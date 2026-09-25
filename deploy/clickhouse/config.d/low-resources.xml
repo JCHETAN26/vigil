@@ -1,0 +1,6 @@
+<clickhouse>
+    <!-- Keep ClickHouse within the container's memory budget on a shared dev box. -->
+    <max_server_memory_usage>1610612736</max_server_memory_usage> <!-- 1.5 GiB -->
+    <mark_cache_size>536870912</mark_cache_size>              <!-- 512 MiB -->
+    <uncompressed_cache_size>0</uncompressed_cache_size>
+</clickhouse>
