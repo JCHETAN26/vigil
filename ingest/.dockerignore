@@ -1,0 +1,7 @@
+# Keep the build context small and reproducible.
+bin/
+dist/
+*.test
+*.out
+integration/
+**/*_test.go

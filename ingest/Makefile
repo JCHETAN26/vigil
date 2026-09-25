@@ -4,11 +4,12 @@
 # Those targets source ../.env automatically for the service credentials.
 
 ENVFILE ?= ../.env
+COMPOSE = docker compose --env-file $(ENVFILE) -f ../deploy/docker-compose.yml
 
 # Source ../.env (if present) into the recipe's shell.
 LOADENV = set -a; [ -f $(ENVFILE) ] && . $(ENVFILE); set +a;
 
-.PHONY: all build fmt vet test test-integration tidy topics migrate receiver writer smoke clean
+.PHONY: all build fmt vet test test-integration tidy topics migrate receiver writer smoke up down logs clean
 
 all: build
 
@@ -46,8 +47,21 @@ receiver:
 writer:
 	$(LOADENV) go run ./cmd/writer
 
+# Bring up the whole stack (infra + ingest services), building the ingest image. The
+# migrate and topics one-shot services run to completion before receiver/writer start.
+up:
+	$(COMPOSE) up -d --build
+
+down:
+	$(COMPOSE) down
+
+# Follow the receiver and writer logs.
+logs:
+	$(COMPOSE) logs -f receiver writer
+
 # End-to-end health check: send one trace through the running receiver+writer and verify
-# it lands in ClickHouse. Requires the receiver and writer to be running.
+# it lands in ClickHouse. Works whether they run via `make up` (containers) or `make
+# receiver`/`make writer` (host).
 smoke:
 	$(LOADENV) go run ./cmd/smoke
 

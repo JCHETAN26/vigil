@@ -6,6 +6,23 @@
 
 name: vigil
 
+# Shared build config for the ingest image (built once, reused by all four commands).
+x-ingest-image: &ingest-image
+  build:
+    context: ../ingest
+    dockerfile: Dockerfile
+    # Build with the host network so `go mod download` can reach the module proxy
+    # (the default bridge network has no DNS/egress in this environment).
+    network: host
+  image: vigil-ingest:local
+
+# ClickHouse credentials + native address for the ingest services (writer, migrate).
+x-clickhouse-env: &clickhouse-env
+  CLICKHOUSE_DB: ${CLICKHOUSE_DB:-vigil}
+  CLICKHOUSE_USER: ${CLICKHOUSE_USER:-vigil}
+  CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:?set CLICKHOUSE_PASSWORD in .env}
+  VIGIL_CLICKHOUSE_ADDR: clickhouse:9000
+
 services:
   redpanda:
     image: redpandadata/redpanda:v24.2.7
@@ -132,6 +149,93 @@ services:
       timeout: 5s
       retries: 12
       start_period: 5s
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+    restart: unless-stopped
+
+  # --- Ingest service (Go): built from ../ingest, one image, four commands ---
+
+  ingest-migrate:
+    <<: *ingest-image
+    container_name: vigil-ingest-migrate
+    command: ["/usr/local/bin/migrate"]
+    environment:
+      <<: *clickhouse-env
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    # One-shot: applies the ClickHouse schema (idempotent) and exits.
+    restart: "no"
+
+  ingest-topics:
+    <<: *ingest-image
+    container_name: vigil-ingest-topics
+    command: ["/usr/local/bin/topics"]
+    environment:
+      VIGIL_KAFKA_BROKERS: redpanda:9092
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    # One-shot: creates the Redpanda topics (idempotent) and exits.
+    restart: "no"
+
+  receiver:
+    <<: *ingest-image
+    container_name: vigil-receiver
+    command: ["/usr/local/bin/receiver"]
+    environment:
+      VIGIL_KAFKA_BROKERS: redpanda:9092
+      # Bind all interfaces inside the container; ports are published to 127.0.0.1 below.
+      VIGIL_OTLP_GRPC_ADDR: 0.0.0.0:4317
+      VIGIL_OTLP_HTTP_ADDR: 0.0.0.0:4318
+      VIGIL_HEALTH_ADDR: 0.0.0.0:8088
+    ports:
+      - "127.0.0.1:4317:4317"   # OTLP/gRPC
+      - "127.0.0.1:4318:4318"   # OTLP/HTTP
+    depends_on:
+      redpanda:
+        condition: service_healthy
+      ingest-topics:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:8088/readyz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+    restart: unless-stopped
+
+  writer:
+    <<: *ingest-image
+    container_name: vigil-writer
+    command: ["/usr/local/bin/writer"]
+    environment:
+      <<: *clickhouse-env
+      VIGIL_KAFKA_BROKERS: redpanda:9092
+      VIGIL_WRITER_HEALTH_ADDR: 0.0.0.0:8089
+    ports:
+      - "127.0.0.1:8089:8089"   # health
+    depends_on:
+      redpanda:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+      ingest-migrate:
+        condition: service_completed_successfully
+      ingest-topics:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:8089/readyz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
     deploy:
       resources:
         limits:

@@ -34,6 +34,8 @@ func TestCost(t *testing.T) {
 		{"provider prefix + dated", "anthropic.claude-haiku-4-5-20251001", 1_000_000, 0, 1.0},
 		{"case insensitive", "Claude-Haiku-4-5", 0, 1_000_000, 5.0},
 		{"sonnet 5", "claude-sonnet-5", 1_000_000, 1_000_000, 12.0},
+		{"opus 5.5", "claude-opus-5-5", 1_000_000, 1_000_000, 24.0},
+		{"opus 5.5 dated", "claude-opus-5-5-20260401", 1_000_000, 0, 4.0},
 		{"unknown model is zero", "some-unknown-model", 1_000_000, 1_000_000, 0.0},
 		{"unknown dated model is zero", "mystery-model-20251001", 1_000_000, 0, 0.0},
 		{"empty model is zero", "", 500, 500, 0.0},
