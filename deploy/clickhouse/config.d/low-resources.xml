@@ -3,4 +3,12 @@
     <max_server_memory_usage>1610612736</max_server_memory_usage> <!-- 1.5 GiB -->
     <mark_cache_size>536870912</mark_cache_size>              <!-- 512 MiB -->
     <uncompressed_cache_size>0</uncompressed_cache_size>
+
+    <!-- Listen on all interfaces inside the container so host processes can reach the
+         published ports. Bind-mounting this config.d over the image's directory masks
+         its docker_related_config.xml, which is what normally sets this; without it
+         ClickHouse listens on localhost only and host connections are reset. The
+         published ports are still bound to 127.0.0.1 in docker-compose.yml, so this
+         does not expose ClickHouse to the LAN. -->
+    <listen_host>0.0.0.0</listen_host>
 </clickhouse>
