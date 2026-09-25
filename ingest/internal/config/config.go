@@ -53,6 +53,30 @@ func ReceiverFromEnv() Receiver {
 	}
 }
 
+// Writer holds settings for the writer/consumer binary.
+type Writer struct {
+	Group         string
+	RawTopic      string
+	DLQTopic      string
+	BatchMaxRows  int
+	BatchMaxBytes int
+	FlushInterval time.Duration
+	HealthAddr    string
+}
+
+// WriterFromEnv reads the writer settings.
+func WriterFromEnv() Writer {
+	return Writer{
+		Group:         envStr("VIGIL_KAFKA_GROUP", "vigil-writer"),
+		RawTopic:      envStr("VIGIL_RAW_TOPIC", "otlp.spans.raw"),
+		DLQTopic:      envStr("VIGIL_DLQ_TOPIC", "spans.dlq"),
+		BatchMaxRows:  envInt("VIGIL_BATCH_MAX_ROWS", 10000),
+		BatchMaxBytes: envInt("VIGIL_BATCH_MAX_BYTES", 32*1024*1024),
+		FlushInterval: envDuration("VIGIL_FLUSH_INTERVAL", 2*time.Second),
+		HealthAddr:    envStr("VIGIL_WRITER_HEALTH_ADDR", "127.0.0.1:8089"),
+	}
+}
+
 // Kafka holds the broker list shared by the producer, consumer, and admin client.
 type Kafka struct {
 	Brokers []string
@@ -143,6 +167,15 @@ func envInt64(key string, def int64) int64 {
 	if v := os.Getenv(key); v != "" {
 		if n, err := strconv.ParseInt(v, 10, 64); err == nil {
 			return n
+		}
+	}
+	return def
+}
+
+func envDuration(key string, def time.Duration) time.Duration {
+	if v := os.Getenv(key); v != "" {
+		if d, err := time.ParseDuration(v); err == nil {
+			return d
 		}
 	}
 	return def
