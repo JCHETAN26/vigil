@@ -170,10 +170,14 @@ CREATE TABLE spans
     resource_attributes Map(LowCardinality(String), String),
     span_attributes     Map(LowCardinality(String), String),
 
-    -- Span events (nested): gen_ai prompt/completion + exception events
-    events.timestamp  Array(DateTime64(9)),
-    events.name       Array(LowCardinality(String)),
-    events.attributes Array(String),          -- JSON-encoded per event
+    -- Span events (nested): gen_ai prompt/completion + exception events.
+    -- Declared as a Nested type; ClickHouse flattens it into the array subcolumns
+    -- events.timestamp / events.name / events.attributes (see note below).
+    events Nested(
+        timestamp  DateTime64(9),
+        name       LowCardinality(String),
+        attributes String                     -- JSON-encoded per event
+    ),
 
     -- Bookkeeping / idempotency version
     ingested_at     DateTime64(3) DEFAULT now64(3) CODEC(ZSTD(1)),
@@ -245,6 +249,14 @@ values gives near-free dictionary encoding. Hot GenAI attributes are promoted to
 typed columns (fast filters/aggregates); the long tail stays in `Map(...)` for
 flexibility. Ids are `String` (hex) for ergonomics — `FixedString(16)`/`(8)`
 would save space and speed comparisons at the cost of readability (open question).
+
+**Events as `Nested` (implementation note).** The events columns are declared with a
+`Nested(timestamp, name, attributes)` type rather than as three free-standing
+`events.* Array(...)` columns. ClickHouse does not accept directly declaring
+dot-named subcolumns in `CREATE TABLE`; `Nested` is the idiomatic way to get exactly
+the flattened `events.timestamp` / `events.name` / `events.attributes` array
+subcolumns, with identical storage and query semantics. Inserts supply three parallel
+arrays under those names, one entry per event.
 
 ### 3.2 `trace_index` — per-trace summary (powers Q1 pruning + the run list)
 
@@ -491,6 +503,11 @@ can reprocess after a writer bug or a schema change.
 - **Retention is a buffer, not storage.** ClickHouse is the system of record;
   the topic keeps ~48h (bounded also by `retention.bytes` to protect disk on this
   machine). Producer compression `zstd`.
+  **Implementation note:** Kafka/Redpanda's `retention.bytes` is a *per-partition*
+  limit. The `VIGIL_RAW_RETENTION_BYTES` env var is therefore expressed as a *total*
+  disk budget for the topic (~4 GiB by default) and the topic-creation tool divides it
+  by the partition count before setting `retention.bytes` (≈683 MiB/partition at 6
+  partitions), so the cap reflects total disk use rather than 6× it.
 - **Single-node dev:** `replication.factor = 1`. Production would use 3.
 - **Idempotency across the boundary** is handled downstream by
   `ReplacingMergeTree` on `(trace_id, span_id)`, so at-least-once consumption is
@@ -549,4 +566,21 @@ All open questions are now decided; this section records the final calls.
    attribute tail.
 7. **Id storage:** **`String`** (hex).
 8. **Redpanda retention:** **48 hours** on `otlp.spans.raw` (buffer, not storage).
-```
+
+---
+
+## 7. Infrastructure notes
+
+Operational details discovered while implementing the ingest service against the local
+Docker stack (`deploy/`).
+
+- **ClickHouse `listen_host`.** The Compose file bind-mounts `deploy/clickhouse/config.d`
+  over the container's `/etc/clickhouse-server/config.d`, which **masks the official
+  image's `docker_related_config.xml`** — the file that normally sets
+  `listen_host = 0.0.0.0`. Without it, ClickHouse falls back to the base `config.xml`
+  and listens on `127.0.0.1`/`::1` *inside the container only*, so the in-container
+  healthcheck passes while every host process (the writer, `cmd/migrate`, `clickhouse-client`)
+  gets its connection reset on the published `8123`/`9000` ports. Fix:
+  `deploy/clickhouse/config.d/low-resources.xml` sets `<listen_host>0.0.0.0</listen_host>`.
+  The published ports remain bound to `127.0.0.1` in `docker-compose.yml`, so ClickHouse
+  is not exposed to the LAN.
