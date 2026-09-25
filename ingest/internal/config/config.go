@@ -30,6 +30,29 @@ func ClickHouseFromEnv() ClickHouse {
 	}
 }
 
+// Receiver holds settings for the OTLP receiver binary.
+type Receiver struct {
+	GRPCAddr        string // OTLP/gRPC listener
+	HTTPAddr        string // OTLP/HTTP listener (POST /v1/traces)
+	HealthAddr      string // /healthz + /readyz listener
+	MaxRequestBytes int    // reject larger request bodies / messages
+	RawTopic        string
+	DLQTopic        string
+}
+
+// ReceiverFromEnv reads the receiver settings. Listeners default to loopback, matching
+// the rest of the local stack; override the *_ADDR vars for containerized use.
+func ReceiverFromEnv() Receiver {
+	return Receiver{
+		GRPCAddr:        envStr("VIGIL_OTLP_GRPC_ADDR", "127.0.0.1:4317"),
+		HTTPAddr:        envStr("VIGIL_OTLP_HTTP_ADDR", "127.0.0.1:4318"),
+		HealthAddr:      envStr("VIGIL_HEALTH_ADDR", "127.0.0.1:8088"),
+		MaxRequestBytes: envInt("VIGIL_MAX_REQUEST_BYTES", 4*1024*1024),
+		RawTopic:        envStr("VIGIL_RAW_TOPIC", "otlp.spans.raw"),
+		DLQTopic:        envStr("VIGIL_DLQ_TOPIC", "spans.dlq"),
+	}
+}
+
 // Kafka holds the broker list shared by the producer, consumer, and admin client.
 type Kafka struct {
 	Brokers []string
