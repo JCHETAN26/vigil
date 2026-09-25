@@ -1,10 +1,14 @@
 # Vigil ingest service.
 # Run from the ingest/ directory. Assumes `go` is on PATH and the Docker stack
-# (deploy/docker-compose.yml) is up for the provisioning and integration targets.
-# Env vars are read from the process environment; source ../.env first, e.g.:
-#   set -a && . ../.env && set +a && make migrate
+# (deploy/docker-compose.yml) is up for the provisioning, smoke, and integration targets.
+# Those targets source ../.env automatically for the service credentials.
 
-.PHONY: all build fmt vet test test-integration tidy topics migrate receiver writer clean
+ENVFILE ?= ../.env
+
+# Source ../.env (if present) into the recipe's shell.
+LOADENV = set -a; [ -f $(ENVFILE) ] && . $(ENVFILE); set +a;
+
+.PHONY: all build fmt vet test test-integration tidy topics migrate receiver writer smoke clean
 
 all: build
 
@@ -26,21 +30,26 @@ test:
 
 # Integration tests against the running Docker stack (build-tagged).
 test-integration:
-	go test -tags=integration ./integration/...
+	$(LOADENV) go test -tags=integration ./integration/...
 
 # Provisioning: create Redpanda topics and apply the ClickHouse schema (both idempotent).
 topics:
-	go run ./cmd/topics
+	$(LOADENV) go run ./cmd/topics
 
 migrate:
-	go run ./cmd/migrate
+	$(LOADENV) go run ./cmd/migrate
 
 # Run the binaries locally.
 receiver:
-	go run ./cmd/receiver
+	$(LOADENV) go run ./cmd/receiver
 
 writer:
-	go run ./cmd/writer
+	$(LOADENV) go run ./cmd/writer
+
+# End-to-end health check: send one trace through the running receiver+writer and verify
+# it lands in ClickHouse. Requires the receiver and writer to be running.
+smoke:
+	$(LOADENV) go run ./cmd/smoke
 
 clean:
 	rm -rf bin dist

@@ -46,6 +46,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	prices.SetLogger(log)
 	log.Info("pricing loaded", "prices_as_of", prices.PricesAsOf, "models", len(prices.Models))
 
 	openCtx, cancelOpen := context.WithTimeout(context.Background(), 15*time.Second)

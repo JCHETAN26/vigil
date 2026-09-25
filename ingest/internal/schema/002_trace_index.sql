@@ -23,6 +23,12 @@ CREATE TABLE IF NOT EXISTS trace_index
 )
 ENGINE = AggregatingMergeTree
 ORDER BY (trace_id)
+-- Same conditional TTL as spans (§3.1): eval traces kept 365 days, others 30 days, so
+-- the run list this table backs never points at traces whose spans have expired. The
+-- daily rollup keeps its own longer retention by design. start_time/run_kind here are the
+-- min/any aggregates, which carry the underlying values TTL evaluates against.
+TTL toDateTime(start_time) + INTERVAL 365 DAY DELETE WHERE run_kind = 'eval',
+    toDateTime(start_time) + INTERVAL 30  DAY DELETE WHERE run_kind != 'eval'
 SETTINGS non_replicated_deduplication_window = 1000;
 
 -- Materialized view feeding trace_index on every insert into spans. All target columns

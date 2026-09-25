@@ -280,16 +280,26 @@ CREATE TABLE trace_index
     total_cost_usd SimpleAggregateFunction(sum, Float64)
 )
 ENGINE = AggregatingMergeTree
-ORDER BY (trace_id);
+ORDER BY (trace_id)
+-- Same conditional TTL as `spans` (§3.1): eval traces 365 days, others 30 days.
+TTL toDateTime(start_time) + INTERVAL 365 DAY DELETE WHERE run_kind = 'eval',
+    toDateTime(start_time) + INTERVAL 30  DAY DELETE WHERE run_kind != 'eval';
 -- populated by a materialized view on inserts to `spans`
 ```
 
 Q1 then becomes: look up `[start_time, end_time]` here, then query `spans` with
 both `trace_id` and the time bound so partition pruning + the bloom index apply.
 `trace_index` is intentionally not partitioned (one small row per trace, keyed
-for point lookups); its rows age out with the source data via a periodic prune
-job. *(Caveat: `any`-aggregating identity assumes a trace has one agent/version,
-which holds because identity is denormalized consistently across a trace.)*
+for point lookups). **Retention (implementation decision):** it carries the *same*
+conditional TTL as `spans` — eval traces 365 days, everything else 30 days — rather
+than relying on a separate prune job. This keeps `trace_index` aligned with the raw
+spans it summarizes, so the dashboard run list never surfaces a trace whose spans have
+already expired (a dead link). The daily rollup (`agent_version_stats_daily`, §3.3)
+deliberately keeps its own longer ~400-day retention, because it is the long-horizon
+trend store and holds only aggregates, not per-trace rows. `run_kind`/`start_time` in
+the TTL are the `any`/`min` aggregates, which carry the underlying values TTL evaluates.
+*(Caveat: `any`-aggregating identity assumes a trace has one agent/version, which holds
+because identity is denormalized consistently across a trace.)*
 
 ### 3.3 `agent_version_stats_daily` — pre-aggregated rollup (Q3 at scale, long retention)
 
@@ -397,6 +407,22 @@ Insert dedup stops whole-batch redelivery (protecting the rollups); Replacing
 catches any residual per-span duplication from an unforeseen boundary change,
 manual backfill, or reprocessing from `otlp.spans.raw` with a different batching.
 Defence in depth, cheap on both sides.
+
+**Known limitation — time-triggered partial batches (implementation).** The writer
+flushes a batch on size **or** a time interval (a liveness fallback for low-traffic
+partitions), and the token is derived from the *actual* inserted offset range. This is
+fully idempotent for size/byte-triggered batches: a replay from the last committed
+offset reforms the identical range and the same token, so ClickHouse drops it before any
+rows or MV rows are written. The one gap is a crash in the narrow window where an insert
+**succeeded but the offset commit failed** for a *time-triggered partial* batch: on
+replay more records may have accumulated, so the reformed range (and its token) can
+differ. There, `ReplacingMergeTree` still collapses the raw-span duplicates on merge, but
+the on-insert rollup MVs can transiently double-count until the §3.7 partition rebuild.
+This is the accepted trade-off behind the "pragmatic" batching rule (size-or-time flush)
+over a strictly deterministic size-only boundary that would stall low-traffic partitions.
+Partition revocation is handled explicitly to keep ranges contiguous: the consumer
+flushes and commits an in-flight batch before releasing a revoked partition, so ownership
+changes do not by themselves create a mismatched range.
 
 ### 3.6 Postgres — `version_manifests`
 
