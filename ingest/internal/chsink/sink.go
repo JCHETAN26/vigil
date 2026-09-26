@@ -66,9 +66,9 @@ func (s *Sink) Insert(ctx context.Context, rows []Row, dedupToken string) error 
 			r.StartTime, r.EndTime,
 			r.SpanName, r.SpanKind, r.StatusCode, r.StatusMessage,
 			r.ServiceName, r.ServiceVersion,
-			r.AgentID, r.AgentVersion, r.GitSHA, r.RunID, r.RunKind, r.EvalRunID, r.EvalCaseID, r.SessionID,
+			r.AgentID, r.AgentVersion, r.GitSHA, r.RunID, r.RunKind, r.EvalRunID, r.EvalCaseID, r.EvalTrial, r.SessionID, r.Role,
 			r.GenAISystem, r.GenAIOperationName, r.GenAIRequestModel, r.GenAIResponseModel,
-			r.GenAIUsageInputTokens, r.GenAIUsageOutputTokens, r.CostUSD,
+			r.GenAIUsageInputTokens, r.GenAIUsageOutputTokens, r.CostUSD, r.CacheHit,
 			r.ResourceAttributes, r.SpanAttributes,
 			r.EventsTimestamp, r.EventsName, r.EventsAttributes,
 		); err != nil {

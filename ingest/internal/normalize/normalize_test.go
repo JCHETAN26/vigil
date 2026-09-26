@@ -18,6 +18,9 @@ func kvStr(k, v string) *commonpb.KeyValue {
 func kvInt(k string, v int64) *commonpb.KeyValue {
 	return &commonpb.KeyValue{Key: k, Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_IntValue{IntValue: v}}}
 }
+func kvBool(k string, v bool) *commonpb.KeyValue {
+	return &commonpb.KeyValue{Key: k, Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_BoolValue{BoolValue: v}}}
+}
 
 func TestNormalizePromotesAndComputesCost(t *testing.T) {
 	prices, err := pricing.Load()
@@ -45,6 +48,9 @@ func TestNormalizePromotesAndComputesCost(t *testing.T) {
 				Status:            &tracepb.Status{Code: tracepb.Status_STATUS_CODE_ERROR, Message: "boom"},
 				Attributes: []*commonpb.KeyValue{
 					kvStr("vigil.run.kind", "eval"),
+					kvInt("vigil.eval.trial", 2),
+					kvStr("vigil.role", "user_simulator"),
+					kvBool("vigil.cache.hit", true),
 					kvStr("gen_ai.response.model", "claude-haiku-4-5"),
 					kvInt("gen_ai.usage.input_tokens", 1_000_000),
 					kvInt("gen_ai.usage.output_tokens", 1_000_000),
@@ -108,6 +114,22 @@ func TestNormalizePromotesAndComputesCost(t *testing.T) {
 		t.Error("vigil.eval.dataset should remain in the span tail")
 	}
 
+	// The eval-only attributes are promoted to typed columns and removed from the tail.
+	if r.EvalTrial != 2 {
+		t.Errorf("EvalTrial = %d, want 2", r.EvalTrial)
+	}
+	if r.Role != "user_simulator" {
+		t.Errorf("Role = %q, want user_simulator", r.Role)
+	}
+	if r.CacheHit != 1 {
+		t.Errorf("CacheHit = %d, want 1", r.CacheHit)
+	}
+	for _, k := range []string{"vigil.eval.trial", "vigil.role", "vigil.cache.hit"} {
+		if _, ok := r.SpanAttributes[k]; ok {
+			t.Errorf("%s should be promoted out of the span tail", k)
+		}
+	}
+
 	// Events flattened into parallel arrays; attributes JSON-encoded.
 	if len(r.EventsName) != 1 || r.EventsName[0] != "gen_ai.content.completion" {
 		t.Errorf("events name = %v", r.EventsName)
@@ -149,5 +171,12 @@ func TestNormalizeRunKindDefaultAndUnmarshalError(t *testing.T) {
 	}
 	if rows[0].CostUSD != 0 {
 		t.Errorf("CostUSD with no model = %v, want 0", rows[0].CostUSD)
+	}
+	// Absent eval attributes default cleanly: trial -1 (not an eval trial), role "", no cache hit.
+	if rows[0].EvalTrial != -1 {
+		t.Errorf("EvalTrial with no attr = %d, want -1", rows[0].EvalTrial)
+	}
+	if rows[0].Role != "" || rows[0].CacheHit != 0 {
+		t.Errorf("role/cache_hit defaults wrong: role=%q cache_hit=%d", rows[0].Role, rows[0].CacheHit)
 	}
 }

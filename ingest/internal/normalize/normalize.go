@@ -32,6 +32,9 @@ const (
 	keyRunKind      = "vigil.run.kind"
 	keyEvalRunID    = "vigil.eval.run_id"
 	keyEvalCaseID   = "vigil.eval.case_id"
+	keyEvalTrial    = "vigil.eval.trial"
+	keyRole         = "vigil.role"
+	keyCacheHit     = "vigil.cache.hit"
 	keySessionID    = "gen_ai.conversation.id"
 	keyGenAISystem  = "gen_ai.system"
 	keyGenAIOp      = "gen_ai.operation.name"
@@ -103,6 +106,9 @@ func Normalize(td *tracepb.TracesData, prices *pricing.Table) ([]chsink.Row, err
 					RunKind:      runKindName(take(spanAttrs, keyRunKind)),
 					EvalRunID:    take(spanAttrs, keyEvalRunID),
 					EvalCaseID:   take(spanAttrs, keyEvalCaseID),
+					EvalTrial:    parseInt32(take(spanAttrs, keyEvalTrial), -1),
+					Role:         take(spanAttrs, keyRole),
+					CacheHit:     parseBool01(take(spanAttrs, keyCacheHit)),
 					SessionID:    take(spanAttrs, keySessionID),
 
 					GenAISystem:            take(spanAttrs, keyGenAISystem),
@@ -189,6 +195,28 @@ func parseUint32(s string) uint32 {
 		return 0
 	}
 	return uint32(n)
+}
+
+// parseInt32 parses a signed int attribute, returning def when absent/unparseable. Used for
+// vigil.eval.trial, where trial 0 is valid, so a distinct sentinel (-1) marks "not present".
+func parseInt32(s string, def int32) int32 {
+	if s == "" {
+		return def
+	}
+	n, err := strconv.ParseInt(s, 10, 32)
+	if err != nil {
+		return def
+	}
+	return int32(n)
+}
+
+// parseBool01 maps a boolean attribute string to 0/1. OTLP bool attributes stringify to
+// "true"/"false" (anyToString); "1" is tolerated. Anything else (incl. absent) is 0.
+func parseBool01(s string) uint8 {
+	if s == "true" || s == "1" {
+		return 1
+	}
+	return 0
 }
 
 // attrsToMap flattens OTLP key-values into a string map (never nil).
