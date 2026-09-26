@@ -610,3 +610,26 @@ Docker stack (`deploy/`).
   `deploy/clickhouse/config.d/low-resources.xml` sets `<listen_host>0.0.0.0</listen_host>`.
   The published ports remain bound to `127.0.0.1` in `docker-compose.yml`, so ClickHouse
   is not exposed to the LAN.
+
+- **Container egress / where things run (decided).** The Docker daemon is configured with
+  `"iptables": false` (in `/etc/docker/daemon.json`), so it installs no MASQUERADE/NAT rule
+  for its bridge networks. Bridge containers can reach each other and the docker0 gateway,
+  but have **no outbound egress or external DNS** — a bridge container cannot reach the
+  Anthropic API or the Go module proxy. This is deliberate on this shared host (it runs
+  Tailscale, which Docker's iptables management would disrupt). Consequences and the
+  decision:
+  - The Vigil **stack stays in Docker** (Redpanda, ClickHouse, Postgres, Redis, and the
+    ingest receiver/writer). None of these need external egress — they talk to each other
+    over the internal `vigil_default` bridge (Docker's embedded DNS resolves service
+    names) and the writer/receiver only reach ClickHouse/Redpanda internally.
+  - The **image build** works around the missing egress with `build.network: host` on the
+    ingest image, so `go mod download` reaches the proxy.
+  - **Python agents and the eval engine run natively on the host** (in venvs), *not* in
+    containers, so their outbound Anthropic API calls use the host's own network. They
+    reach the stack via the published `127.0.0.1` ports (OTLP on `4317`/`4318`, ClickHouse
+    on `8123`/`9000`). No host firewall change is made now.
+  - **Kubernetes (Week 6) will need an egress decision from the machine owner.** Pods that
+    call the Anthropic API need outbound NAT/DNS, which this host currently denies to
+    bridge/pod networks. Options to weigh then: a scoped MASQUERADE rule for the pod
+    subnet, enabling Docker/k8s-managed iptables (must be reconciled with Tailscale), or an
+    egress proxy. This is a shared-machine policy call, not one to make unilaterally.

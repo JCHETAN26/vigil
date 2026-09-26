@@ -143,3 +143,63 @@ def test_wrap_async_records(spans):
     s = [x for x in spans() if x.name.startswith("gen_ai.chat")][0]
     assert s.attributes["gen_ai.usage.input_tokens"] == 5
     assert s.attributes["gen_ai.usage.output_tokens"] == 6
+
+
+# --- kwargs pass-through (the wrapper must forward call args verbatim, add/drop nothing) ---
+
+class RecordingMessages:
+    def __init__(self):
+        self.kwargs = None
+
+    def create(self, **kwargs):
+        self.kwargs = kwargs
+        return _text_and_tool_response()
+
+
+class RecordingClient:
+    def __init__(self):
+        self.messages = RecordingMessages()
+
+
+class AsyncRecordingMessages:
+    def __init__(self):
+        self.kwargs = None
+
+    async def create(self, **kwargs):
+        self.kwargs = kwargs
+        return _text_and_tool_response()
+
+
+class AsyncRecordingClient:
+    def __init__(self):
+        self.messages = AsyncRecordingMessages()
+
+
+_CALL_KWARGS = {
+    "model": "claude-haiku-4-5",
+    "max_tokens": 100,
+    "system": "you are helpful",
+    "tools": [{"name": "t"}],
+    "messages": [{"role": "user", "content": "hi"}],
+}
+
+
+def test_wrap_sync_forwards_kwargs_verbatim(spans):
+    raw = RecordingClient()
+    client = vigil.wrap(raw)
+    with vigil.agent_run(run_kind="eval"):
+        client.messages.create(**_CALL_KWARGS)
+    # The wrapper adds nothing and drops nothing.
+    assert raw.messages.kwargs == _CALL_KWARGS
+
+
+def test_wrap_async_forwards_kwargs_verbatim(spans):
+    raw = AsyncRecordingClient()
+    client = vigil.wrap(raw)
+
+    async def go():
+        with vigil.agent_run(run_kind="eval"):
+            await client.messages.create(**_CALL_KWARGS)
+
+    asyncio.run(go())
+    assert raw.messages.kwargs == _CALL_KWARGS
