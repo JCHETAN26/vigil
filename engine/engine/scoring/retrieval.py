@@ -37,14 +37,21 @@ def _gold(case: Case) -> list[str]:
 
 class RetrievalRecall:
     """recall@k over the merged ranking: fraction of gold titles present in its top ``k``.
-    ``k`` from ``expected['recall_k']`` (default 5). Passes at
-    ``expected['recall_threshold']`` (default 1.0 — all gold within top-k)."""
+
+    ``k`` is fixed at construction when given (the scorer's name becomes ``RetrievalRecall@k``
+    so several k's coexist as distinct per-case scores — HotpotQA reports @5 for the first
+    hop and @10 for two hops); otherwise it falls back to ``expected['recall_k']`` (default 5)
+    and keeps the bare name. Passes at ``expected['recall_threshold']`` (default 1.0)."""
 
     name = "RetrievalRecall"
 
+    def __init__(self, k: int | None = None):
+        self._k = k
+        self.name = "RetrievalRecall" if k is None else f"RetrievalRecall@{k}"
+
     def score(self, case: Case, result: RunResult) -> ScoreResult:
         gold = _gold(case)
-        k = int(case.expected.get("recall_k", 5))
+        k = self._k if self._k is not None else int(case.expected.get("recall_k", 5))
         threshold = float(case.expected.get("recall_threshold", 1.0))
         topk = merged_ranking(result)[:k]
         if not gold:

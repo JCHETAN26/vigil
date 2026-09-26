@@ -185,6 +185,9 @@ _INFERENCE = (
 _BY_NAME = {cls.name: cls for _, cls in _INFERENCE}
 for _cls in (TokenF1, RetrievalRecall, NDCG, AllGoldRetrieved):
     _BY_NAME[_cls.name] = _cls
+# Fixed-k recall variants, so a suite can report several cutoffs side by side (HotpotQA: @5, @10).
+_BY_NAME["RetrievalRecall@5"] = lambda: RetrievalRecall(5)
+_BY_NAME["RetrievalRecall@10"] = lambda: RetrievalRecall(10)
 
 
 def scorers_for(expected: dict) -> list:

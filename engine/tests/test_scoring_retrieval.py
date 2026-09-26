@@ -76,6 +76,17 @@ def test_all_gold_retrieved_is_uncapped():
     assert not r2.passed and r2.detail["missing"] == ["Z"]
 
 
+def test_recall_at_5_and_10_variants():
+    picked = scorers_for({"scorers": ["RetrievalRecall@5", "RetrievalRecall@10"]})
+    assert [s.name for s in picked] == ["RetrievalRecall@5", "RetrievalRecall@10"]
+    # Gold at rank 8: missed by @5, caught by @10 — the reason HotpotQA reports both.
+    gold = _case({"supporting_titles": ["A", "Z"]})
+    result = _result(["A", "B", "C", "D", "E", "F", "G", "Z"])
+    by_name = {s.name: s.score(gold, result) for s in picked}
+    assert by_name["RetrievalRecall@5"].score == 0.5
+    assert by_name["RetrievalRecall@10"].score == 1.0
+
+
 def test_retrieval_scorers_are_opt_in_by_name():
     # Not inferred from any expected key; selected explicitly.
     names = [type(x).__name__ for x in scorers_for(

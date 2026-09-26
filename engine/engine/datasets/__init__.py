@@ -3,6 +3,14 @@
 the real dataset adapters come later."""
 
 from .base import Case, DatasetAdapter, get_adapter, register_adapter
+from .hotpotqa import HotpotQAAdapter
 from .local import LocalJSONAdapter
 
-__all__ = ["Case", "DatasetAdapter", "get_adapter", "register_adapter", "LocalJSONAdapter"]
+__all__ = [
+    "Case",
+    "DatasetAdapter",
+    "get_adapter",
+    "register_adapter",
+    "LocalJSONAdapter",
+    "HotpotQAAdapter",
+]

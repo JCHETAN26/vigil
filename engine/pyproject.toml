@@ -25,6 +25,9 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "pytest-asyncio>=0.23", "ruff>=0.6"]
+# Build-time only: reading the HotpotQA parquet mirror in bench/build_hotpotqa_corpus.py.
+# Not needed to run evals. `pip install -e ".[bench]"` (or pass --url a JSON source instead).
+bench = ["pyarrow>=15"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["engine"]

@@ -20,6 +20,7 @@ install: venv
 	$(PY) -m pip install -q -e "../sdk-python"
 	$(PY) -m pip install -q -e ".[dev]"
 	$(PY) -m pip install -q --no-deps -e "../agents/hello_agent"
+	$(PY) -m pip install -q -e "../agents/hotpotqa_agent"   # brings bm25s for the worker
 
 test:
 	$(ISOLATE) PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 $(PY) -m pytest -q -p asyncio -m "not integration"
