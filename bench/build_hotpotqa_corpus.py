@@ -12,8 +12,10 @@ evals).
   corpus.v1.jsonl     one {"doc_id": title, "text": paragraph} per line — the POOLED corpus
                       (every paragraph of the pinned questions, deduped by title): thousands of
                       documents, so retrieval is realistic, not over a question's own 10.
-  cases.v1.json       {version, source, count, cases:[{case_id, question, answer,
-                      supporting_titles, type, level}]} — read by the HotpotQAAdapter.
+  cases.v1.json       {version, source:{name,url,revision,sha256}, verification, count,
+                      cases:[{case_id, question, answer, supporting_titles, type, level}]}
+                      — read by the HotpotQAAdapter. `source` pins the HF dataset commit and a
+                      sha256 of the exact bytes; `verification` records the cross-check below.
   subsets/dev20.txt   20 case ids for the development run (first 20 by id).
   subsets/base100.txt 100 case ids for the baseline, STRATIFIED by type (bridge/comparison)
                       to match the pinned set's distribution.
@@ -27,8 +29,10 @@ data-shaping lives in engine.datasets.hotpotqa and is unit-tested there.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -37,6 +41,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "engine"))
 
 from engine.datasets.hotpotqa import (
     build_corpus,
+    record_mismatches,
     select_subset,
     stratified_subset,
     to_case_spec,
@@ -48,17 +53,92 @@ SOURCE_URL = (
     "https://huggingface.co/datasets/hotpotqa/hotpot_qa/resolve/"
     "refs%2Fconvert%2Fparquet/distractor/validation/0000.parquet"
 )
+# The original JSON, used only to verify the mirror when it is reachable (host is often down).
+ORIGINAL_URL = "http://curtis.ml.cmu.edu/datasets/hotpot/hotpot_dev_distractor_v1.json"
 VERSION = "v1"
 
 
-def _download(url: str, dest: Path) -> Path:
-    if dest.exists():
+def _meta_path(dest: Path) -> Path:
+    return dest.with_suffix(dest.suffix + ".meta.json")
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, *args, **kwargs):  # do not follow
+        return None
+
+
+def _fetch_revision(url: str) -> str | None:
+    """The Hugging Face dataset commit behind a resolve URL, from the ``X-Repo-Commit`` header.
+
+    HF puts that header on the huggingface.co response, which then 302-redirects to a CDN that
+    does not carry it — so we must read it from the pre-redirect response (redirects disabled)."""
+    opener = urllib.request.build_opener(_NoRedirect)
+    try:
+        req = urllib.request.Request(url, method="HEAD")
+        try:
+            with opener.open(req, timeout=15) as resp:
+                return resp.headers.get("X-Repo-Commit")
+        except urllib.error.HTTPError as redirect:  # blocked 3xx still carries the header
+            return redirect.headers.get("X-Repo-Commit")
+    except (urllib.error.URLError, OSError):
+        return None
+
+
+def _ensure_source(url: str, dest: Path) -> None:
+    """Download the source (if not cached) and record its HF revision in a sidecar meta file."""
+    if not dest.exists():
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        print(f"downloading {url} …")
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req, timeout=180) as resp:
+            data = resp.read()
+        dest.write_bytes(data)
+    else:
         print(f"using cached source {dest} ({dest.stat().st_size // (1024 * 1024)} MB)")
-        return dest
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    print(f"downloading {url} …")
-    urllib.request.urlretrieve(url, dest)
-    return dest
+    # The commit isn't on the followed (CDN) download response, so resolve it separately.
+    _meta_path(dest).write_text(json.dumps({"url": url, "revision": _fetch_revision(url)}))
+
+
+def _source_meta(dest: Path, url: str) -> dict:
+    """Provenance for the manifest: the mirror URL, its pinned revision (HF commit), and a
+    sha256 of the exact bytes used, so a re-build can be checked for source drift."""
+    revision = None
+    if _meta_path(dest).exists():
+        try:
+            revision = json.loads(_meta_path(dest).read_text()).get("revision")
+        except json.JSONDecodeError:
+            revision = None
+    kind = "HF parquet mirror (hotpotqa/hotpot_qa distractor/validation)" if dest.suffix == ".parquet" else "hotpot_dev_distractor_v1.json"
+    return {
+        "name": kind,
+        "url": url,
+        "revision": revision,
+        "sha256": hashlib.sha256(dest.read_bytes()).hexdigest(),
+    }
+
+
+def _verify_against_original(subset: list[dict], original_url: str, timeout: float) -> str:
+    """Best-effort: when the original JSON host is reachable, assert the mirror's id/question/
+    answer/supporting_facts match it for the pinned subset. Fails loudly on any mismatch;
+    silently skipped (with a note) when the host is down."""
+    print(f"verifying mirror against original ({original_url}) …")
+    try:
+        req = urllib.request.Request(original_url)
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            original = json.loads(resp.read())
+    except Exception as exc:  # noqa: BLE001 - unreachable host is expected, not fatal
+        note = f"skipped: original unreachable ({type(exc).__name__})"
+        print(f"  {note}")
+        return note
+    mismatches = record_mismatches(subset, original)
+    if mismatches:
+        raise SystemExit(
+            "mirror verification FAILED against the original for the pinned subset:\n  "
+            + "\n  ".join(mismatches[:20])
+            + (f"\n  … and {len(mismatches) - 20} more" if len(mismatches) > 20 else "")
+        )
+    print(f"  passed: {len(subset)} questions match the original")
+    return "passed"
 
 
 def _load_records(path: Path) -> list[dict]:
@@ -98,7 +178,7 @@ def _read_parquet(path: Path) -> list[dict]:
     return records
 
 
-def build(records: list[dict], n: int, out: Path) -> None:
+def build(records: list[dict], n: int, out: Path, source: dict, verification: str) -> None:
     subset = select_subset(records, n)
     corpus = build_corpus(subset)
     cases = [to_case_spec(r) for r in subset]
@@ -112,7 +192,13 @@ def build(records: list[dict], n: int, out: Path) -> None:
     cases_path = out / f"cases.{VERSION}.json"
     cases_path.write_text(
         json.dumps(
-            {"version": VERSION, "source": "hotpot_dev_distractor_v1", "count": len(cases), "cases": cases},
+            {
+                "version": VERSION,
+                "source": source,  # {name, url, revision (HF commit), sha256}
+                "verification": verification,  # 'passed' | 'disabled' | 'skipped: …'
+                "count": len(cases),
+                "cases": cases,
+            },
             ensure_ascii=False,
         )
     )
@@ -136,6 +222,7 @@ def build(records: list[dict], n: int, out: Path) -> None:
     print(f"cases:   {len(cases)} questions -> {cases_path}")
     print(f"subsets: dev20 (n=20) mix={mix(dev20)}, base100 (n={len(base100)}) mix={mix(base100)}")
     print(f"full set mix: {mix([c['case_id'] for c in cases])}")
+    print(f"source:  revision={source['revision']} sha256={source['sha256'][:12]}… verify={verification}")
 
 
 def main(argv=None) -> int:
@@ -144,12 +231,24 @@ def main(argv=None) -> int:
     p.add_argument("--out", default="data/hotpotqa", help="output directory for artifacts")
     p.add_argument("--url", default=SOURCE_URL)
     p.add_argument("--cache", default="data/hotpotqa/hotpot_dev_distractor.parquet")
+    p.add_argument("--original-url", default=ORIGINAL_URL, help="original JSON, for verification")
+    p.add_argument("--verify-timeout", type=float, default=15.0)
+    p.add_argument("--no-verify", action="store_true", help="skip the original cross-check")
     args = p.parse_args(argv)
 
-    src = _download(args.url, Path(args.cache))
-    records = _load_records(src)
+    cache = Path(args.cache)
+    _ensure_source(args.url, cache)
+    records = _load_records(cache)
     print(f"loaded {len(records)} dev records")
-    build(records, args.n, Path(args.out))
+
+    subset = select_subset(records, args.n)
+    verification = (
+        "disabled"
+        if args.no_verify
+        else _verify_against_original(subset, args.original_url, args.verify_timeout)
+    )
+    source = _source_meta(cache, args.url)
+    build(records, args.n, Path(args.out), source, verification)
     return 0
 
 

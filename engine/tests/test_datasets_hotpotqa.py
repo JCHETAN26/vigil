@@ -11,6 +11,7 @@ from engine.datasets.hotpotqa import (
     HOTPOTQA_SCORERS,
     HotpotQAAdapter,
     build_corpus,
+    record_mismatches,
     select_subset,
     stratified_subset,
     supporting_titles,
@@ -71,6 +72,27 @@ def test_stratified_subset_matches_type_mix():
         counts[types[i]] = counts.get(types[i], 0) + 1
     # 80/20 mix over 10 -> 8 bridge, 2 comparison.
     assert counts == {"bridge": 8, "comparison": 2}
+
+
+def test_record_mismatches_detects_drift():
+    mirror = [
+        _rec("a", q="Qa", ans="A", supporting=[["T1", 0], ["T2", 1]]),
+        _rec("b", q="Qb", ans="B", supporting=[["T3", 0]]),
+    ]
+    # Identical original -> no mismatches.
+    assert record_mismatches(mirror, [dict(r) for r in mirror]) == []
+
+    original = [
+        _rec("a", q="Qa DIFFERENT", ans="A", supporting=[["T1", 0], ["T2", 1]]),  # question drift
+        _rec("b", q="Qb", ans="B-DIFFERENT", supporting=[["T3", 1]]),  # answer + supporting drift
+        # 'a' present; a mirror id missing from original is also reported:
+    ]
+    out = record_mismatches(mirror + [_rec("c", q="Qc", ans="C")], original)
+    joined = "\n".join(out)
+    assert "a: question differs" in joined
+    assert "b: answer differs" in joined
+    assert "b: supporting_facts differ" in joined
+    assert "c: id not present in original" in joined
 
 
 def _write_cases(tmp_path):

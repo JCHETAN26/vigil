@@ -58,6 +58,31 @@ def select_subset(records: list[dict], n: int) -> list[dict]:
     return sorted(records, key=lambda r: r["_id"])[:n]
 
 
+def _supporting_set(record: dict) -> set[tuple]:
+    return {(title, sent) for title, sent in record.get("supporting_facts", [])}
+
+
+def record_mismatches(mirror: list[dict], original: list[dict]) -> list[str]:
+    """Compare mirror records against the original by ``_id`` and return human-readable
+    mismatches for id/question/answer/supporting_facts (empty list = the mirror matches the
+    original for every mirror record). Used to verify the HF parquet mirror against the
+    official ``hotpot_dev_distractor_v1.json`` for the pinned subset."""
+    by_id = {r["_id"]: r for r in original}
+    out: list[str] = []
+    for m in mirror:
+        o = by_id.get(m["_id"])
+        if o is None:
+            out.append(f"{m['_id']}: id not present in original")
+            continue
+        if m["question"] != o["question"]:
+            out.append(f"{m['_id']}: question differs")
+        if m["answer"] != o["answer"]:
+            out.append(f"{m['_id']}: answer differs")
+        if _supporting_set(m) != _supporting_set(o):
+            out.append(f"{m['_id']}: supporting_facts differ")
+    return out
+
+
 def build_corpus(records: list[dict]) -> list[dict]:
     """Pool every paragraph across ``records`` into ``[{doc_id, text}]``, keyed by Wikipedia
     title and deduped (first occurrence wins). doc_id = title, matching supporting_facts, so
