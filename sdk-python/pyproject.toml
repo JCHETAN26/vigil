@@ -1,0 +1,36 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "vigil-sdk"
+version = "0.1.0"
+description = "Vigil tracing SDK: a thin layer over OpenTelemetry that exports OTLP traces of agent runs, LLM calls, tool calls, and retrieval steps to the Vigil ingest service."
+requires-python = ">=3.10"
+dependencies = [
+    "opentelemetry-api>=1.25",
+    "opentelemetry-sdk>=1.25",
+]
+
+[project.optional-dependencies]
+# Exporters pull grpcio / requests; kept optional so tests can run with an injected
+# in-memory exporter and no heavy transitive builds.
+otlp-grpc = ["opentelemetry-exporter-otlp-proto-grpc>=1.25"]
+otlp-http = ["opentelemetry-exporter-otlp-proto-http>=1.25"]
+anthropic = ["anthropic>=0.40"]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/vigil"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["E501"]
