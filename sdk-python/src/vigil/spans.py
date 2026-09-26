@@ -10,7 +10,7 @@ from typing import Any
 
 from opentelemetry.trace import SpanKind, Status, StatusCode
 
-from .context import RunContext, reset_run, set_run
+from .context import RunContext, reset_role, reset_run, set_role, set_run
 from .tracer import get_content_capture, get_tracer
 
 # --- gen_ai attribute helpers (usable directly and by the Anthropic wrapper) ---
@@ -64,6 +64,8 @@ def _apply_run_attrs(span, rc: RunContext) -> None:
         span.set_attribute("vigil.eval.run_id", rc.eval_run_id)
     if rc.eval_case_id:
         span.set_attribute("vigil.eval.case_id", rc.eval_case_id)
+    if rc.trial is not None:  # trial 0 is valid, so test presence, not truthiness
+        span.set_attribute("vigil.eval.trial", rc.trial)
     if rc.session_id:
         span.set_attribute("gen_ai.conversation.id", rc.session_id)
     if rc.dataset:
@@ -80,13 +82,16 @@ def agent_run(
     run_id: str | None = None,
     eval_run_id: str | None = None,
     eval_case_id: str | None = None,
+    trial: int | None = None,
     session_id: str | None = None,
     dataset: str | None = None,
     name: str = "agent.run",
     attributes: dict | None = None,
 ) -> Iterator[Any]:
     """Open a root span for one agent execution and set the ambient run identity, so every
-    child span inherits it. ``run_id`` defaults to the trace id when not given (§2.2)."""
+    child span inherits it. ``run_id`` defaults to the trace id when not given (§2.2).
+    ``trial`` (0-based) is the repeat index within an eval run, stamped as
+    ``vigil.eval.trial`` on every span so the Week-3 bootstrap can resample per trial."""
     tracer = get_tracer()
     with tracer.start_as_current_span(name) as span:
         trace_id = format(span.get_span_context().trace_id, "032x")
@@ -95,6 +100,7 @@ def agent_run(
             run_kind=run_kind,
             eval_run_id=eval_run_id,
             eval_case_id=eval_case_id,
+            trial=trial,
             session_id=session_id,
             dataset=dataset,
         )
@@ -112,6 +118,20 @@ def agent_run(
             raise
         finally:
             reset_run(token)
+
+
+@contextmanager
+def role(name: str) -> Iterator[None]:
+    """Tag every span opened inside this block with ``vigil.role=<name>`` (e.g.
+    ``user_simulator``). Used to mark an LLM user-simulator's model calls so their tokens
+    and cost can be attributed separately from the agent's (design doc §4). Nests inside an
+    ``agent_run`` and does not open a span of its own; the wrapped LLM/tool spans carry the
+    attribute via the IdentitySpanProcessor."""
+    token = set_role(name)
+    try:
+        yield
+    finally:
+        reset_role(token)
 
 
 @contextmanager

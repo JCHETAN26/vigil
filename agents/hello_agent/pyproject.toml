@@ -8,7 +8,10 @@ version = "0.1.0"
 description = "Week 1 Vigil test agent: a tool-use agent (calculator + mock weather) instrumented with the Vigil SDK."
 requires-python = ">=3.10"
 # vigil-sdk is installed editably from ../../sdk-python by the Makefile (path dep).
-dependencies = ["anthropic>=0.40"]
+# anthropic is pinned to the SAME range as the engine (engine/pyproject.toml) and every
+# other agent package: the eval worker runs this agent's code inside the engine's venv, so
+# the version tested here must match the version the worker runs with.
+dependencies = ["anthropic>=1.8,<2"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff>=0.6"]

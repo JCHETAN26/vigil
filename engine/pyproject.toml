@@ -1,0 +1,40 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "vigil-engine"
+version = "0.1.0"
+description = "Vigil eval engine: runs a versioned agent over a dataset, scores each case, records results in Postgres, and links every result to its ClickHouse trace."
+requires-python = ">=3.10"
+# vigil-sdk is installed editably from ../sdk-python by the Makefile (path dep).
+#
+# The worker runs *agent* code inside this same venv (one subprocess per agent version), so
+# the agents' runtime deps must be installed here too. anthropic is pinned to the SAME range
+# as hello_agent and every agent package, so the version the agent is tested against is the
+# version the worker runs it with. See README ("Agent dependencies").
+dependencies = [
+    "psycopg[binary]>=3.1,<4",
+    "redis>=5,<6",
+    "anthropic>=1.8,<2",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-asyncio>=0.23", "ruff>=0.6"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["engine"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["integration: end-to-end test requiring the running stack (Postgres/ClickHouse/Redis/OTLP)"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["E501"]

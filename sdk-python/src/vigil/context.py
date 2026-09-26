@@ -17,11 +17,17 @@ class RunContext:
     run_kind: str = "live"  # "live" | "eval" | "unknown"
     eval_run_id: str | None = None
     eval_case_id: str | None = None
+    trial: int | None = None  # 0-based repeat index within an eval run (design doc §2.3)
     session_id: str | None = None
     dataset: str | None = None
 
 
 _current: ContextVar[RunContext | None] = ContextVar("vigil_run", default=None)
+
+# The active role within a run (e.g. "user_simulator"), stamped as vigil.role onto every
+# span opened while it is set. Orthogonal to run identity: a role is a sub-scope inside an
+# agent_run, so it lives in its own contextvar and nests independently.
+_role: ContextVar[str | None] = ContextVar("vigil_role", default=None)
 
 
 def current_run() -> RunContext | None:
@@ -39,3 +45,15 @@ def reset_run(token: Token) -> None:
 def current_run_kind() -> str:
     rc = _current.get()
     return rc.run_kind if rc else "unknown"
+
+
+def current_role() -> str | None:
+    return _role.get()
+
+
+def set_role(role: str) -> Token:
+    return _role.set(role)
+
+
+def reset_role(token: Token) -> None:
+    _role.reset(token)
