@@ -5,12 +5,14 @@
 
 VENV = .venv
 PY = $(VENV)/bin/python
+# uv-managed CPython (installed with `uv python install 3.12`); the host system Python is untouched.
+PYTHON_VERSION = 3.12
 ISOLATE = env -u PYTHONPATH
 
 .PHONY: venv install test test-integration lint fmt migrate clean
 
 venv:
-	python3 -m venv $(VENV)
+	uv venv --python $(PYTHON_VERSION) --seed $(VENV)
 
 # Install the engine, the SDK (editable path dep), and the agents whose code the worker
 # runs in this venv. hello_agent is installed with --no-deps because its anthropic pin is

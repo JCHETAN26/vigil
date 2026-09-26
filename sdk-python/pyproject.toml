@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "vigil-sdk"
 version = "0.1.0"
 description = "Vigil tracing SDK: a thin layer over OpenTelemetry that exports OTLP traces of agent runs, LLM calls, tool calls, and retrieval steps to the Vigil ingest service."
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = [
     "opentelemetry-api>=1.25",
     "opentelemetry-sdk>=1.25",

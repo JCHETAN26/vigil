@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "vigil-engine"
 version = "0.1.0"
 description = "Vigil eval engine: runs a versioned agent over a dataset, scores each case, records results in Postgres, and links every result to its ClickHouse trace."
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 # vigil-sdk is installed editably from ../sdk-python by the Makefile (path dep).
 #
 # The worker runs *agent* code inside this same venv (one subprocess per agent version), so

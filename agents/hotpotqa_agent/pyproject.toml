@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "hotpotqa-agent"
 version = "0.1.0"
 description = "HotpotQA multi-hop RAG agent under test: a search tool over a pooled BM25 corpus, instrumented with the Vigil SDK."
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 # vigil-sdk is installed editably from ../../sdk-python by the Makefile (path dep).
 # anthropic is pinned to the SAME range as the engine and every other agent package (the eval
 # worker runs this agent's code inside the engine venv). bm25s provides the Lucene BM25 variant.

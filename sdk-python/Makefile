@@ -5,12 +5,14 @@
 
 VENV = .venv
 PY = $(VENV)/bin/python
+# uv-managed CPython (installed with `uv python install 3.12`); the host system Python is untouched.
+PYTHON_VERSION = 3.12
 ISOLATE = env -u PYTHONPATH
 
 .PHONY: venv install test lint fmt clean
 
 venv:
-	python3 -m venv $(VENV)
+	uv venv --python $(PYTHON_VERSION) --seed $(VENV)
 
 install: venv
 	$(PY) -m pip install -q --upgrade pip
