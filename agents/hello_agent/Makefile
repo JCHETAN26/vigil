@@ -10,7 +10,7 @@ ROOT_ENV = ../../.env
 ISOLATE = env -u PYTHONPATH
 LOADENV = set -a; [ -f $(ROOT_ENV) ] && . $(ROOT_ENV); set +a;
 
-.PHONY: venv install run test lint clean
+.PHONY: venv install run test test-e2e lint clean
 
 venv:
 	uv venv --python $(PYTHON_VERSION) --seed $(VENV)
@@ -25,7 +25,11 @@ run:
 	$(LOADENV) $(ISOLATE) $(PY) -m hello_agent
 
 test:
-	$(LOADENV) $(ISOLATE) PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 $(PY) -m pytest -q
+	$(LOADENV) $(ISOLATE) PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 $(PY) -m pytest -q -m "not e2e"
+
+# Live end-to-end against the running stack (needs ANTHROPIC_API_KEY); skips cleanly if absent.
+test-e2e:
+	$(LOADENV) $(ISOLATE) PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 $(PY) -m pytest -q -m e2e
 
 lint:
 	$(ISOLATE) $(VENV)/bin/ruff check hello_agent tests
