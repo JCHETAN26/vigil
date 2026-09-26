@@ -74,6 +74,21 @@ def test_stratified_subset_matches_type_mix():
     assert counts == {"bridge": 8, "comparison": 2}
 
 
+def test_stratified_subset_excludes_and_stays_disjoint():
+    recs = [_rec(f"b{i:02d}", typ="bridge") for i in range(80)]
+    recs += [_rec(f"c{i:02d}", typ="comparison") for i in range(20)]
+    dev = set(stratified_subset(recs, 10))
+    base = stratified_subset(recs, 20, exclude=dev)
+    assert len(base) == 20
+    assert dev.isdisjoint(base)  # no dev question reused in the baseline
+    types = {r["_id"]: r["type"] for r in recs}
+    counts: dict[str, int] = {}
+    for i in base:
+        counts[types[i]] = counts.get(types[i], 0) + 1
+    # Type mix is preserved on the post-exclusion pool: 80/20 over 20 -> 16 bridge, 4 comparison.
+    assert counts == {"bridge": 16, "comparison": 4}
+
+
 def test_record_mismatches_detects_drift():
     mirror = [
         _rec("a", q="Qa", ans="A", supporting=[["T1", 0], ["T2", 1]]),

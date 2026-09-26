@@ -98,12 +98,18 @@ def build_corpus(records: list[dict]) -> list[dict]:
     return corpus
 
 
-def stratified_subset(records: list[dict], n: int) -> list[str]:
+def stratified_subset(records: list[dict], n: int, exclude: set[str] | None = None) -> list[str]:
     """Pick ``n`` case ids stratified by question ``type`` to match the input's type mix
     (bridge vs comparison), deterministically. Per-type counts are proportional (largest
-    remainder to hit exactly ``n``); within a type, ids are taken in sorted order."""
+    remainder to hit exactly ``n``); within a type, ids are taken in sorted order. Ids in
+    ``exclude`` are dropped from the candidate pool first (before both the proportion estimate
+    and the pick), so the result is disjoint from them — used to keep the baseline subset
+    disjoint from the dev subset while preserving the type mix."""
+    exclude = exclude or set()
     by_type: dict[str, list[str]] = {}
     for r in sorted(records, key=lambda r: r["_id"]):
+        if r["_id"] in exclude:
+            continue
         by_type.setdefault(r.get("type", "bridge"), []).append(r["_id"])
 
     total = sum(len(ids) for ids in by_type.values())

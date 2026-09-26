@@ -189,24 +189,12 @@ def build(records: list[dict], n: int, out: Path, source: dict, verification: st
         for doc in corpus:
             f.write(json.dumps(doc, ensure_ascii=False) + "\n")
 
-    cases_path = out / f"cases.{VERSION}.json"
-    cases_path.write_text(
-        json.dumps(
-            {
-                "version": VERSION,
-                "source": source,  # {name, url, revision (HF commit), sha256}
-                "verification": verification,  # 'passed' | 'disabled' | 'skipped: …'
-                "count": len(cases),
-                "cases": cases,
-            },
-            ensure_ascii=False,
-        )
-    )
-
     subsets_dir = out / "subsets"
     subsets_dir.mkdir(exist_ok=True)
     dev20 = [c["case_id"] for c in cases[:20]]
-    base100 = stratified_subset(subset, 100)
+    # base100 is stratified by type AND disjoint from dev20, so the measurement baseline never
+    # reuses a question we sanity-checked on during development.
+    base100 = stratified_subset(subset, 100, exclude=set(dev20))
     (subsets_dir / "dev20.txt").write_text("\n".join(dev20) + "\n")
     (subsets_dir / "base100.txt").write_text("\n".join(base100) + "\n")
 
@@ -217,6 +205,34 @@ def build(records: list[dict], n: int, out: Path, source: dict, verification: st
         for i in ids:
             counts[by_id[i]] = counts.get(by_id[i], 0) + 1
         return counts
+
+    # Record the subsets in the manifest so the dev/baseline split is documented and auditable.
+    overlap = sorted(set(dev20) & set(base100))
+    subsets_manifest = {
+        "dev20": {"n": len(dev20), "mix": mix(dev20)},
+        "base100": {
+            "n": len(base100),
+            "mix": mix(base100),
+            "stratified_by": "type",
+            "disjoint_from": "dev20",
+        },
+        "dev20_base100_overlap": len(overlap),
+    }
+
+    cases_path = out / f"cases.{VERSION}.json"
+    cases_path.write_text(
+        json.dumps(
+            {
+                "version": VERSION,
+                "source": source,  # {name, url, revision (HF commit), sha256}
+                "verification": verification,  # 'passed' | 'disabled' | 'skipped: …'
+                "count": len(cases),
+                "subsets": subsets_manifest,  # dev/baseline split: sizes, type mix, disjointness
+                "cases": cases,
+            },
+            ensure_ascii=False,
+        )
+    )
 
     print(f"corpus:  {len(corpus)} unique paragraphs -> {corpus_path}")
     print(f"cases:   {len(cases)} questions -> {cases_path}")
