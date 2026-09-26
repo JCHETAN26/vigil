@@ -27,6 +27,11 @@ var (
 type modelPrice struct {
 	Input  float64 `json:"input"`  // USD per 1M input tokens
 	Output float64 `json:"output"` // USD per 1M output tokens
+	// Prompt-caching rates (USD per 1M tokens). CacheWrite5m is the 5-minute-TTL cache-write
+	// rate (base input x 1.25); CacheRead is the cache-hit rate (base input x 0.1 for standard
+	// models). Zero when the model predates cache pricing in the table.
+	CacheWrite5m float64 `json:"cache_write_5m"`
+	CacheRead    float64 `json:"cache_read"`
 }
 
 // Table is a loaded price table.
@@ -63,6 +68,15 @@ func (t *Table) SetLogger(l *slog.Logger) { t.log = l }
 // models cost 0 (the consumer records 0 rather than failing), matching the schema note
 // "computed by consumer; 0 if unknown". An unknown non-empty model is logged once.
 func (t *Table) Cost(model string, inputTokens, outputTokens uint32) float64 {
+	return t.CostWithCache(model, inputTokens, 0, 0, outputTokens)
+}
+
+// CostWithCache returns the USD cost for a span that used prompt caching. Anthropic reports
+// cache-write and cache-read tokens separately from ordinary (uncached) input tokens, and
+// prices them at the model's cache_write_5m and cache_read rates respectively; ordinary output
+// tokens are unchanged. Unknown or empty models cost 0 (matching Cost). Callers that don't use
+// caching pass 0 for both cache counts (that's what Cost does).
+func (t *Table) CostWithCache(model string, inputTokens, cacheWriteTokens, cacheReadTokens, outputTokens uint32) float64 {
 	base := normalizeModel(model)
 	if base == "" {
 		return 0 // spans with no model (e.g. non-LLM spans) are not a pricing gap
@@ -72,7 +86,10 @@ func (t *Table) Cost(model string, inputTokens, outputTokens uint32) float64 {
 		t.warnUnknown(base, model)
 		return 0
 	}
-	return float64(inputTokens)/1e6*p.Input + float64(outputTokens)/1e6*p.Output
+	return float64(inputTokens)/1e6*p.Input +
+		float64(cacheWriteTokens)/1e6*p.CacheWrite5m +
+		float64(cacheReadTokens)/1e6*p.CacheRead +
+		float64(outputTokens)/1e6*p.Output
 }
 
 func (t *Table) warnUnknown(base, raw string) {

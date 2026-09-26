@@ -53,22 +53,48 @@ class CostMeter:
         if not models:
             raise ValueError(f"{self.path} has no models")
         self.prices_as_of: str = table.get("prices_as_of", "")
-        # {normalized_model -> (input_per_million, output_per_million)}
-        self._prices: dict[str, tuple[float, float]] = {
-            name: (float(p["input"]), float(p["output"])) for name, p in models.items()
+        # {normalized_model -> (input, output, cache_write_5m, cache_read) per 1M tokens}.
+        # cache_* default to 0 for any model that predates cache pricing in the table.
+        self._prices: dict[str, tuple[float, float, float, float]] = {
+            name: (
+                float(p["input"]),
+                float(p["output"]),
+                float(p.get("cache_write_5m", 0.0)),
+                float(p.get("cache_read", 0.0)),
+            )
+            for name, p in models.items()
         }
 
     def cost(self, model: str, input_tokens: int, output_tokens: int) -> float:
         """USD cost for ``input_tokens``/``output_tokens`` at ``model``'s rate. Unknown or
-        empty model → 0.0."""
+        empty model → 0.0. The zero-cache case of :meth:`cost_with_cache`."""
+        return self.cost_with_cache(model, input_tokens, output_tokens, 0, 0)
+
+    def cost_with_cache(
+        self,
+        model: str,
+        input_tokens: int,
+        output_tokens: int,
+        cache_write_tokens: int = 0,
+        cache_read_tokens: int = 0,
+    ) -> float:
+        """USD cost for a call that used prompt caching. Anthropic reports cache-write and
+        cache-read tokens separately from ordinary (uncached) input tokens and prices them at
+        the model's ``cache_write_5m`` and ``cache_read`` rates; output is unchanged. Unknown or
+        empty model → 0.0 (matching the Go writer)."""
         base = _normalize_model(model or "")
         if not base:
             return 0.0
         rate = self._prices.get(base)
         if rate is None:
             return 0.0
-        in_rate, out_rate = rate
-        return input_tokens / 1e6 * in_rate + output_tokens / 1e6 * out_rate
+        in_rate, out_rate, cache_write_rate, cache_read_rate = rate
+        return (
+            input_tokens / 1e6 * in_rate
+            + cache_write_tokens / 1e6 * cache_write_rate
+            + cache_read_tokens / 1e6 * cache_read_rate
+            + output_tokens / 1e6 * out_rate
+        )
 
     def has_model(self, model: str) -> bool:
         return _normalize_model(model or "") in self._prices

@@ -1,0 +1,23 @@
+{
+  "benchmark": "tau2-bench",
+  "repo": "https://github.com/sierra-research/tau2-bench",
+  "pinned_commit": "b7ea9074c1cba482b30687fecdb5c8425fd6f619",
+  "pinned_commit_date": "2026-09-17",
+  "license": "MIT",
+  "domain": "retail",
+  "control_model": "single",
+  "control_model_evidence": "src/tau2/domains/retail/environment.py builds Environment(domain, policy, tools) with no user_tools and rejects solo_mode; only the agent has tools, the user is a pure LLM simulator. (The dual-control domain telecom imports TelecomUserTools.)",
+  "split_source": "data/tau2/domains/retail/split_tasks.json (at the pinned commit): train=74, test=40, base=114 (base = train + test, train and test disjoint).",
+  "dev": {
+    "n": 10,
+    "drawn_from": "train",
+    "selection": "first 10 train task ids by numeric order (deterministic)",
+    "task_ids": ["0", "1", "2", "3", "4", "6", "7", "8", "10", "11"]
+  },
+  "measurement": {
+    "drawn_from": "test",
+    "note": "The measurement baseline is sized by cost and drawn from the test split; the exact subset is chosen after the dev run measures per-task cost. The whole test split is the candidate pool.",
+    "candidate_task_ids": ["5", "9", "12", "17", "18", "26", "27", "32", "33", "36", "38", "39", "40", "42", "45", "49", "51", "53", "55", "56", "60", "61", "62", "64", "65", "68", "70", "71", "74", "77", "79", "86", "90", "94", "97", "100", "101", "102", "108", "111"]
+  },
+  "disjointness": "dev is drawn from train and measurement from test; train and test are disjoint in split_tasks.json, so the 10 dev tasks share no id with any measurement task (verified: dev ∩ test = ∅)."
+}

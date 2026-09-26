@@ -34,3 +34,6 @@ more than feature count.
 - Every benchmark result is produced by a script in bench/ that saves raw data
   and generates the table, so results are reproducible.
 - When unsure about a design decision, propose options with trade-offs and ask.
+- Run `make test-all` (repo root) at the end of every stage before committing. It runs every
+  suite across all packages and skips the live suites cleanly when the stack or
+  `ANTHROPIC_API_KEY` is missing.
