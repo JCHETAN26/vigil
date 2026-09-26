@@ -24,6 +24,16 @@ class ToolCall:
 
 
 @dataclass
+class Retrieval:
+    """One retrieval/search call the agent made: the query and the ids of the documents it
+    got back, in rank order. Retrieval scorers (recall@k, nDCG) read these; the SDK also
+    records a retrieval span per call so the same is visible in ClickHouse."""
+
+    query: str
+    doc_ids: list[str] = field(default_factory=list)
+
+
+@dataclass
 class RunResult:
     output: Any  # the agent's full output (may include reasoning/explanation)
     # A short, canonical final answer for scoring, separate from the full output. Scorers like
@@ -31,6 +41,7 @@ class RunResult:
     # None — so an agent that explains its work can still be scored on just the answer.
     final_answer: Any = None
     tool_calls: list[ToolCall] = field(default_factory=list)
+    retrievals: list[Retrieval] = field(default_factory=list)  # one per search call (RAG agents)
     trace_id: str = ""  # 032x hex; links to ClickHouse
     input_tokens: int = 0  # AGENT tokens (excludes user simulator)
     output_tokens: int = 0

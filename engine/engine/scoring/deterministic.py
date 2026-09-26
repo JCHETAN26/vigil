@@ -14,6 +14,7 @@ from vigil import RunResult
 from engine.datasets.base import Case
 
 from .base import ScoreResult
+from .retrieval import NDCG, AllGoldRetrieved, RetrievalRecall
 
 _WS = re.compile(r"\s+")
 
@@ -178,9 +179,12 @@ _INFERENCE = (
     ("tool_calls", ExpectedToolCalls),
     ("arguments", RequiredArguments),
 )
-# All selectable-by-name scorers (inferred ones plus explicit-only ones like TokenF1).
+# All selectable-by-name scorers (inferred ones plus explicit-only ones like TokenF1 and the
+# retrieval scorers). Retrieval scorers are opt-in via expected['scorers'] — they need
+# supporting_titles + the agent's retrievals, so they never apply by key inference.
 _BY_NAME = {cls.name: cls for _, cls in _INFERENCE}
-_BY_NAME[TokenF1.name] = TokenF1
+for _cls in (TokenF1, RetrievalRecall, NDCG, AllGoldRetrieved):
+    _BY_NAME[_cls.name] = _cls
 
 
 def scorers_for(expected: dict) -> list:

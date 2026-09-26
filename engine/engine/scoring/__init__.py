@@ -9,6 +9,7 @@ from .deterministic import (
     TokenF1,
     scorers_for,
 )
+from .retrieval import NDCG, AllGoldRetrieved, RetrievalRecall, merged_ranking
 
 __all__ = [
     "CaseScore",
@@ -19,5 +20,9 @@ __all__ = [
     "ExpectedToolCalls",
     "RequiredArguments",
     "TokenF1",
+    "RetrievalRecall",
+    "NDCG",
+    "AllGoldRetrieved",
+    "merged_ranking",
     "scorers_for",
 ]
