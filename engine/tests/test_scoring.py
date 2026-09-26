@@ -35,17 +35,28 @@ def test_expected_tool_calls_set_and_ordered():
     s = ExpectedToolCalls()
     calls = [ToolCall("calculator"), ToolCall("get_weather")]
     # Set match: order-independent by default.
-    assert s.score(_case({"tool_calls": ["get_weather", "calculator"]}), _result(tool_calls=calls)).passed
+    assert s.score(
+        _case({"tool_calls": ["get_weather", "calculator"]}), _result(tool_calls=calls)
+    ).passed
     # Ordered match fails when the order differs.
-    r = s.score(_case({"tool_calls": ["get_weather", "calculator"], "tool_calls_ordered": True}), _result(tool_calls=calls))
+    r = s.score(
+        _case({"tool_calls": ["get_weather", "calculator"], "tool_calls_ordered": True}),
+        _result(tool_calls=calls),
+    )
     assert not r.passed
     # Ordered match passes with the exact order.
-    assert s.score(_case({"tool_calls": ["calculator", "get_weather"], "tool_calls_ordered": True}), _result(tool_calls=calls)).passed
+    assert s.score(
+        _case({"tool_calls": ["calculator", "get_weather"], "tool_calls_ordered": True}),
+        _result(tool_calls=calls),
+    ).passed
 
 
 def test_expected_tool_calls_partial_score():
     s = ExpectedToolCalls()
-    r = s.score(_case({"tool_calls": ["calculator", "get_weather"]}), _result(tool_calls=[ToolCall("calculator")]))
+    r = s.score(
+        _case({"tool_calls": ["calculator", "get_weather"]}),
+        _result(tool_calls=[ToolCall("calculator")]),
+    )
     assert not r.passed
     assert r.score == 0.5  # one of two expected present
 
@@ -54,18 +65,28 @@ def test_required_arguments():
     s = RequiredArguments()
     calls = [ToolCall("calculator", {"expression": "2 + 2", "extra": 1})]
     # Present + equal where a value is specified.
-    assert s.score(_case({"arguments": {"calculator": {"expression": "2 + 2"}}}), _result(tool_calls=calls)).passed
+    assert s.score(
+        _case({"arguments": {"calculator": {"expression": "2 + 2"}}}), _result(tool_calls=calls)
+    ).passed
     # null value requires presence only.
-    assert s.score(_case({"arguments": {"calculator": {"expression": None}}}), _result(tool_calls=calls)).passed
+    assert s.score(
+        _case({"arguments": {"calculator": {"expression": None}}}), _result(tool_calls=calls)
+    ).passed
     # Wrong value fails.
-    assert not s.score(_case({"arguments": {"calculator": {"expression": "9"}}}), _result(tool_calls=calls)).passed
+    assert not s.score(
+        _case({"arguments": {"calculator": {"expression": "9"}}}), _result(tool_calls=calls)
+    ).passed
     # Missing tool fails.
-    assert not s.score(_case({"arguments": {"get_weather": {"location": None}}}), _result(tool_calls=calls)).passed
+    assert not s.score(
+        _case({"arguments": {"get_weather": {"location": None}}}), _result(tool_calls=calls)
+    ).passed
 
 
 def test_scorers_for_inference_and_explicit():
     assert [type(x).__name__ for x in scorers_for({"answer": "x"})] == ["ExactMatch"]
-    inferred = [type(x).__name__ for x in scorers_for({"answer": "x", "tool_calls": [], "arguments": {}})]
+    inferred = [
+        type(x).__name__ for x in scorers_for({"answer": "x", "tool_calls": [], "arguments": {}})
+    ]
     assert inferred == ["ExactMatch", "ExpectedToolCalls", "RequiredArguments"]
     explicit = [type(x).__name__ for x in scorers_for({"scorers": ["ExpectedToolCalls"]})]
     assert explicit == ["ExpectedToolCalls"]

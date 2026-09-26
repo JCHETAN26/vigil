@@ -1,0 +1,17 @@
+{
+  "version": "2026-09-25",
+  "cases": [
+    {
+      "case_id": "calc-1",
+      "input": "What is 23 * 19?",
+      "expected": {"answer": "437", "tool_calls": ["calculator"]},
+      "tags": ["math"]
+    },
+    {
+      "case_id": "wx-1",
+      "input": "What's the weather in Paris?",
+      "expected": {"tool_calls": ["get_weather"]},
+      "tags": ["weather"]
+    }
+  ]
+}

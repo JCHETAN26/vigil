@@ -17,15 +17,25 @@ def _write(tmp_path, doc):
 
 
 def test_load_cases(tmp_path):
-    path = _write(tmp_path, {
-        "version": "2026-09-25",
-        "cases": [
-            {"case_id": "calc-1", "input": "What is 23 * 19?",
-             "expected": {"answer": "437", "tool_calls": ["calculator"]}, "tags": ["math"]},
-            {"case_id": "wx-1", "input": {"question": "Weather in Paris?"},
-             "expected": {"tool_calls": ["get_weather"]}},
-        ],
-    })
+    path = _write(
+        tmp_path,
+        {
+            "version": "2026-09-25",
+            "cases": [
+                {
+                    "case_id": "calc-1",
+                    "input": "What is 23 * 19?",
+                    "expected": {"answer": "437", "tool_calls": ["calculator"]},
+                    "tags": ["math"],
+                },
+                {
+                    "case_id": "wx-1",
+                    "input": {"question": "Weather in Paris?"},
+                    "expected": {"tool_calls": ["get_weather"]},
+                },
+            ],
+        },
+    )
     adapter = LocalJSONAdapter(path)
     assert adapter.name == "local"
     assert adapter.version == "2026-09-25"
@@ -51,9 +61,15 @@ def test_from_config(tmp_path):
 
 
 def test_duplicate_case_id_rejected(tmp_path):
-    path = _write(tmp_path, {"cases": [
-        {"case_id": "d", "expected": {}}, {"case_id": "d", "expected": {}},
-    ]})
+    path = _write(
+        tmp_path,
+        {
+            "cases": [
+                {"case_id": "d", "expected": {}},
+                {"case_id": "d", "expected": {}},
+            ]
+        },
+    )
     with pytest.raises(ValueError, match="duplicate case_id"):
         list(LocalJSONAdapter(path).load())
 
@@ -70,6 +86,7 @@ def test_registry():
         get_adapter("nope")
 
     with pytest.raises(ValueError, match="no non-empty 'name'"):
+
         @register_adapter
         class _NoName:  # noqa: N801
             pass

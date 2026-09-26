@@ -42,7 +42,9 @@ def test_unknown_and_empty_model_cost_zero():
 
 def test_prices_path_override(tmp_path, monkeypatch):
     custom = tmp_path / "prices.json"
-    custom.write_text(json.dumps({"prices_as_of": "test", "models": {"m": {"input": 2.0, "output": 4.0}}}))
+    custom.write_text(
+        json.dumps({"prices_as_of": "test", "models": {"m": {"input": 2.0, "output": 4.0}}})
+    )
     monkeypatch.setenv("VIGIL_PRICES_PATH", str(custom))
     meter = CostMeter()
     assert meter.prices_as_of == "test"
