@@ -162,6 +162,9 @@ class HotpotQAAdapter:
                     "type": c.get("type", "bridge"),
                     "ndcg_k": 10,
                     "scorers": HOTPOTQA_SCORERS,
+                    # TokenF1 (>= 0.8) decides pass/fail; everything else is informational.
+                    "pass_scorers": ["TokenF1"],
+                    "f1_threshold": 0.8,
                 },
                 tags=[c.get("type", "bridge")] + ([c["level"]] if c.get("level") else []),
             )

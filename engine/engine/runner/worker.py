@@ -168,10 +168,17 @@ class _Worker:
             sim_input_tokens=result.sim_input_tokens,
             sim_output_tokens=result.sim_output_tokens,
             sim_cost_usd=sim_cost_usd,
+            # The full transcript we persist, enough to re-score a run offline without
+            # re-running the agent (bench/hotpotqa_baseline.py rebuilds a RunResult from this):
+            # the final answer scorers compare, the tool calls, and the per-call retrievals.
             output={
                 "output": result.output,
+                "final_answer": result.final_answer,
                 "tool_calls": [
                     {"name": tc.name, "arguments": tc.arguments} for tc in result.tool_calls
+                ],
+                "retrievals": [
+                    {"query": r.query, "doc_ids": list(r.doc_ids)} for r in result.retrievals
                 ],
             },
             # The budget counts agent + simulator cost (design §3.3, §7).

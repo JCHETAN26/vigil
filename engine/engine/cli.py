@@ -33,6 +33,8 @@ def cmd_migrate(_args) -> int:
 def cmd_suite_create(args) -> int:
     adapter_cls = get_adapter(args.adapter)
     config = {"path": args.path}
+    if args.subset_path:
+        config["subset_path"] = args.subset_path
     if args.version:
         config["version"] = args.version
     adapter = adapter_cls.from_config(config)
@@ -126,6 +128,11 @@ def build_parser() -> argparse.ArgumentParser:
     create.add_argument("--name", required=True)
     create.add_argument("--adapter", required=True, help="adapter name, e.g. 'local'")
     create.add_argument("--path", required=True, help="dataset path (adapter-specific)")
+    create.add_argument(
+        "--subset-path",
+        default=None,
+        help="file of case ids (one per line) to restrict the suite to (adapter-specific)",
+    )
     create.add_argument("--version", default=None)
     create.set_defaults(func=cmd_suite_create)
 

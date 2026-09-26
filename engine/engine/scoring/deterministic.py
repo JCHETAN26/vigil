@@ -5,7 +5,6 @@ and shareable. ``scorers_for`` picks which apply to a case.
 
 from __future__ import annotations
 
-import re
 import string
 from collections import Counter
 
@@ -16,37 +15,6 @@ from engine.datasets.base import Case
 from .base import ScoreResult
 from .retrieval import NDCG, AllGoldRetrieved, RetrievalRecall
 
-_WS = re.compile(r"\s+")
-
-
-def _normalize(value) -> str:
-    """Normalized text compare: string-ify, strip, casefold, collapse internal whitespace."""
-    return _WS.sub(" ", str(value).strip()).casefold()
-
-
-def _predicted(result: RunResult):
-    """The text a scorer compares: the short ``final_answer`` when the agent set one, else the
-    full ``output`` (design: final_answer is separate from the full output)."""
-    return result.final_answer if result.final_answer is not None else result.output
-
-
-class ExactMatch:
-    """Normalized compare of the agent's final answer to ``expected['answer']``."""
-
-    name = "ExactMatch"
-
-    def score(self, case: Case, result: RunResult) -> ScoreResult:
-        expected = case.expected.get("answer")
-        pred = _predicted(result)
-        passed = _normalize(pred) == _normalize(expected)
-        return ScoreResult(
-            name=self.name,
-            passed=passed,
-            score=1.0 if passed else 0.0,
-            detail={"expected": expected, "got": pred},
-        )
-
-
 _ARTICLES = {"a", "an", "the"}
 _PUNCT_TABLE = str.maketrans("", "", string.punctuation)
 
@@ -56,6 +24,38 @@ def _squad_tokens(text) -> list[str]:
     and split on whitespace."""
     lowered = str(text).lower().translate(_PUNCT_TABLE)
     return [tok for tok in lowered.split() if tok not in _ARTICLES]
+
+
+def _squad_normalize(value) -> str:
+    """The canonical SQuAD/HotpotQA answer string: the normalized tokens re-joined on single
+    spaces. Both ExactMatch and TokenF1 compare on this, so 'The Yoruba' == 'Yoruba'."""
+    return " ".join(_squad_tokens(value))
+
+
+def _predicted(result: RunResult):
+    """The text a scorer compares: the short ``final_answer`` when the agent set one, else the
+    full ``output`` (design: final_answer is separate from the full output)."""
+    return result.final_answer if result.final_answer is not None else result.output
+
+
+class ExactMatch:
+    """Exact match of the agent's final answer to ``expected['answer']`` under the official
+    SQuAD/HotpotQA answer normalization (lowercase, strip punctuation, drop the articles
+    a/an/the, collapse whitespace) — the same normalization TokenF1 uses, so 'The Yoruba'
+    exactly matches 'Yoruba'."""
+
+    name = "ExactMatch"
+
+    def score(self, case: Case, result: RunResult) -> ScoreResult:
+        expected = case.expected.get("answer")
+        pred = _predicted(result)
+        passed = _squad_normalize(pred) == _squad_normalize(expected)
+        return ScoreResult(
+            name=self.name,
+            passed=passed,
+            score=1.0 if passed else 0.0,
+            detail={"expected": expected, "got": pred},
+        )
 
 
 def _token_f1(pred: str, gold: str) -> tuple[float, float, float]:

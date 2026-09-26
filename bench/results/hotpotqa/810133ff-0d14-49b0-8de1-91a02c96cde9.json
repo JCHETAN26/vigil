@@ -1,0 +1,690 @@
+{
+  "meta": {
+    "run_id": "810133ff-0d14-49b0-8de1-91a02c96cde9",
+    "suite": "hotpotqa-dev20",
+    "agent_id": "hotpotqa-agent",
+    "mode": "development",
+    "trials_per_case": 1,
+    "cost_spent_usd": 0.149927,
+    "notes": "Stage D dev run v2 (fixed scorers: SQuAD ExactMatch, pass=TokenF1>=0.8)",
+    "skipped_non_ok": 0,
+    "title": "dev20 (development, fixed scorers)",
+    "rescored": true
+  },
+  "generated_at": "2026-09-26T19:15:24.394998+00:00",
+  "n_boot": 10000,
+  "seed": 1234,
+  "metrics": [
+    "passed",
+    "TokenF1",
+    "ExactMatch",
+    "RetrievalRecall@5",
+    "RetrievalRecall@10",
+    "NDCG",
+    "AllGoldRetrieved"
+  ],
+  "units": [
+    {
+      "case_id": "5a70eee85542994082a3e3f0",
+      "trial": 0,
+      "type": "bridge",
+      "metrics": {
+        "passed": 0.0,
+        "ExactMatch": 0.0,
+        "TokenF1": 0.6666666666666666,
+        "RetrievalRecall@5": 0.5,
+        "RetrievalRecall@10": 1.0,
+        "NDCG": 0.45560514958746035,
+        "AllGoldRetrieved": 1.0
+      },
+      "cost_usd": 0.019952,
+      "input_tokens": 17077,
+      "output_tokens": 575,
+      "latency_ms": 8371
+    },
+    {
+      "case_id": "5a70f0a75542994082a3e403",
+      "trial": 0,
+      "type": "bridge",
+      "metrics": {
+        "passed": 0.0,
+        "ExactMatch": 0.0,
+        "TokenF1": 0.6666666666666666,
+        "RetrievalRecall@5": 1.0,
+        "RetrievalRecall@10": 1.0,
+        "NDCG": 1.0,
+        "AllGoldRetrieved": 1.0
+      },
+      "cost_usd": 0.003034,
+      "input_tokens": 2304,
+      "output_tokens": 146,
+      "latency_ms": 2738
+    },
+    {
+      "case_id": "5a70f0e75542994082a3e408",
+      "trial": 0,
+      "type": "comparison",
+      "metrics": {
+        "passed": 0.0,
+        "ExactMatch": 0.0,
+        "TokenF1": 0.0,
+        "RetrievalRecall@5": 0.5,
+        "RetrievalRecall@10": 1.0,
+        "NDCG": 0.5249810332008933,
+        "AllGoldRetrieved": 1.0
+      },
+      "cost_usd": 0.010947,
+      "input_tokens": 9107,
+      "output_tokens": 368,
+      "latency_ms": 5816
+    },
+    {
+      "case_id": "5a70f11a5542994082a3e40b",
+      "trial": 0,
+      "type": "comparison",
+      "metrics": {
+        "passed": 0.0,
+        "ExactMatch": 0.0,
+        "TokenF1": 0.2857142857142857,
+        "RetrievalRecall@5": 1.0,
+        "RetrievalRecall@10": 1.0,
+        "NDCG": 0.8503449055347546,
+        "AllGoldRetrieved": 1.0
+      },
+      "cost_usd": 0.040378,
+      "input_tokens": 36523,
+      "output_tokens": 771,
+      "latency_ms": 11709
+    },
+    {
+      "case_id": "5a70f1685542994082a3e40f",
+      "trial": 0,
+      "type": "bridge",
+      "metrics": {
+        "passed": 0.0,
+        "ExactMatch": 0.0,
+        "TokenF1": 0.14285714285714288,
+        "RetrievalRecall@5": 1.0,
+        "RetrievalRecall@10": 1.0,
+        "NDCG": 1.0,
+        "AllGoldRetrieved": 1.0
+      },
+      "cost_usd": 0.004546,
+      "input_tokens": 2826,
+      "output_tokens": 344,
+      "latency_ms": 3584
+    },
+    {
+      "case_id": "5a70f39c5542994082a3e429",
+      "trial": 0,
+      "type": "bridge",
+      "metrics": {
+        "passed": 1.0,
+        "ExactMatch": 1.0,
+        "TokenF1": 1.0,
+        "RetrievalRecall@5": 1.0,
+        "RetrievalRecall@10": 1.0,
+        "NDCG": 0.6509209298071326,
+        "AllGoldRetrieved": 1.0
+      },
+      "cost_usd": 0.003098,
+      "input_tokens": 2178,
+      "output_tokens": 184,
+      "latency_ms": 2030
+    },
+    {
+      "case_id": "5a70f4695542994082a3e435",
+      "trial": 0,
+      "type": "comparison",
+      "metrics": {
+        "passed": 1.0,
+        "ExactMatch": 1.0,
+        "TokenF1": 1.0,
+        "RetrievalRecall@5": 1.0,
+        "RetrievalRecall@10": 1.0,
+        "NDCG": 0.9197207891481876,
+        "AllGoldRetrieved": 1.0
+      },
+      "cost_usd": 0.003868,
+      "input_tokens": 2878,
+      "output_tokens": 198,
+      "latency_ms": 2822
+    },
+    {
+      "case_id": "5a70f4c45542994082a3e437",
+      "trial": 0,
+      "type": "bridge",
+      "metrics": {
+        "passed": 1.0,
+        "ExactMatch": 1.0,
+        "TokenF1": 1.0,
+        "RetrievalRecall@5": 0.5,
+        "RetrievalRecall@10": 0.5,
+        "NDCG": 0.6131471927654584,
+        "AllGoldRetrieved": 0.0
+      },
+      "cost_usd": 0.003113,
+      "input_tokens": 2183,
+      "output_tokens": 186,
+      "latency_ms": 2896
+    },
+    {
+      "case_id": "5a70f6425542994082a3e44c",
+      "trial": 0,
+      "type": "bridge",
+      "metrics": {
+        "passed": 0.0,
+        "ExactMatch": 0.0,
+        "TokenF1": 0.6666666666666666,
+        "RetrievalRecall@5": 0.5,
+        "RetrievalRecall@10": 1.0,
+        "NDCG": 0.45560514958746035,
+        "AllGoldRetrieved": 1.0
+      },
+      "cost_usd": 0.006102,
+      "input_tokens": 4382,
+      "output_tokens": 344,
+      "latency_ms": 3768
+    },
+    {
+      "case_id": "5a70f9335542994082a3e46a",
+      "trial": 0,
+      "type": "comparison",
+      "metrics": {
+        "passed": 1.0,
+        "ExactMatch": 1.0,
+        "TokenF1": 1.0,
+        "RetrievalRecall@5": 0.5,
+        "RetrievalRecall@10": 1.0,
+        "NDCG": 0.6052602440527057,
+        "AllGoldRetrieved": 1.0
+      },
+      "cost_usd": 0.003685,
+      "input_tokens": 2755,
+      "output_tokens": 186,
+      "latency_ms": 2775
+    },
+    {
+      "case_id": "5a70ff335542994082a3e49c",
+      "trial": 0,
+      "type": "bridge",
+      "metrics": {
+        "passed": 1.0,
+        "ExactMatch": 0.0,
+        "TokenF1": 0.8,
+        "RetrievalRecall@5": 0.0,
+        "RetrievalRecall@10": 0.5,
+        "NDCG": 0.18457569677956817,
+        "AllGoldRetrieved": 1.0
+      },
+      "cost_usd": 0.014535,
+      "input_tokens": 11875,
+      "output_tokens": 532,
+      "latency_ms": 6025
+    },
+    {
+      "case_id": "5a7100435542994082a3e4a3",
+      "trial": 0,
+      "type": "comparison",
+      "metrics": {
+        "passed": 0.0,
+        "ExactMatch": 0.0,
+        "TokenF1": 0.0,
+        "RetrievalRecall@5": 0.5,
+        "RetrievalRecall@10": 1.0,
+        "NDCG": 0.8315546295836225,
+        "AllGoldRetrieved": 1.0
+      },
+      "cost_usd": 0.004164,
+      "input_tokens": 3174,
+      "output_tokens": 198,
+      "latency_ms": 2643
+    },
+    {
+      "case_id": "5a7103b35542994082a3e4c0",
+      "trial": 0,
+      "type": "comparison",
+      "metrics": {
+        "passed": 1.0,
+        "ExactMatch": 1.0,
+        "TokenF1": 1.0,
+        "RetrievalRecall@5": 1.0,
+        "RetrievalRecall@10": 1.0,
+        "NDCG": 0.8503449055347546,
+        "AllGoldRetrieved": 1.0
+      },
+      "cost_usd": 0.004025,
+      "input_tokens": 3000,
+      "output_tokens": 205,
+      "latency_ms": 2392
+    },
+    {
+      "case_id": "5a7108fa5542994082a3e4ef",
+      "trial": 0,
+      "type": "comparison",
+      "metrics": {
+        "passed": 1.0,
+        "ExactMatch": 1.0,
+        "TokenF1": 1.0,
+        "RetrievalRecall@5": 0.5,
+        "RetrievalRecall@10": 1.0,
+        "NDCG": 0.5249810332008933,
+        "AllGoldRetrieved": 1.0
+      },
+      "cost_usd": 0.00378,
+      "input_tokens": 2845,
+      "output_tokens": 187,
+      "latency_ms": 2743
+    },
+    {
+      "case_id": "5a71095e5542994082a3e4f3",
+      "trial": 0,
+      "type": "bridge",
+      "metrics": {
+        "passed": 1.0,
+        "ExactMatch": 1.0,
+        "TokenF1": 1.0,
+        "RetrievalRecall@5": 1.0,
+        "RetrievalRecall@10": 1.0,
+        "NDCG": 1.0,
+        "AllGoldRetrieved": 1.0
+      },
+      "cost_usd": 0.002562,
+      "input_tokens": 2212,
+      "output_tokens": 70,
+      "latency_ms": 1541
+    },
+    {
+      "case_id": "5a7109e95542994082a3e4fa",
+      "trial": 0,
+      "type": "bridge",
+      "metrics": {
+        "passed": 0.0,
+        "ExactMatch": 0.0,
+        "TokenF1": 0.5,
+        "RetrievalRecall@5": 0.5,
+        "RetrievalRecall@10": 1.0,
+        "NDCG": 0.8315546295836225,
+        "AllGoldRetrieved": 1.0
+      },
+      "cost_usd": 0.00404,
+      "input_tokens": 3040,
+      "output_tokens": 200,
+      "latency_ms": 2819
+    },
+    {
+      "case_id": "5a710a1e5542994082a3e4fd",
+      "trial": 0,
+      "type": "bridge",
+      "metrics": {
+        "passed": 1.0,
+        "ExactMatch": 1.0,
+        "TokenF1": 1.0,
+        "RetrievalRecall@5": 0.5,
+        "RetrievalRecall@10": 1.0,
+        "NDCG": 0.8315546295836225,
+        "AllGoldRetrieved": 1.0
+      },
+      "cost_usd": 0.005682,
+      "input_tokens": 4397,
+      "output_tokens": 257,
+      "latency_ms": 3499
+    },
+    {
+      "case_id": "5a710a915542994082a3e504",
+      "trial": 0,
+      "type": "comparison",
+      "metrics": {
+        "passed": 1.0,
+        "ExactMatch": 1.0,
+        "TokenF1": 1.0,
+        "RetrievalRecall@5": 0.5,
+        "RetrievalRecall@10": 1.0,
+        "NDCG": 0.8065735963827293,
+        "AllGoldRetrieved": 1.0
+      },
+      "cost_usd": 0.003904,
+      "input_tokens": 2759,
+      "output_tokens": 229,
+      "latency_ms": 3214
+    },
+    {
+      "case_id": "5a710bb15542994082a3e50d",
+      "trial": 0,
+      "type": "bridge",
+      "metrics": {
+        "passed": 1.0,
+        "ExactMatch": 1.0,
+        "TokenF1": 1.0,
+        "RetrievalRecall@5": 0.5,
+        "RetrievalRecall@10": 1.0,
+        "NDCG": 0.8315546295836225,
+        "AllGoldRetrieved": 1.0
+      },
+      "cost_usd": 0.005315,
+      "input_tokens": 4180,
+      "output_tokens": 227,
+      "latency_ms": 3383
+    },
+    {
+      "case_id": "5a710d155542994082a3e520",
+      "trial": 0,
+      "type": "bridge",
+      "metrics": {
+        "passed": 1.0,
+        "ExactMatch": 1.0,
+        "TokenF1": 1.0,
+        "RetrievalRecall@5": 1.0,
+        "RetrievalRecall@10": 1.0,
+        "NDCG": 0.6509209298071326,
+        "AllGoldRetrieved": 1.0
+      },
+      "cost_usd": 0.003197,
+      "input_tokens": 2262,
+      "output_tokens": 187,
+      "latency_ms": 2224
+    }
+  ],
+  "aggregate": {
+    "overall": {
+      "n_questions": 20,
+      "n_units": 20,
+      "metrics": {
+        "passed": {
+          "ci": {
+            "mean": 0.6,
+            "lo": 0.4,
+            "hi": 0.8,
+            "n": 20
+          },
+          "trial_variance": {
+            "mean_std": null,
+            "max_std": null,
+            "n_questions": 0
+          }
+        },
+        "TokenF1": {
+          "ci": {
+            "mean": 0.7364285714285714,
+            "lo": 0.5685714285714286,
+            "hi": 0.8804761904761905,
+            "n": 20
+          },
+          "trial_variance": {
+            "mean_std": null,
+            "max_std": null,
+            "n_questions": 0
+          }
+        },
+        "ExactMatch": {
+          "ci": {
+            "mean": 0.55,
+            "lo": 0.35,
+            "hi": 0.75,
+            "n": 20
+          },
+          "trial_variance": {
+            "mean_std": null,
+            "max_std": null,
+            "n_questions": 0
+          }
+        },
+        "RetrievalRecall@5": {
+          "ci": {
+            "mean": 0.675,
+            "lo": 0.55,
+            "hi": 0.8,
+            "n": 20
+          },
+          "trial_variance": {
+            "mean_std": null,
+            "max_std": null,
+            "n_questions": 0
+          }
+        },
+        "RetrievalRecall@10": {
+          "ci": {
+            "mean": 0.95,
+            "lo": 0.875,
+            "hi": 1.0,
+            "n": 20
+          },
+          "trial_variance": {
+            "mean_std": null,
+            "max_std": null,
+            "n_questions": 0
+          }
+        },
+        "NDCG": {
+          "ci": {
+            "mean": 0.7209600036861811,
+            "lo": 0.624682247813168,
+            "hi": 0.8111218023791971,
+            "n": 20
+          },
+          "trial_variance": {
+            "mean_std": null,
+            "max_std": null,
+            "n_questions": 0
+          }
+        },
+        "AllGoldRetrieved": {
+          "ci": {
+            "mean": 0.95,
+            "lo": 0.85,
+            "hi": 1.0,
+            "n": 20
+          },
+          "trial_variance": {
+            "mean_std": null,
+            "max_std": null,
+            "n_questions": 0
+          }
+        }
+      }
+    },
+    "by_type": {
+      "bridge": {
+        "n_questions": 12,
+        "n_units": 12,
+        "metrics": {
+          "passed": {
+            "ci": {
+              "mean": 0.5833333333333334,
+              "lo": 0.3333333333333333,
+              "hi": 0.8333333333333334,
+              "n": 12
+            },
+            "trial_variance": {
+              "mean_std": null,
+              "max_std": null,
+              "n_questions": 0
+            }
+          },
+          "TokenF1": {
+            "ci": {
+              "mean": 0.7869047619047619,
+              "lo": 0.6301587301587301,
+              "hi": 0.9277777777777777,
+              "n": 12
+            },
+            "trial_variance": {
+              "mean_std": null,
+              "max_std": null,
+              "n_questions": 0
+            }
+          },
+          "ExactMatch": {
+            "ci": {
+              "mean": 0.5,
+              "lo": 0.25,
+              "hi": 0.75,
+              "n": 12
+            },
+            "trial_variance": {
+              "mean_std": null,
+              "max_std": null,
+              "n_questions": 0
+            }
+          },
+          "RetrievalRecall@5": {
+            "ci": {
+              "mean": 0.6666666666666666,
+              "lo": 0.5,
+              "hi": 0.8333333333333334,
+              "n": 12
+            },
+            "trial_variance": {
+              "mean_std": null,
+              "max_std": null,
+              "n_questions": 0
+            }
+          },
+          "RetrievalRecall@10": {
+            "ci": {
+              "mean": 0.9166666666666666,
+              "lo": 0.7916666666666666,
+              "hi": 1.0,
+              "n": 12
+            },
+            "trial_variance": {
+              "mean_std": null,
+              "max_std": null,
+              "n_questions": 0
+            }
+          },
+          "NDCG": {
+            "ci": {
+              "mean": 0.7087865780904233,
+              "lo": 0.5643338540210584,
+              "hi": 0.8403054606280179,
+              "n": 12
+            },
+            "trial_variance": {
+              "mean_std": null,
+              "max_std": null,
+              "n_questions": 0
+            }
+          },
+          "AllGoldRetrieved": {
+            "ci": {
+              "mean": 0.9166666666666666,
+              "lo": 0.75,
+              "hi": 1.0,
+              "n": 12
+            },
+            "trial_variance": {
+              "mean_std": null,
+              "max_std": null,
+              "n_questions": 0
+            }
+          }
+        }
+      },
+      "comparison": {
+        "n_questions": 8,
+        "n_units": 8,
+        "metrics": {
+          "passed": {
+            "ci": {
+              "mean": 0.625,
+              "lo": 0.25,
+              "hi": 0.875,
+              "n": 8
+            },
+            "trial_variance": {
+              "mean_std": null,
+              "max_std": null,
+              "n_questions": 0
+            }
+          },
+          "TokenF1": {
+            "ci": {
+              "mean": 0.6607142857142857,
+              "lo": 0.3214285714285714,
+              "hi": 0.9107142857142857,
+              "n": 8
+            },
+            "trial_variance": {
+              "mean_std": null,
+              "max_std": null,
+              "n_questions": 0
+            }
+          },
+          "ExactMatch": {
+            "ci": {
+              "mean": 0.625,
+              "lo": 0.25,
+              "hi": 0.875,
+              "n": 8
+            },
+            "trial_variance": {
+              "mean_std": null,
+              "max_std": null,
+              "n_questions": 0
+            }
+          },
+          "RetrievalRecall@5": {
+            "ci": {
+              "mean": 0.6875,
+              "lo": 0.5625,
+              "hi": 0.875,
+              "n": 8
+            },
+            "trial_variance": {
+              "mean_std": null,
+              "max_std": null,
+              "n_questions": 0
+            }
+          },
+          "RetrievalRecall@10": {
+            "ci": {
+              "mean": 1.0,
+              "lo": 1.0,
+              "hi": 1.0,
+              "n": 8
+            },
+            "trial_variance": {
+              "mean_std": null,
+              "max_std": null,
+              "n_questions": 0
+            }
+          },
+          "NDCG": {
+            "ci": {
+              "mean": 0.7392201420798176,
+              "lo": 0.6286065072158936,
+              "hi": 0.8402538655605327,
+              "n": 8
+            },
+            "trial_variance": {
+              "mean_std": null,
+              "max_std": null,
+              "n_questions": 0
+            }
+          },
+          "AllGoldRetrieved": {
+            "ci": {
+              "mean": 1.0,
+              "lo": 1.0,
+              "hi": 1.0,
+              "n": 8
+            },
+            "trial_variance": {
+              "mean_std": null,
+              "max_std": null,
+              "n_questions": 0
+            }
+          }
+        }
+      }
+    },
+    "cost": {
+      "total_usd": 0.14992699999999998,
+      "per_question_usd": 0.007496349999999999,
+      "mean_input_tokens": 6097.85,
+      "mean_output_tokens": 279.7,
+      "mean_latency_ms": 3849.6
+    }
+  }
+}

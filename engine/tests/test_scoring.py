@@ -35,6 +35,19 @@ def test_exact_match_normalizes():
     assert not r.passed and r.score == 0.0
 
 
+def test_exact_match_uses_squad_normalization():
+    # ExactMatch uses the official SQuAD/HotpotQA normalization (same as TokenF1): a leading
+    # article and trailing punctuation are stripped, so these are exact matches.
+    s = ExactMatch()
+    assert s.score(_case({"answer": "The Yoruba"}), _result(final_answer="Yoruba")).passed
+    assert s.score(_case({"answer": "Yoruba"}), _result(final_answer="the Yoruba.")).passed
+    assert s.score(
+        _case({"answer": "The White House"}), _result(final_answer="white house")
+    ).passed
+    # A genuine difference still fails.
+    assert not s.score(_case({"answer": "Yoruba"}), _result(final_answer="Hausa")).passed
+
+
 def test_exact_match_prefers_final_answer():
     s = ExactMatch()
     # The full output explains; the short final_answer is what's scored.
@@ -149,3 +162,34 @@ def test_score_case_aggregates():
 def test_score_case_no_scorers_is_not_pass():
     agg = score_case(_case({}), _result(), [])
     assert not agg.passed and agg.score == 0.0 and agg.scores == {}
+
+
+def test_pass_scorers_gate_only_named_scorers():
+    # pass_scorers=['TokenF1']: TokenF1 decides pass/fail; ExactMatch is informational.
+    # Answer differs from gold by an article -> TokenF1 == 1.0 (passes), ExactMatch also 1.0.
+    case = _case(
+        {
+            "answer": "Barack Hussein Obama",
+            "scorers": ["ExactMatch", "TokenF1"],
+            "pass_scorers": ["TokenF1"],
+            "f1_threshold": 0.8,
+        }
+    )
+    # Partial answer: TokenF1 = 0.8 (>= threshold, passes) but ExactMatch fails.
+    result = _result(final_answer="Barack Obama")  # p=2/2, r=2/3 -> F1 = 0.8
+    agg = score_case(case, result, scorers_for(case.expected))
+    assert not agg.scores["ExactMatch"]["passed"]  # informational scorer fails
+    assert not agg.scores["ExactMatch"]["deciding"]
+    assert agg.scores["TokenF1"]["deciding"]
+    assert agg.scores["TokenF1"]["score"] == pytest.approx(0.8)
+    assert agg.passed  # ...yet the case passes: only TokenF1 gates
+
+    # Below the F1 threshold -> the case fails even though it's the only gate.
+    fail = score_case(case, _result(final_answer="Barack"), scorers_for(case.expected))
+    assert not fail.passed
+
+
+def test_pass_scorers_unknown_name_raises():
+    case = _case({"answer": "x", "scorers": ["ExactMatch"], "pass_scorers": ["TokenF1"]})
+    with pytest.raises(KeyError):
+        score_case(case, _result(final_answer="x"), scorers_for(case.expected))
