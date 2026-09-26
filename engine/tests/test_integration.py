@@ -168,8 +168,10 @@ async def test_two_case_two_trial_live(test_db_dsn):
         assert _poll_count(f"SELECT count() FROM spans WHERE trace_id = '{tid}'", 1) >= 1, (
             f"trace {tid} for {case_id}#{trial} did not land in ClickHouse"
         )
+        # vigil.eval.trial was promoted to the typed eval_trial column (migration 005), which
+        # is where the writer now records it; the raw span_attributes map no longer carries it.
         row = _ch(
-            "SELECT run_kind, eval_run_id, eval_case_id, span_attributes['vigil.eval.trial'] "
+            "SELECT run_kind, eval_run_id, eval_case_id, eval_trial "
             f"FROM spans WHERE trace_id = '{tid}' AND span_name = 'agent.run' LIMIT 1"
         ).split("\t")
         assert row[0] == "eval", f"run_kind on {tid}: {row[0]!r}"
