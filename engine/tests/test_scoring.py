@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pytest
 from vigil import RunResult, ToolCall
 
 from engine.datasets.base import Case
@@ -9,6 +10,7 @@ from engine.scoring import (
     ExactMatch,
     ExpectedToolCalls,
     RequiredArguments,
+    TokenF1,
     score_case,
     scorers_for,
 )
@@ -18,8 +20,10 @@ def _case(expected, case_id="c0"):
     return Case(case_id=case_id, input=None, expected=expected, tags=[])
 
 
-def _result(output="", tool_calls=None):
-    return RunResult(output=output, tool_calls=tool_calls or [], trace_id="t")
+def _result(output="", tool_calls=None, final_answer=None):
+    return RunResult(
+        output=output, final_answer=final_answer, tool_calls=tool_calls or [], trace_id="t"
+    )
 
 
 def test_exact_match_normalizes():
@@ -29,6 +33,41 @@ def test_exact_match_normalizes():
     assert s.score(_case({"answer": "Hello World"}), _result("  hello   world ")).passed
     r = s.score(_case({"answer": "437"}), _result("438"))
     assert not r.passed and r.score == 0.0
+
+
+def test_exact_match_prefers_final_answer():
+    s = ExactMatch()
+    # The full output explains; the short final_answer is what's scored.
+    r = _result(output="23 * 19 = 437, so the answer is 437.", final_answer="437")
+    assert s.score(_case({"answer": "437"}), r).passed
+    # With no final_answer, it falls back to the full output.
+    assert not s.score(_case({"answer": "437"}), _result(output="23 * 19 = 437")).passed
+
+
+def test_token_f1_scoring_and_normalization():
+    s = TokenF1()
+    # SQuAD normalization: articles/punctuation/case ignored -> exact token match, F1 = 1.
+    r = s.score(_case({"answer": "The White House"}), _result(final_answer="white house."))
+    assert r.passed and r.score == 1.0
+    # Partial overlap gives a fractional F1 and (by default threshold 1.0) does not pass.
+    r2 = s.score(_case({"answer": "Barack Hussein Obama"}), _result(final_answer="Barack Obama"))
+    assert not r2.passed
+    assert 0.0 < r2.score < 1.0
+    assert r2.score == pytest.approx(0.8)  # p=2/2, r=2/3 -> F1 = 0.8
+    # A lower threshold lets a partial match pass.
+    r3 = s.score(
+        _case({"answer": "Barack Hussein Obama", "f1_threshold": 0.5}),
+        _result(final_answer="Barack Obama"),
+    )
+    assert r3.passed
+    # No overlap -> F1 0.
+    assert s.score(_case({"answer": "cats"}), _result(final_answer="dogs")).score == 0.0
+
+
+def test_token_f1_is_opt_in_only():
+    # TokenF1 is not inferred from 'answer' (ExactMatch is), but is selectable by name.
+    assert [type(x).__name__ for x in scorers_for({"answer": "x"})] == ["ExactMatch"]
+    assert [type(x).__name__ for x in scorers_for({"scorers": ["TokenF1"]})] == ["TokenF1"]
 
 
 def test_expected_tool_calls_set_and_ordered():

@@ -20,6 +20,15 @@ def test_get_weather():
     assert "Paris" in get_weather("Paris")
 
 
+def test_extract_final_answer():
+    # The terse answer comes from the FINAL: line, not the full explanation.
+    assert agent._extract_final_answer("23 * 19 = 437\nFINAL: 437") == "437"
+    # The last FINAL line wins if there are several.
+    assert agent._extract_final_answer("FINAL: draft\nFINAL: 42") == "42"
+    # No marker -> fall back to the full (stripped) text.
+    assert agent._extract_final_answer("  just this  ") == "just this"
+
+
 # --- stub Anthropic client that drives one tool call then a final answer ---
 
 # Reject kwargs the real SDK doesn't accept, so the offline test catches signature drift

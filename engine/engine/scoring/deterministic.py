@@ -6,6 +6,8 @@ and shareable. ``scorers_for`` picks which apply to a case.
 from __future__ import annotations
 
 import re
+import string
+from collections import Counter
 
 from vigil import RunResult
 
@@ -21,21 +23,81 @@ def _normalize(value) -> str:
     return _WS.sub(" ", str(value).strip()).casefold()
 
 
+def _predicted(result: RunResult):
+    """The text a scorer compares: the short ``final_answer`` when the agent set one, else the
+    full ``output`` (design: final_answer is separate from the full output)."""
+    return result.final_answer if result.final_answer is not None else result.output
+
+
 class ExactMatch:
-    """Normalized compare of ``result.output`` to ``expected['answer']``."""
+    """Normalized compare of the agent's final answer to ``expected['answer']``."""
 
     name = "ExactMatch"
 
     def score(self, case: Case, result: RunResult) -> ScoreResult:
         expected = case.expected.get("answer")
-        got = _normalize(result.output)
-        want = _normalize(expected)
-        passed = got == want
+        pred = _predicted(result)
+        passed = _normalize(pred) == _normalize(expected)
         return ScoreResult(
             name=self.name,
             passed=passed,
             score=1.0 if passed else 0.0,
-            detail={"expected": expected, "got": result.output},
+            detail={"expected": expected, "got": pred},
+        )
+
+
+_ARTICLES = {"a", "an", "the"}
+_PUNCT_TABLE = str.maketrans("", "", string.punctuation)
+
+
+def _squad_tokens(text) -> list[str]:
+    """SQuAD/HotpotQA normalization: lowercase, drop punctuation, drop the articles a/an/the,
+    and split on whitespace."""
+    lowered = str(text).lower().translate(_PUNCT_TABLE)
+    return [tok for tok in lowered.split() if tok not in _ARTICLES]
+
+
+def _token_f1(pred: str, gold: str) -> tuple[float, float, float]:
+    """Token-level F1 over the normalized token multisets (SQuAD convention). Returns
+    (f1, precision, recall). When either side is empty, F1 is 1.0 iff both are empty."""
+    p_toks = _squad_tokens(pred)
+    g_toks = _squad_tokens(gold)
+    if not p_toks or not g_toks:
+        same = float(p_toks == g_toks)
+        return same, same, same
+    common = Counter(p_toks) & Counter(g_toks)
+    num_same = sum(common.values())
+    if num_same == 0:
+        return 0.0, 0.0, 0.0
+    precision = num_same / len(p_toks)
+    recall = num_same / len(g_toks)
+    f1 = 2 * precision * recall / (precision + recall)
+    return f1, precision, recall
+
+
+class TokenF1:
+    """Token-level F1 with SQuAD/HotpotQA-style normalization, comparing the agent's final
+    answer to ``expected['answer']`` (used for HotpotQA). ``score`` is the F1; ``passed`` is
+    ``f1 >= expected.get('f1_threshold', 1.0)`` (default: exact token match)."""
+
+    name = "TokenF1"
+
+    def score(self, case: Case, result: RunResult) -> ScoreResult:
+        gold = case.expected.get("answer")
+        pred = _predicted(result)
+        f1, precision, recall = _token_f1(pred, gold)
+        threshold = float(case.expected.get("f1_threshold", 1.0))
+        return ScoreResult(
+            name=self.name,
+            passed=f1 >= threshold,
+            score=f1,
+            detail={
+                "expected": gold,
+                "got": pred,
+                "precision": precision,
+                "recall": recall,
+                "threshold": threshold,
+            },
         )
 
 
@@ -108,13 +170,17 @@ def _args_satisfy(args: dict, required: dict) -> bool:
     return True
 
 
-# Map an expected-key to the scorer that consumes it, for inference.
+# Map an expected-key to the scorer that consumes it, for inference. TokenF1 also reads
+# 'answer' but is deliberately NOT inferred — it would double-score with ExactMatch — so it is
+# opt-in via expected['scorers'] (e.g. HotpotQA suites request ["TokenF1"]).
 _INFERENCE = (
     ("answer", ExactMatch),
     ("tool_calls", ExpectedToolCalls),
     ("arguments", RequiredArguments),
 )
+# All selectable-by-name scorers (inferred ones plus explicit-only ones like TokenF1).
 _BY_NAME = {cls.name: cls for _, cls in _INFERENCE}
+_BY_NAME[TokenF1.name] = TokenF1
 
 
 def scorers_for(expected: dict) -> list:

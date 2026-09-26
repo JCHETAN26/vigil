@@ -2,7 +2,13 @@
 seam for the Week-3 LLM-as-judge scorers."""
 
 from .base import CaseScore, Scorer, ScoreResult, score_case
-from .deterministic import ExactMatch, ExpectedToolCalls, RequiredArguments, scorers_for
+from .deterministic import (
+    ExactMatch,
+    ExpectedToolCalls,
+    RequiredArguments,
+    TokenF1,
+    scorers_for,
+)
 
 __all__ = [
     "CaseScore",
@@ -12,5 +18,6 @@ __all__ = [
     "ExactMatch",
     "ExpectedToolCalls",
     "RequiredArguments",
+    "TokenF1",
     "scorers_for",
 ]

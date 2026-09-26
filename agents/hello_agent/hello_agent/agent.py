@@ -21,7 +21,8 @@ AGENT_ID = "hello-agent"
 SYSTEM_PROMPT = (
     "You are a concise assistant. When a question needs arithmetic, call the calculator "
     "tool. When it asks about weather, call the get_weather tool. Prefer the tools over "
-    "guessing, and give a short final answer."
+    "guessing. End your reply with a line 'FINAL: <answer>' containing just the answer "
+    "itself (a number or a short phrase), with no units or explanation."
 )
 
 MODEL = os.getenv("VIGIL_HELLO_MODEL", os.getenv("ANTHROPIC_MODEL", "claude-haiku-4-5"))
@@ -49,6 +50,17 @@ AGENT_VERSION = vigil.compute_agent_version(
 )
 
 _MAX_TURNS = 6
+
+
+def _extract_final_answer(text: str) -> str:
+    """Pull the terse answer from the last ``FINAL: <answer>`` line, falling back to the full
+    text if the model didn't emit the marker. Kept deterministic so it is unit-testable."""
+    final = None
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.upper().startswith("FINAL:"):
+            final = stripped.split(":", 1)[1].strip()
+    return final if final is not None else text.strip()
 
 
 def init_tracing():
@@ -135,9 +147,11 @@ async def run(
             )
             break
 
+        final_answer = _extract_final_answer(answer)
         span.set_attribute("vigil.answer_chars", len(answer))
         return RunResult(
             output=answer,
+            final_answer=final_answer,
             tool_calls=tool_calls,
             trace_id=trace_id,
             input_tokens=input_tokens,

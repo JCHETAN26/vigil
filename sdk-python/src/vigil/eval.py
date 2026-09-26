@@ -25,7 +25,11 @@ class ToolCall:
 
 @dataclass
 class RunResult:
-    output: Any  # final answer, for ExactMatch and judges
+    output: Any  # the agent's full output (may include reasoning/explanation)
+    # A short, canonical final answer for scoring, separate from the full output. Scorers like
+    # ExactMatch and TokenF1 compare this when present, falling back to ``output`` when it is
+    # None — so an agent that explains its work can still be scored on just the answer.
+    final_answer: Any = None
     tool_calls: list[ToolCall] = field(default_factory=list)
     trace_id: str = ""  # 032x hex; links to ClickHouse
     input_tokens: int = 0  # AGENT tokens (excludes user simulator)
