@@ -12,6 +12,7 @@ import os
 from typing import Any
 
 import vigil
+from vigil import RunResult, ToolCall
 
 from .tools import TOOLS, dispatch
 
@@ -30,11 +31,18 @@ MODEL = os.getenv("VIGIL_HELLO_MODEL", os.getenv("ANTHROPIC_MODEL", "claude-haik
 # if a future model needs them.
 PARAMS: dict[str, Any] = {"max_tokens": 1024}
 
+# The manifest inputs the eval engine reads (contract §4): the engine computes the version
+# hash from these and upserts version_manifests. Named to satisfy the AgentModule protocol.
+prompts = {"system": SYSTEM_PROMPT}
+model = MODEL
+params = PARAMS
+tools = TOOLS
+
 # The agent version is a content hash over the behavior-defining inputs (§2.3): the
 # prompt, the tool schemas, the model, and the decoding params. It changes whenever any
 # of these change.
 AGENT_VERSION = vigil.compute_agent_version(
-    prompts={"system": SYSTEM_PROMPT},
+    prompts=prompts,
     tools=TOOLS,
     model=MODEL,
     params=PARAMS,
@@ -53,43 +61,57 @@ def init_tracing():
     )
 
 
-def make_client(raw: Any | None = None):
-    """Return a Vigil-instrumented Anthropic client. Pass ``raw`` (e.g. a stub) in
-    tests; otherwise a real ``anthropic.Anthropic`` is created (key from env)."""
+def make_client(raw: Any | None = None, *, timeout: float | None = None):
+    """Return a Vigil-instrumented **async** Anthropic client. Pass ``raw`` (e.g. a stub) in
+    tests; otherwise a real ``anthropic.AsyncAnthropic`` is created (key from env). ``timeout``
+    sets the client's per-request timeout — the eval worker sets it below the per-case timeout
+    as a backstop so a hung request can't outlive the case's cancellation."""
     if raw is None:
         import anthropic
 
-        raw = anthropic.Anthropic()
+        raw = anthropic.AsyncAnthropic(timeout=timeout) if timeout else anthropic.AsyncAnthropic()
     return vigil.wrap(raw)
 
 
-def run(
+async def run(
     client,
-    question: str,
+    case_input: Any,
     *,
     eval_run_id: str,
     eval_case_id: str,
-) -> dict:
-    """Answer one question with a tool-use loop, as one eval agent run. Returns the
-    answer, the trace id, and the agent version."""
+    trial: int = 0,
+) -> RunResult:
+    """Answer one question with a tool-use loop, as one eval agent run (contract §4). ``run``
+    is async so a per-case timeout can cancel an in-flight request. Returns a ``RunResult``
+    with the final answer, the tool calls made, the trace id, and raw token counts (the engine
+    computes cost)."""
+    question = case_input.get("question", "") if isinstance(case_input, dict) else str(case_input)
     with vigil.agent_run(
         run_kind="eval",
         eval_run_id=eval_run_id,
         eval_case_id=eval_case_id,
+        trial=trial,
         attributes={"vigil.question": question},
     ) as span:
         trace_id = format(span.get_span_context().trace_id, "032x")
         messages: list[dict[str, Any]] = [{"role": "user", "content": question}]
         answer = ""
+        tool_calls: list[ToolCall] = []
+        input_tokens = 0
+        output_tokens = 0
 
         for _ in range(_MAX_TURNS):
-            resp = client.messages.create(
+            resp = await client.messages.create(
                 model=MODEL,
                 system=SYSTEM_PROMPT,
                 tools=TOOLS,
                 messages=messages,
                 **PARAMS,
             )
+            usage = getattr(resp, "usage", None)
+            if usage is not None:
+                input_tokens += getattr(usage, "input_tokens", 0) or 0
+                output_tokens += getattr(usage, "output_tokens", 0) or 0
             messages.append({"role": "assistant", "content": resp.content})
 
             if getattr(resp, "stop_reason", None) == "tool_use":
@@ -97,6 +119,7 @@ def run(
                 for block in resp.content:
                     if getattr(block, "type", None) != "tool_use":
                         continue
+                    tool_calls.append(ToolCall(name=block.name, arguments=dict(block.input or {})))
                     with vigil.tool_call(tool_name=block.name, arguments=block.input) as tspan:
                         result = dispatch(block.name, block.input)
                         tspan.set_attribute("gen_ai.tool.call.id", block.id)
@@ -113,4 +136,10 @@ def run(
             break
 
         span.set_attribute("vigil.answer_chars", len(answer))
-        return {"answer": answer, "trace_id": trace_id, "agent_version": AGENT_VERSION}
+        return RunResult(
+            output=answer,
+            tool_calls=tool_calls,
+            trace_id=trace_id,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+        )

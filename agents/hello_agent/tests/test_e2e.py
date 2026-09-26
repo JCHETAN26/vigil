@@ -72,6 +72,8 @@ def _poll(sql: str, want: int, timeout: float = 45.0) -> int:
 def test_hello_agent_end_to_end():
     _require_stack()
 
+    import asyncio
+
     import vigil
 
     from hello_agent import agent
@@ -80,15 +82,19 @@ def test_hello_agent_end_to_end():
     client = agent.make_client()
     run_id = "e2e-" + uuid.uuid4().hex[:12]
 
-    # Two short questions: one forces the calculator, one forces the weather tool.
-    calc = agent.run(client, "What is 23 * 19?", eval_run_id=run_id, eval_case_id="calc")
-    weather = agent.run(
-        client, "What's the weather in Paris?", eval_run_id=run_id, eval_case_id="weather"
-    )
+    async def _run_both():
+        # Two short questions: one forces the calculator, one forces the weather tool.
+        calc = await agent.run(client, "What is 23 * 19?", eval_run_id=run_id, eval_case_id="calc")
+        weather = await agent.run(
+            client, "What's the weather in Paris?", eval_run_id=run_id, eval_case_id="weather"
+        )
+        return calc, weather
+
+    calc, weather = asyncio.run(_run_both())
 
     vigil.shutdown()  # flush the SDK's buffered spans to the receiver
 
-    tid = calc["trace_id"]
+    tid = calc.trace_id
 
     # Wait until the run + its children have landed (writer batches on a short interval).
     assert _poll(f"SELECT count() FROM spans WHERE trace_id = '{tid}'", 3) >= 3
@@ -141,10 +147,10 @@ def test_hello_agent_end_to_end():
 
     # 5) agent_version present and matching the computed version.
     av = _ch(f"SELECT DISTINCT agent_version FROM spans WHERE trace_id = '{tid}'")
-    assert av == calc["agent_version"] and av != ""
+    assert av == agent.AGENT_VERSION and av != ""
 
     # The second question produced its own trace with a tool span (weather).
-    tid2 = weather["trace_id"]
+    tid2 = weather.trace_id
     assert (
         _poll(
             f"SELECT count() FROM spans WHERE trace_id = '{tid2}' AND startsWith(span_name, 'tool.')",

@@ -4,6 +4,7 @@ runs, LLM calls, tool calls, and retrieval steps to the Vigil ingest service."""
 from .anthropic import wrap
 from .config import Config
 from .context import RunContext, current_run
+from .eval import RunResult, ToolCall
 from .identity import compute_agent_version, git_sha
 from .spans import (
     agent_run,
@@ -22,6 +23,8 @@ from .tracer import get_config, get_tracer, init, shutdown
 __all__ = [
     "Config",
     "RunContext",
+    "RunResult",
+    "ToolCall",
     "agent_run",
     "compute_agent_version",
     "current_run",

@@ -8,6 +8,7 @@ Requires ANTHROPIC_API_KEY in the environment and the Vigil stack up (OTLP recei
 
 from __future__ import annotations
 
+import asyncio
 import sys
 import uuid
 
@@ -18,20 +19,24 @@ from . import agent
 DEFAULT_QUESTIONS = ["What is 23 * 19?", "What's the weather in Paris?"]
 
 
-def main(argv: list[str]) -> int:
-    questions = argv[1:] or DEFAULT_QUESTIONS
+async def _amain(questions: list[str]) -> int:
     agent.init_tracing()
     client = agent.make_client()
     run_id = "cli-" + uuid.uuid4().hex[:12]
     try:
         for i, q in enumerate(questions):
-            result = agent.run(client, q, eval_run_id=run_id, eval_case_id=f"q{i}")
+            result = await agent.run(client, q, eval_run_id=run_id, eval_case_id=f"q{i}")
             print(f"Q: {q}")
-            print(f"A: {result['answer']}")
-            print(f"   trace_id={result['trace_id']} agent_version={result['agent_version'][:12]}…")
+            print(f"A: {result.output}")
+            print(f"   trace_id={result.trace_id} agent_version={agent.AGENT_VERSION[:12]}…")
     finally:
         vigil.shutdown()  # flush buffered spans to the receiver before exit
     return 0
+
+
+def main(argv: list[str]) -> int:
+    questions = argv[1:] or DEFAULT_QUESTIONS
+    return asyncio.run(_amain(questions))
 
 
 if __name__ == "__main__":

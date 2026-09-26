@@ -55,7 +55,8 @@ class StubMessages:
     def __init__(self):
         self.calls = []
 
-    def create(self, **kwargs):
+    # Async, so vigil.wrap treats the stub like a real AsyncAnthropic client (contract §4).
+    async def create(self, **kwargs):
         unexpected = set(kwargs) - _ALLOWED_CREATE_KWARGS
         if unexpected:
             raise TypeError(
@@ -82,13 +83,21 @@ class StubClient:
 
 
 def test_tool_use_loop_executes_tool_and_returns_answer():
+    import asyncio
+
     stub = StubClient()
     client = agent.make_client(stub)
 
-    result = agent.run(client, "What is 2 + 2?", eval_run_id="off-1", eval_case_id="c1")
+    result = asyncio.run(
+        agent.run(client, "What is 2 + 2?", eval_run_id="off-1", eval_case_id="c1", trial=0)
+    )
 
-    assert result["answer"] == "The answer is 4."
-    assert result["agent_version"] == agent.AGENT_VERSION
+    assert result.output == "The answer is 4."
+    # The agent reports token counts (5 in + 7 out per call, two calls) — no cost.
+    assert result.input_tokens == 10 and result.output_tokens == 14
+    # It recorded the calculator tool call for the scorers.
+    assert [tc.name for tc in result.tool_calls] == ["calculator"]
+    assert result.tool_calls[0].arguments == {"expression": "2 + 2"}
     # Two model calls: initial + after the tool result.
     assert len(stub.messages.calls) == 2
     # The agent must send only SDK-supported args (max_tokens yes, no removed sampling params).
