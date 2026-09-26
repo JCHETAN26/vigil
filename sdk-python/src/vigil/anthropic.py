@@ -344,12 +344,30 @@ class _current_span:
         return self._cm.__exit__(*exc)
 
 
+def _is_async_callable(fn: Any) -> bool:
+    """True if ``fn`` is (or wraps) a coroutine function.
+
+    The real ``AsyncAnthropic.messages.create`` is a *decorated* async method (e.g. the
+    SDK's ``@required_args``), so ``inspect.iscoroutinefunction`` returns False on the
+    outer wrapper even though the underlying method is ``async def`` — it exposes the real
+    function via ``__wrapped__``. We must unwrap before deciding, or an async client is
+    misrouted to the sync path, which never awaits the response: it would record usage off
+    an un-awaited coroutine (0 tokens, empty model) and end the span before the response
+    arrives. ``inspect.unwrap`` follows the ``__wrapped__`` chain."""
+    if inspect.iscoroutinefunction(fn):
+        return True
+    try:
+        return inspect.iscoroutinefunction(inspect.unwrap(fn))
+    except Exception:
+        return False
+
+
 def wrap(client: Any):
     """Return an instrumented wrapper around an Anthropic or AsyncAnthropic client. The
     wrapper delegates every attribute except ``messages``, which it instruments."""
     create = getattr(getattr(client, "messages", None), "create", None)
     if create is None:
         raise TypeError("wrap() expects an Anthropic client with a .messages.create method")
-    if inspect.iscoroutinefunction(create):
+    if _is_async_callable(create):
         return _AsyncClient(client)
     return _SyncClient(client)

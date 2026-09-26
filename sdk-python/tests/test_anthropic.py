@@ -1,4 +1,5 @@
 import asyncio
+import functools
 
 import vigil
 
@@ -143,6 +144,103 @@ def test_wrap_async_records(spans):
     s = [x for x in spans() if x.name.startswith("gen_ai.chat")][0]
     assert s.attributes["gen_ai.usage.input_tokens"] == 5
     assert s.attributes["gen_ai.usage.output_tokens"] == 6
+
+
+# --- async: decorated create (mimics the real AsyncAnthropic) + response recording ---
+
+# The real AsyncAnthropic.messages.create is a *decorated* async method: inspect
+# .iscoroutinefunction returns False on the outer wrapper, and the true coroutine function is
+# reachable via __wrapped__. These stubs reproduce that so the tests catch the detection bug
+# (async client misrouted to the sync path -> span ended before the await -> 0 tokens).
+
+_SLEEP = 0.02  # long enough that a span ending before the await would have ~0 duration
+
+
+def _decorated_async(fn):
+    @functools.wraps(fn)  # sets outer.__wrapped__ = fn, so inspect.unwrap reaches the coroutine
+    def outer(self, **kwargs):
+        return fn(self, **kwargs)  # returns a coroutine / async generator, not awaited here
+
+    return outer
+
+
+async def _async_stream_events():
+    yield Obj(type="message_start", message=Obj(model="claude-haiku-4-5", usage=Obj(input_tokens=7)))
+    yield Obj(
+        type="content_block_start",
+        content_block=Obj(type="tool_use", name="search", input={"q": "x"}, id="tu_9"),
+    )
+    yield Obj(type="message_delta", usage=Obj(output_tokens=13))
+    yield Obj(type="message_stop")
+
+
+class DecoratedAsyncMessages:
+    @_decorated_async
+    async def create(self, **kwargs):
+        await asyncio.sleep(_SLEEP)  # simulate network latency spanning the awaited call
+        if kwargs.get("stream"):
+            return _async_stream_events()
+        return Response("claude-haiku-4-5", Usage(5, 6), [TextBlock("yo"), ToolBlock("search", {"q": "x"}, "tu_1")])
+
+
+class DecoratedAsyncClient:
+    def __init__(self):
+        self.messages = DecoratedAsyncMessages()
+
+
+def test_wrap_detects_decorated_async_client():
+    # Regression: a decorated async create must still route to the async wrapper.
+    from vigil.anthropic import _AsyncClient
+
+    assert isinstance(vigil.wrap(DecoratedAsyncClient()), _AsyncClient)
+
+
+def _duration_ns(span):
+    return span.end_time - span.start_time
+
+
+def test_wrap_async_records_tokens_model_and_duration(spans):
+    client = vigil.wrap(DecoratedAsyncClient())
+
+    async def go():
+        with vigil.agent_run(run_kind="eval"):
+            return await client.messages.create(
+                model="claude-haiku-4-5", max_tokens=10, messages=[{"role": "user", "content": "hey"}]
+            )
+
+    r = asyncio.run(go())
+    assert r.model == "claude-haiku-4-5"
+
+    s = [x for x in spans() if x.name.startswith("gen_ai.chat")][0]
+    assert s.attributes["gen_ai.usage.input_tokens"] == 5
+    assert s.attributes["gen_ai.usage.output_tokens"] == 6
+    assert s.attributes["gen_ai.response.model"] == "claude-haiku-4-5"
+    assert "gen_ai.tool_use" in {e.name for e in s.events}
+    # The span must stay open across the awaited call: its duration covers the latency, not ~0
+    # (the bug ended the span before the await, giving a near-zero duration).
+    assert _duration_ns(s) >= _SLEEP * 1e9 * 0.5
+
+
+def test_wrap_async_streaming_records_tokens_model_and_duration(spans):
+    client = vigil.wrap(DecoratedAsyncClient())
+
+    async def go():
+        with vigil.agent_run(run_kind="eval"):
+            stream = await client.messages.create(
+                model="claude-haiku-4-5", max_tokens=10, stream=True,
+                messages=[{"role": "user", "content": "x"}],
+            )
+            return [event async for event in stream]
+
+    events = asyncio.run(go())
+    assert len(events) == 4
+
+    s = [x for x in spans() if x.name.startswith("gen_ai.chat")][0]
+    assert s.attributes["gen_ai.usage.input_tokens"] == 7
+    assert s.attributes["gen_ai.usage.output_tokens"] == 13
+    assert s.attributes["gen_ai.response.model"] == "claude-haiku-4-5"
+    assert "gen_ai.tool_use" in {e.name for e in s.events}
+    assert _duration_ns(s) >= _SLEEP * 1e9 * 0.5
 
 
 # --- kwargs pass-through (the wrapper must forward call args verbatim, add/drop nothing) ---
