@@ -88,6 +88,34 @@ feature count (see `CLAUDE.md`).
 
 ## What's next (in order)
 
+> **Current state (2026-09-26 pause):** Sessions 1–3 done. HotpotQA Stage D **done** (100×3
+> measurement baseline committed). Session 4 **τ²-bench retail done** (agent/adapter/scorer/
+> pass^k, τ² isolated in its own venv behind a subprocess domain server; commits `b96e9e5`,
+> `8d3ce29`). Week 3 **paired bootstrap regression detection done** (`engine regress` + power/MDE
+> harness; commit `2b84ea4`). All unit/offline suites green under `make test-all`.
+>
+> **BLOCKED on the Anthropic account usage cap — regain access 2026-10-01 00:00 UTC.** No eval
+> run or live test (e2e/integration) can succeed until then; the live suites report
+> "SKIPPED: API usage cap reached". When the cap lifts, in order:
+>
+> 1. **Confirm τ² fixes end-to-end.** Re-run the 10×2 τ² retail dev
+>    (`engine run --suite tau2-retail-dev10 --agent tau2_retail_agent.agent --mode development
+>    --trials 2 --concurrency 4 --budget 2`) and check the report shows near-full completion
+>    (tool-error recovery + gold-replay fix), meaningful pass^k, and a Postgres↔ClickHouse cost
+>    MATCH. Then `make test-all` (live suites now pass).
+> 2. **Real A/A test for the regression detector's FPR on real data.** Run the SAME agent
+>    version **twice** on `hotpotqa-base100` (100q×3, measurement, ~$2 each), then
+>    `python -m engine regress --baseline <runA> --candidate <runB>`. Expect **no gated
+>    regression** and Δ≈0 on every metric; this confirms the empirical false-positive rate on
+>    real paired runs (the synthetic study gave gated-rule FPR 0.0%, CI-part 7.3%, MDE ~4.5%
+>    pass-rate at 100q — see `bench/results/regression/`). If the A/A flags a gated regression,
+>    investigate before trusting the detector.
+> 3. **τ² measurement baseline** — size by cost from the dev run, **$6 budget**, and **stop for
+>    owner approval** before launching (per the standing rule).
+>
+> Every eval run is disk-guarded (refuses under 1 GB free) and needs the owner's OK for the
+> measurement baseline. Do not prune Docker caches without asking the owner.
+
 1. **HotpotQA Stage D** (not started):
    - Build artifacts if absent: `python bench/build_hotpotqa_corpus.py --n 500`.
    - Create suites from `data/hotpotqa/subsets/{dev20,base100}.txt` (adapter `hotpotqa`,
