@@ -84,7 +84,7 @@ async def execute_unit(
         try:
             result = await asyncio.wait_for(run_call(), timeout=timeout)
             return UnitOutcome(status="ok", attempts=attempts, result=result)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return UnitOutcome(
                 status="timeout",
                 attempts=attempts,

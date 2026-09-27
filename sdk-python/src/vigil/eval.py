@@ -45,5 +45,14 @@ class RunResult:
     trace_id: str = ""  # 032x hex; links to ClickHouse
     input_tokens: int = 0  # AGENT tokens (excludes user simulator)
     output_tokens: int = 0
+    # AGENT prompt-cache tokens (Anthropic): cache_creation = written to cache, cache_read =
+    # served from cache. Priced at the model's cache_write_5m / cache_read rates by the engine;
+    # 0 when the agent doesn't use caching.
+    cache_creation_input_tokens: int = 0
+    cache_read_input_tokens: int = 0
     sim_input_tokens: int = 0  # LLM user-simulator tokens (tau-bench), if any
     sim_output_tokens: int = 0
+    # Free-form agent-reported metadata a scorer can read, e.g. a benchmark's own reward that
+    # the engine can't recompute (τ²-bench: {"reward", "db_match", "gold_hash", ...}). Kept out
+    # of the token/cost fields; persisted with the transcript.
+    info: dict = field(default_factory=dict)

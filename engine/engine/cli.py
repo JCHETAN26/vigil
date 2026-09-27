@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import os
+import shutil
 import sys
 
 import psycopg
@@ -35,6 +37,8 @@ def cmd_suite_create(args) -> int:
     config = {"path": args.path}
     if args.subset_path:
         config["subset_path"] = args.subset_path
+    if args.split:
+        config["split"] = args.split
     if args.version:
         config["version"] = args.version
     adapter = adapter_cls.from_config(config)
@@ -66,7 +70,26 @@ def cmd_suite_create(args) -> int:
     return 0
 
 
+def _check_free_disk() -> None:
+    """Refuse to start an eval run when free disk is under the floor (default 1 GB). An eval run
+    writes traces to ClickHouse and results to Postgres; running the disk out mid-run corrupts
+    state and can affect other work on the machine. Override the floor with
+    VIGIL_MIN_FREE_DISK_GB (0 disables)."""
+    floor_gb = float(os.getenv("VIGIL_MIN_FREE_DISK_GB", "1.0"))
+    if floor_gb <= 0:
+        return
+    free_gb = shutil.disk_usage(os.getcwd()).free / 1e9
+    if free_gb < floor_gb:
+        raise SystemExit(
+            f"error: refusing to start eval run — only {free_gb:.2f} GB free, need >= "
+            f"{floor_gb:.2f} GB (free space or set VIGIL_MIN_FREE_DISK_GB). "
+            "Vigil never deletes on its own."
+        )
+    print(f"disk check: {free_gb:.2f} GB free (floor {floor_gb:.2f} GB) — ok")
+
+
 def cmd_run(args) -> int:
+    _check_free_disk()
     cfg = EngineConfig.from_env()
     with _connect() as conn:
         orch = Orchestrator(conn, cfg)
@@ -132,6 +155,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--subset-path",
         default=None,
         help="file of case ids (one per line) to restrict the suite to (adapter-specific)",
+    )
+    create.add_argument(
+        "--split",
+        default=None,
+        help="adapter-specific split to materialize (e.g. tau2_retail: 'dev' | 'measurement')",
     )
     create.add_argument("--version", default=None)
     create.set_defaults(func=cmd_suite_create)

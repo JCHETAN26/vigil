@@ -42,6 +42,8 @@ const (
 	keyRespModel    = "gen_ai.response.model"
 	keyInputTokens  = "gen_ai.usage.input_tokens"
 	keyOutputTokens = "gen_ai.usage.output_tokens"
+	keyCacheWrite   = "gen_ai.usage.cache_creation_input_tokens"
+	keyCacheRead    = "gen_ai.usage.cache_read_input_tokens"
 )
 
 // FromOTLP unmarshals a raw per-trace OTLP payload and normalizes it into span rows.
@@ -75,6 +77,8 @@ func Normalize(td *tracepb.TracesData, prices *pricing.Table) ([]chsink.Row, err
 				}
 				inTok := parseUint32(take(spanAttrs, keyInputTokens))
 				outTok := parseUint32(take(spanAttrs, keyOutputTokens))
+				cacheWriteTok := parseUint32(take(spanAttrs, keyCacheWrite))
+				cacheReadTok := parseUint32(take(spanAttrs, keyCacheRead))
 				reqModel := take(spanAttrs, keyReqModel)
 				respModel := take(spanAttrs, keyRespModel)
 				costModel := respModel
@@ -111,13 +115,15 @@ func Normalize(td *tracepb.TracesData, prices *pricing.Table) ([]chsink.Row, err
 					CacheHit:     parseBool01(take(spanAttrs, keyCacheHit)),
 					SessionID:    take(spanAttrs, keySessionID),
 
-					GenAISystem:            take(spanAttrs, keyGenAISystem),
-					GenAIOperationName:     take(spanAttrs, keyGenAIOp),
-					GenAIRequestModel:      reqModel,
-					GenAIResponseModel:     respModel,
-					GenAIUsageInputTokens:  inTok,
-					GenAIUsageOutputTokens: outTok,
-					CostUSD:                prices.Cost(costModel, inTok, outTok),
+					GenAISystem:                        take(spanAttrs, keyGenAISystem),
+					GenAIOperationName:                 take(spanAttrs, keyGenAIOp),
+					GenAIRequestModel:                  reqModel,
+					GenAIResponseModel:                 respModel,
+					GenAIUsageInputTokens:              inTok,
+					GenAIUsageOutputTokens:             outTok,
+					GenAIUsageCacheCreationInputTokens: cacheWriteTok,
+					GenAIUsageCacheReadInputTokens:     cacheReadTok,
+					CostUSD:                            prices.CostWithCache(costModel, inTok, cacheWriteTok, cacheReadTok, outTok),
 
 					ResourceAttributes: resAttrs,
 					SpanAttributes:     spanAttrs,

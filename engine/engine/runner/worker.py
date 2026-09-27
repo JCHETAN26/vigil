@@ -153,7 +153,16 @@ class _Worker:
 
         result = outcome.result
         agg = score_case(case, result, scorers_for(case.expected))
-        cost_usd = self._meter.cost(self._agent.model, result.input_tokens, result.output_tokens)
+        # Agent cost is cache-aware: cache-write/read tokens are priced separately from ordinary
+        # input tokens, matching the Go writer's per-span CostWithCache so Postgres and ClickHouse
+        # costs agree. The simulator isn't cached, so it uses the plain cost.
+        cost_usd = self._meter.cost_with_cache(
+            self._agent.model,
+            result.input_tokens,
+            result.output_tokens,
+            result.cache_creation_input_tokens,
+            result.cache_read_input_tokens,
+        )
         sim_cost_usd = self._meter.cost(
             self._sim_model, result.sim_input_tokens, result.sim_output_tokens
         )
@@ -180,6 +189,8 @@ class _Worker:
                 "retrievals": [
                     {"query": r.query, "doc_ids": list(r.doc_ids)} for r in result.retrievals
                 ],
+                # Agent-reported metadata (e.g. τ²'s reward breakdown), for offline reporting.
+                "info": result.info,
             },
             # The budget counts agent + simulator cost (design §3.3, §7).
             budget_cost=cost_usd + sim_cost_usd,

@@ -45,6 +45,8 @@ def set_gen_ai_response(
     response_model: str | None = None,
     input_tokens: int | None = None,
     output_tokens: int | None = None,
+    cache_creation_input_tokens: int | None = None,
+    cache_read_input_tokens: int | None = None,
     finish_reason: str | None = None,
 ) -> None:
     if response_model:
@@ -53,6 +55,14 @@ def set_gen_ai_response(
         span.set_attribute("gen_ai.usage.input_tokens", int(input_tokens))
     if output_tokens is not None:
         span.set_attribute("gen_ai.usage.output_tokens", int(output_tokens))
+    # Prompt-cache usage (Anthropic): cache_creation = tokens written to cache this call;
+    # cache_read = tokens served from cache. Priced separately from ordinary input tokens.
+    if cache_creation_input_tokens is not None:
+        span.set_attribute(
+            "gen_ai.usage.cache_creation_input_tokens", int(cache_creation_input_tokens)
+        )
+    if cache_read_input_tokens is not None:
+        span.set_attribute("gen_ai.usage.cache_read_input_tokens", int(cache_read_input_tokens))
     if finish_reason:
         span.set_attribute("gen_ai.response.finish_reasons", [finish_reason])
 

@@ -133,8 +133,19 @@ async def test_two_case_two_trial_live(test_db_dsn):
             concurrency=2,
         )
 
-    assert result["status"] == "succeeded", result
     run_id = str(result["run_id"])
+
+    # If the Anthropic account is usage-capped, every unit errors with a 400; report that
+    # distinctly (SKIPPED), separate from a pass and from a genuine failure.
+    with psycopg.connect(test_db_dsn) as conn:
+        errs = conn.execute(
+            "SELECT error FROM eval_case_results WHERE run_id = %s AND status != 'ok'",
+            (result["run_id"],),
+        ).fetchall()
+    if any(e[0] and ("usage limit" in e[0].lower() or "regain access" in e[0].lower()) for e in errs):
+        pytest.skip("SKIPPED: API usage cap reached (Anthropic account usage limit)")
+
+    assert result["status"] == "succeeded", result
 
     # --- Postgres: one run version, 4 results with the right trial numbers ---
     with psycopg.connect(test_db_dsn) as conn:
@@ -184,6 +195,30 @@ async def test_two_case_two_trial_live(test_db_dsn):
         _ch(f"SELECT count() FROM spans WHERE eval_run_id = '{run_id}' AND run_kind = 'eval'")
     )
     assert total >= 4, f"expected >=4 eval spans for the run, got {total}"
+
+    # --- Cost agreement: Postgres (engine cost meter) == ClickHouse (Go writer cost) ---
+    # The engine prices each case's agent tokens with CostMeter.cost_with_cache and stores it in
+    # eval_case_results.cost_usd; the Go writer prices each agent LLM span with CostWithCache into
+    # spans.cost_usd. Both read the same prices.json (incl. cache rates), so the per-run agent
+    # cost must agree. Agent spans are role='' (the user simulator, if any, is role='user_simulator').
+    with psycopg.connect(test_db_dsn) as conn:
+        pg_cost = float(
+            conn.execute(
+                "SELECT COALESCE(sum(cost_usd), 0) FROM eval_case_results WHERE run_id = %s",
+                (result["run_id"],),
+            ).fetchone()[0]
+        )
+    ch_cost = float(
+        _ch(
+            "SELECT sum(cost_usd) FROM spans "
+            f"WHERE eval_run_id = '{run_id}' AND run_kind = 'eval' AND role = ''"
+        )
+        or "0"
+    )
+    assert pg_cost > 0, "expected non-zero agent cost"
+    assert abs(pg_cost - ch_cost) < 1e-6, (
+        f"agent cost disagrees: Postgres ${pg_cost} vs ClickHouse ${ch_cost}"
+    )
 
 
 async def test_measurement_with_cache_is_refused(test_db_dsn):

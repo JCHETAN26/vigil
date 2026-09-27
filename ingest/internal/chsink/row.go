@@ -36,14 +36,16 @@ type Row struct {
 	SessionID    string
 	Role         string // vigil.role, e.g. "user_simulator"; "" = the agent itself
 
-	GenAISystem            string
-	GenAIOperationName     string
-	GenAIRequestModel      string
-	GenAIResponseModel     string
-	GenAIUsageInputTokens  uint32
-	GenAIUsageOutputTokens uint32
-	CostUSD                float64
-	CacheHit               uint8 // 1 if this span was served from the dev LLM cache, else 0
+	GenAISystem                        string
+	GenAIOperationName                 string
+	GenAIRequestModel                  string
+	GenAIResponseModel                 string
+	GenAIUsageInputTokens              uint32
+	GenAIUsageOutputTokens             uint32
+	GenAIUsageCacheCreationInputTokens uint32 // prompt-cache writes (Anthropic), priced at cache_write_5m
+	GenAIUsageCacheReadInputTokens     uint32 // prompt-cache reads/hits, priced at cache_read
+	CostUSD                            float64
+	CacheHit                           uint8 // 1 if served from the dev LLM cache, else 0
 
 	ResourceAttributes map[string]string
 	SpanAttributes     map[string]string
@@ -62,6 +64,8 @@ span_name, span_kind, status_code, status_message,
 service_name, service_version,
 agent_id, agent_version, git_sha, run_id, run_kind, eval_run_id, eval_case_id, eval_trial, session_id, role,
 gen_ai_system, gen_ai_operation_name, gen_ai_request_model, gen_ai_response_model,
-gen_ai_usage_input_tokens, gen_ai_usage_output_tokens, cost_usd, cache_hit,
+gen_ai_usage_input_tokens, gen_ai_usage_output_tokens,
+gen_ai_usage_cache_creation_input_tokens, gen_ai_usage_cache_read_input_tokens,
+cost_usd, cache_hit,
 resource_attributes, span_attributes,
 ` + "`events.timestamp`, `events.name`, `events.attributes`"

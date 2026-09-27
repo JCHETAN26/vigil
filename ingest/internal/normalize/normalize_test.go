@@ -143,6 +143,52 @@ func TestNormalizePromotesAndComputesCost(t *testing.T) {
 	}
 }
 
+func TestNormalizeCacheTokensAndCost(t *testing.T) {
+	prices, err := pricing.Load()
+	if err != nil {
+		t.Fatalf("pricing: %v", err)
+	}
+	traceID := append([]byte{0xbb}, make([]byte, 15)...)
+	spanID := append([]byte{0x02}, make([]byte, 7)...)
+	td := &tracepb.TracesData{ResourceSpans: []*tracepb.ResourceSpans{{
+		ScopeSpans: []*tracepb.ScopeSpans{{
+			Spans: []*tracepb.Span{{
+				TraceId: traceID,
+				SpanId:  spanID,
+				Name:    "gen_ai.chat",
+				Attributes: []*commonpb.KeyValue{
+					kvStr("gen_ai.response.model", "claude-haiku-4-5"),
+					kvInt("gen_ai.usage.input_tokens", 1_000_000),
+					kvInt("gen_ai.usage.output_tokens", 1_000_000),
+					kvInt("gen_ai.usage.cache_creation_input_tokens", 1_000_000),
+					kvInt("gen_ai.usage.cache_read_input_tokens", 1_000_000),
+				},
+			}},
+		}},
+	}}}
+	rows, err := Normalize(td, prices)
+	if err != nil {
+		t.Fatalf("Normalize: %v", err)
+	}
+	r := rows[0]
+	if r.GenAIUsageCacheCreationInputTokens != 1_000_000 || r.GenAIUsageCacheReadInputTokens != 1_000_000 {
+		t.Errorf("cache tokens wrong: write=%d read=%d",
+			r.GenAIUsageCacheCreationInputTokens, r.GenAIUsageCacheReadInputTokens)
+	}
+	// haiku: 1M in ($1) + 1M out ($5) + 1M cache-write ($1.25) + 1M cache-read ($0.10) = $7.35.
+	if r.CostUSD != 7.35 {
+		t.Errorf("CostUSD = %v, want 7.35 (cache-aware)", r.CostUSD)
+	}
+	// Cache-token attributes are promoted out of the span tail.
+	for _, k := range []string{
+		"gen_ai.usage.cache_creation_input_tokens", "gen_ai.usage.cache_read_input_tokens",
+	} {
+		if _, ok := r.SpanAttributes[k]; ok {
+			t.Errorf("%s should be promoted out of the span tail", k)
+		}
+	}
+}
+
 func TestNormalizeRunKindDefaultAndUnmarshalError(t *testing.T) {
 	prices, _ := pricing.Load()
 

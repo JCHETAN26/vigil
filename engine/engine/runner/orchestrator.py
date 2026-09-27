@@ -150,7 +150,7 @@ class SubprocessWorkerPool:
         for proc in self._procs.values():
             try:
                 await asyncio.wait_for(proc.wait(), timeout=15)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 proc.kill()
         for task in [*self._readers, *self._monitors]:
             task.cancel()

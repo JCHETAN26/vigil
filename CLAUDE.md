@@ -37,3 +37,7 @@ more than feature count.
 - Run `make test-all` (repo root) at the end of every stage before committing. It runs every
   suite across all packages and skips the live suites cleanly when the stack or
   `ANTHROPIC_API_KEY` is missing.
+- Disk is tight and shared with the machine's owner (never touch their files). Before any eval
+  run, check free disk and refuse under 1 GB — `python -m engine run` enforces this (floor
+  `VIGIL_MIN_FREE_DISK_GB`, default 1.0). Never delete Docker images/volumes/build cache or
+  caches without asking the owner first.

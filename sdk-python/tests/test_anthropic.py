@@ -77,6 +77,41 @@ class SyncClient:
         self.messages = SyncMessages()
 
 
+def test_wrap_records_cache_tokens_when_present(spans):
+    # A response whose usage carries prompt-cache counts records them on the span; a plain
+    # usage (no cache attrs) records neither (backward compatible).
+    class CacheUsage:
+        def __init__(self):
+            self.input_tokens = 40
+            self.output_tokens = 12
+            self.cache_creation_input_tokens = 5300
+            self.cache_read_input_tokens = 0
+
+    class CacheMessages:
+        def create(self, **kwargs):
+            return Response("claude-haiku-4-5", CacheUsage(), [TextBlock("ok")])
+
+    class CacheClient:
+        def __init__(self):
+            self.messages = CacheMessages()
+
+    client = vigil.wrap(CacheClient())
+    with vigil.agent_run(run_kind="eval"):
+        client.messages.create(model="claude-haiku-4-5", max_tokens=50, messages=[])
+    s = [x for x in spans() if x.name.startswith("gen_ai.chat")][0]
+    assert s.attributes["gen_ai.usage.cache_creation_input_tokens"] == 5300
+    assert s.attributes["gen_ai.usage.cache_read_input_tokens"] == 0
+
+
+def test_wrap_omits_cache_tokens_when_absent(spans):
+    client = vigil.wrap(SyncClient())
+    with vigil.agent_run(run_kind="eval"):
+        client.messages.create(model="claude-haiku-4-5", max_tokens=100, messages=[])
+    s = [x for x in spans() if x.name.startswith("gen_ai.chat")][0]
+    assert "gen_ai.usage.cache_creation_input_tokens" not in s.attributes
+    assert "gen_ai.usage.cache_read_input_tokens" not in s.attributes
+
+
 def test_wrap_sync_records_model_tokens_and_tool_use(spans):
     client = vigil.wrap(SyncClient())
     with vigil.agent_run(run_kind="eval"):

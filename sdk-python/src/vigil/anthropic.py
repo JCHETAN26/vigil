@@ -66,6 +66,12 @@ def _record_response(span, response) -> None:
         response_model=getattr(response, "model", None),
         input_tokens=getattr(usage, "input_tokens", None) if usage else None,
         output_tokens=getattr(usage, "output_tokens", None) if usage else None,
+        cache_creation_input_tokens=(
+            getattr(usage, "cache_creation_input_tokens", None) if usage else None
+        ),
+        cache_read_input_tokens=(
+            getattr(usage, "cache_read_input_tokens", None) if usage else None
+        ),
         finish_reason=getattr(response, "stop_reason", None),
     )
     for block in getattr(response, "content", []) or []:
@@ -105,6 +111,8 @@ class _StreamAccumulator:
         self.model = None
         self.input_tokens = 0
         self.output_tokens = 0
+        self.cache_creation_input_tokens = 0
+        self.cache_read_input_tokens = 0
         self.tool_blocks: list = []
 
     def observe(self, event) -> None:
@@ -115,6 +123,11 @@ class _StreamAccumulator:
             usage = getattr(msg, "usage", None)
             if usage and getattr(usage, "input_tokens", None) is not None:
                 self.input_tokens = usage.input_tokens
+            # Cache usage is reported on message_start (part of the input accounting).
+            if usage and getattr(usage, "cache_creation_input_tokens", None) is not None:
+                self.cache_creation_input_tokens = usage.cache_creation_input_tokens
+            if usage and getattr(usage, "cache_read_input_tokens", None) is not None:
+                self.cache_read_input_tokens = usage.cache_read_input_tokens
         elif etype == "content_block_start":
             block = getattr(event, "content_block", None)
             if getattr(block, "type", None) == "tool_use":
@@ -131,6 +144,8 @@ class _StreamAccumulator:
             response_model=self.model,
             input_tokens=self.input_tokens,
             output_tokens=self.output_tokens,
+            cache_creation_input_tokens=self.cache_creation_input_tokens,
+            cache_read_input_tokens=self.cache_read_input_tokens,
         )
         for block in self.tool_blocks:
             _record_content_block(self.span, cc, block)
