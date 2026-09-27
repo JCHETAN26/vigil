@@ -195,6 +195,7 @@ def cmd_regress(args) -> int:
             direction=METRIC_DIRECTION.get(m, HIGHER_IS_BETTER),
             threshold=thresholds.get(m, 0.0),
             alpha=args.alpha, n_boot=args.n_boot, seed=args.seed, two_level=args.two_level,
+            method=args.method,
         )
         tag = "GATE" if m in _REGRESS_GATE else "info"
         print(f"  [{tag}] {v.summary()}")
@@ -253,6 +254,7 @@ def build_parser() -> argparse.ArgumentParser:
     reg.add_argument("--threshold-pass", type=float, default=0.05, help="practical threshold pass")
     reg.add_argument("--threshold-f1", type=float, default=0.03, help="practical threshold (F1)")
     reg.add_argument("--two-level", action="store_true", help="diagnostic: also resample trials")
+    reg.add_argument("--method", default="t", choices=["t", "percentile", "bca"], help="CI method")
     reg.add_argument("--n-boot", type=int, default=10000)
     reg.add_argument("--seed", type=int, default=1234)
     reg.set_defaults(func=cmd_regress)

@@ -83,3 +83,17 @@ def test_two_level_runs_and_matches_point_estimate():
 def test_no_shared_cases_raises():
     with pytest.raises(ValueError):
         paired_bootstrap_diff({"a": [1.0]}, {"b": [1.0]})
+
+
+def test_all_ci_methods_selectable_and_agree_on_a_clear_regression():
+    base = {f"q{i}": [0.9, 0.9, 0.9] for i in range(50)}
+    cand = {f"q{i}": [0.5, 0.5, 0.5] for i in range(50)}
+    for m in ("t", "percentile", "bca"):
+        v = paired_bootstrap_diff(base, cand, threshold=0.03, method=m, n_boot=2000)
+        assert v.method == m
+        assert v.regressed  # a clear 0.4 drop is caught by every method
+
+
+def test_unknown_method_raises():
+    with pytest.raises(ValueError):
+        paired_bootstrap_diff({"a": [1.0, 0.0]}, {"a": [0.0, 0.0]}, method="nope")

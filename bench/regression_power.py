@@ -27,7 +27,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "engine"))
 
-from engine.regression import HIGHER_IS_BETTER, paired_bootstrap_diff
+from engine.regression import CI_METHODS, HIGHER_IS_BETTER, paired_bootstrap_diff
 
 
 def simulate_pass_run(p: np.ndarray, n_trials: int, rng, shift: float, shift_mask: np.ndarray):
@@ -40,12 +40,14 @@ def simulate_pass_run(p: np.ndarray, n_trials: int, rng, shift: float, shift_mas
 
 
 def detection_rate(
-    p, *, n_trials, delta, shift_mask, n_sims, alpha, n_boot, seed, threshold=0.0, gated=False
+    p, *, n_trials, delta, shift_mask, n_sims, alpha, n_boot, seed,
+    threshold=0.0, gated=False, method="t",
 ) -> float:
     """Fraction of simulations flagged when the candidate is shifted by `delta` on shift_mask.
     By default counts the statistical part alone (one-sided CI excludes zero) — used for power
     and MDE. With `gated=True` it counts the full two-part rule (CI excludes zero AND point
-    estimate ≥ threshold). With delta=0 the result is a false-positive rate."""
+    estimate ≥ threshold). With delta=0 the result is a false-positive rate. `method` selects
+    the CI method (percentile | bca | t)."""
     ss = np.random.SeedSequence(seed)
     child = ss.spawn(n_sims)
     flagged = 0
@@ -54,18 +56,21 @@ def detection_rate(
         base = simulate_pass_run(p, n_trials, rng, 0.0, shift_mask)  # baseline: no shift
         cand = simulate_pass_run(p, n_trials, rng, delta, shift_mask)  # candidate: shifted
         v = paired_bootstrap_diff(
-            base, cand, metric="passed", direction=HIGHER_IS_BETTER,
+            base, cand, metric="passed", direction=HIGHER_IS_BETTER, method=method,
             threshold=threshold, alpha=alpha, n_boot=n_boot, seed=int(rng.integers(1 << 31)),
         )
         flagged += int(v.regressed if gated else v.ci_excludes_zero)
     return flagged / n_sims
 
 
-def power_curve(p, *, deltas, shift_mask, n_trials, n_sims, alpha, n_boot, seed) -> dict:
+def power_curve(
+    p, *, deltas, shift_mask, n_trials, n_sims, alpha, n_boot, seed,
+    threshold=0.0, gated=False, method="t",
+) -> dict:
     return {
         round(float(d), 4): detection_rate(
-            p, n_trials=n_trials, delta=d, shift_mask=shift_mask,
-            n_sims=n_sims, alpha=alpha, n_boot=n_boot, seed=seed + i,
+            p, n_trials=n_trials, delta=d, shift_mask=shift_mask, n_sims=n_sims, alpha=alpha,
+            n_boot=n_boot, seed=seed + i, threshold=threshold, gated=gated, method=method,
         )
         for i, d in enumerate(deltas)
     }
@@ -130,21 +135,40 @@ def main(argv=None) -> int:
     n_trials = 3
     deltas = [0.0, 0.02, 0.04, 0.06, 0.08, 0.10, 0.15, 0.20]
     all_mask = np.ones(len(p), dtype=bool)
+    kw = {"n_trials": n_trials, "n_sims": args.n_sims, "alpha": args.alpha, "n_boot": args.n_boot}
 
-    uniform = power_curve(
-        p, deltas=deltas, shift_mask=all_mask, n_trials=n_trials,
-        n_sims=args.n_sims, alpha=args.alpha, n_boot=args.n_boot, seed=args.seed,
+    # (1) Compare CI methods on their false-positive rate (CI part, Δ=0) and mid-effect power,
+    # then ADOPT the one whose FPR is closest to α while keeping power (within 3pts of the best).
+    comparison = {}
+    for m in CI_METHODS:
+        comparison[m] = {
+            "fpr": detection_rate(p, delta=0.0, shift_mask=all_mask, seed=args.seed, method=m, **kw),
+            "power_at_0.06": detection_rate(
+                p, delta=0.06, shift_mask=all_mask, seed=args.seed + 7, method=m, **kw
+            ),
+        }
+    # "Keeping power": drop only methods that lose meaningful power (>10 pts below the best);
+    # among the rest, adopt the one whose FPR is closest to α. (BCa can be anti-conservative on
+    # discrete/small data, so a high-power-but-high-FPR method is correctly rejected here.)
+    best_power = max(c["power_at_0.06"] for c in comparison.values())
+    eligible = [m for m, c in comparison.items() if c["power_at_0.06"] >= best_power - 0.10]
+    adopted = min(eligible, key=lambda m: abs(comparison[m]["fpr"] - args.alpha))
+
+    # (2) With the adopted method: CI-part MDE (to justify the threshold) + the FULL GATED rule's
+    # power curve and MDE (CI excludes zero AND point estimate ≥ threshold), uniform + bridge-only.
+    ci_uniform = power_curve(p, deltas=deltas, shift_mask=all_mask, seed=args.seed, method=adopted, **kw)
+    gated_uniform = power_curve(
+        p, deltas=deltas, shift_mask=all_mask, seed=args.seed, method=adopted,
+        gated=True, threshold=args.threshold_pass, **kw,
     )
-    bridge_only = power_curve(
-        p, deltas=deltas, shift_mask=bridge, n_trials=n_trials,
-        n_sims=args.n_sims, alpha=args.alpha, n_boot=args.n_boot, seed=args.seed + 1000,
+    gated_bridge = power_curve(
+        p, deltas=deltas, shift_mask=bridge, seed=args.seed + 1000, method=adopted,
+        gated=True, threshold=args.threshold_pass, **kw,
     )
-    mde_uniform = min_detectable_effect(uniform)
-    fpr = uniform[0.0]  # CI-part false-positive rate (statistical only)
-    gated_fpr = detection_rate(  # full two-part rule (CI + threshold) at zero effect
-        p, n_trials=n_trials, delta=0.0, shift_mask=all_mask, n_sims=args.n_sims,
-        alpha=args.alpha, n_boot=args.n_boot, seed=args.seed, threshold=args.threshold_pass, gated=True,
-    )
+    ci_mde = min_detectable_effect(ci_uniform)
+    gated_mde = min_detectable_effect(gated_uniform)
+    gated_fpr = gated_uniform[0.0]
+    ci_fpr = ci_uniform[0.0]
 
     result = {
         "meta": {
@@ -153,49 +177,85 @@ def main(argv=None) -> int:
             "n_boot": args.n_boot, "seed": args.seed, "baseline_pass_rate": float(p.mean()),
         },
         "generated_at": datetime.now(timezone.utc).isoformat(),
-        "power_uniform": uniform,
-        "power_bridge_only": bridge_only,
-        "false_positive_rate_ci_part": fpr,
-        "false_positive_rate_gated_rule": gated_fpr,
-        "min_detectable_effect_uniform": mde_uniform,
+        "method_comparison": comparison,
+        "adopted_method": adopted,
         "threshold_pass": args.threshold_pass,
-        "threshold_at_or_above_mde": (mde_uniform is not None and args.threshold_pass >= mde_uniform),
+        "ci_part": {"fpr": ci_fpr, "mde": ci_mde, "power_uniform": ci_uniform},
+        "gated_rule": {
+            "fpr": gated_fpr, "mde": gated_mde,
+            "power_uniform": gated_uniform, "power_bridge_only": gated_bridge,
+        },
+        "threshold_at_or_above_ci_mde": (ci_mde is not None and args.threshold_pass >= ci_mde),
     }
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     (out / f"{args.run}.json").write_text(json.dumps(result, indent=2))
 
+    def pct(x):
+        return f"{x * 100:.0f}%" if x is not None else "—"
+
     lines = [
-        f"# Regression detector — power & MDE on HotpotQA baseline `{args.run[:12]}`",
+        f"# Regression detector — method choice, power & MDE on HotpotQA baseline `{args.run[:12]}`",
         "",
         (
             f"_Model fit from {len(p)} questions × {n_trials} trials (pass rate "
             f"{p.mean() * 100:.1f}%, {int(bridge.sum())} bridge). Each simulation draws a fresh "
-            f"baseline and candidate; the shift is applied only to the candidate. "
+            f"baseline and candidate independently; the shift is applied only to the candidate. "
             f"α={args.alpha} one-sided, {args.n_sims} sims/point, {args.n_boot} bootstraps._"
         ),
         "",
-        "| effect (Δ pass rate) | power (uniform) | power (bridge-only) |",
+        "## CI method comparison (false-positive rate vs power)",
+        "",
+        "| method | FPR (Δ=0, target 5%) | power @ 6% drop |",
+        "|---|---|---|",
+    ]
+    for m in CI_METHODS:
+        star = " ← adopted" if m == adopted else ""
+        lines.append(
+            f"| {m}{star} | {comparison[m]['fpr'] * 100:.1f}% | "
+            f"{comparison[m]['power_at_0.06'] * 100:.0f}% |"
+        )
+    lines += [
+        "",
+        f"Adopted **{adopted}**: FPR closest to α while keeping power.",
+        "",
+        "## Full gated-rule power (CI excludes zero AND point estimate ≥ threshold)",
+        "",
+        "| effect (Δ pass rate) | gated power (uniform) | gated power (bridge-only) |",
         "|---|---|---|",
     ]
     for d in deltas:
-        lines.append(f"| {d:.2f} | {uniform[round(d, 4)] * 100:.0f}% | {bridge_only[round(d, 4)] * 100:.0f}% |")
+        lines.append(
+            f"| {d:.2f} | {pct(gated_uniform[round(d, 4)])} | {pct(gated_bridge[round(d, 4)])} |"
+        )
+    thr = args.threshold_pass * 100
     lines += [
         "",
         (
-            f"- **False-positive rate** (Δ=0): CI-part {fpr * 100:.1f}% "
-            f"(target ≈ {args.alpha * 100:.0f}%); full gated rule {gated_fpr * 100:.1f}% "
-            "(the threshold suppresses the CI part's residual false positives)"
+            f"**Headline: on {len(p)} questions × {n_trials} trials, the gated detector "
+            f"({adopted} CI, threshold {thr:.0f}%) catches a "
+            f"{gated_mde * 100:.1f}-point pass-rate drop" if gated_mde is not None
+            else f"**Headline: on {len(p)} questions × {n_trials} trials, the gated detector "
+            f"({adopted}, threshold {thr:.0f}%) does not reach"
+        )
+        + (
+            f" with 80% power at a {gated_fpr * 100:.1f}% false-positive rate.**"
+            if gated_mde is not None else " 80% power within the tested grid.**"
         ),
-        "- **Minimum detectable effect** (uniform, 80% power): "
-        + (f"{mde_uniform * 100:.1f}% pass-rate drop" if mde_uniform is not None else "not reached in grid"),
-        f"- **Practical threshold** (pass rate): {args.threshold_pass * 100:.1f}% — "
-        + ("**at or above** the MDE ✓" if result["threshold_at_or_above_mde"] else "**below** the MDE ⚠️"),
+        "",
+        (
+            f"- CI-part FPR (adopted method): {ci_fpr * 100:.1f}% "
+            f"(target ≈ {args.alpha * 100:.0f}%); CI-part MDE {pct(ci_mde)}."
+        ),
+        f"- Practical threshold {thr:.0f}% is "
+        + ("**at or above** the CI-part MDE ✓" if result["threshold_at_or_above_ci_mde"]
+           else "**below** the CI-part MDE ⚠️")
+        + " (so we never claim to flag effects below what we can detect).",
         "",
     ]
     (out / f"{args.run}.md").write_text("\n".join(lines) + "\n")
     print("\n".join(lines))
-    print(f"\nraw -> {out / (args.run + '.json')}\ntable -> {out / (args.run + '.md')}")
+    print(f"\nadopted method: {adopted}\nraw -> {out / (args.run + '.json')}")
     return 0
 
 
