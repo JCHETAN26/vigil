@@ -5,6 +5,7 @@ the real dataset adapters come later."""
 from .base import Case, DatasetAdapter, get_adapter, register_adapter
 from .hotpotqa import HotpotQAAdapter
 from .local import LocalJSONAdapter
+from .tau2_retail import Tau2RetailAdapter
 
 __all__ = [
     "Case",
@@ -13,4 +14,5 @@ __all__ = [
     "register_adapter",
     "LocalJSONAdapter",
     "HotpotQAAdapter",
+    "Tau2RetailAdapter",
 ]

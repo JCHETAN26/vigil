@@ -1,0 +1,30 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "tau2-retail-agent"
+version = "0.1.0"
+description = "τ²-bench retail agent under test: follows τ²'s retail policy and tools over a mock DB, with an LLM user simulator. τ² itself is isolated in its own venv behind a subprocess domain server."
+requires-python = ">=3.12"
+# vigil-sdk is installed editably from ../../sdk-python by the Makefile (path dep).
+# anthropic is pinned to the SAME range as the engine and every other agent (the eval worker
+# runs this agent's code inside the engine venv). NOTE: `tau2` is deliberately NOT a dependency
+# here — it is heavy (openai/litellm/pandas) and lives in its own venv (deps/tau2-bench/.venv),
+# reached over a subprocess domain server; this package must stay importable without it.
+dependencies = ["anthropic>=1.8,<2"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["tau2_retail_agent"]
+
+[tool.pytest.ini_options]
+markers = ["e2e: end-to-end test requiring the running stack, the τ² venv, and an ANTHROPIC_API_KEY"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]

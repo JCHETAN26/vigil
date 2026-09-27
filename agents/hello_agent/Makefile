@@ -29,7 +29,7 @@ test:
 
 # Live end-to-end against the running stack (needs ANTHROPIC_API_KEY); skips cleanly if absent.
 test-e2e:
-	$(LOADENV) $(ISOLATE) PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 $(PY) -m pytest -q -m e2e
+	$(LOADENV) $(ISOLATE) PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 $(PY) -m pytest -q -rs -m e2e
 
 lint:
 	$(ISOLATE) $(VENV)/bin/ruff check hello_agent tests

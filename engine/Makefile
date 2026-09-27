@@ -23,12 +23,13 @@ install: venv
 	$(PY) -m pip install -q -e ".[dev]"
 	$(PY) -m pip install -q --no-deps -e "../agents/hello_agent"
 	$(PY) -m pip install -q -e "../agents/hotpotqa_agent"   # brings bm25s for the worker
+	$(PY) -m pip install -q --no-deps -e "../agents/tau2_retail_agent"  # deps satisfied; tau2 itself is isolated
 
 test:
 	$(ISOLATE) PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 $(PY) -m pytest -q -p asyncio -m "not integration"
 
 test-integration:
-	$(ISOLATE) PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 $(PY) -m pytest -q -p asyncio -m integration
+	$(ISOLATE) PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 $(PY) -m pytest -q -rs -p asyncio -m integration
 
 lint:
 	$(ISOLATE) $(VENV)/bin/ruff check engine tests

@@ -26,6 +26,7 @@ test-unit:
 	@echo "==> engine (unit)";            $(LOADENV) $(MAKE) -s -C engine test
 	@echo "==> hello_agent (offline)";    $(MAKE) -s -C agents/hello_agent test
 	@echo "==> hotpotqa_agent (offline)"; $(MAKE) -s -C agents/hotpotqa_agent test
+	@echo "==> tau2_retail_agent (offline)"; $(MAKE) -s -C agents/tau2_retail_agent test
 	@echo "==> bench (aggregation)";      $(ISOLATE) PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 $(BENCH_PY) -m pytest -q -p asyncio bench/tests
 	@echo "==> ingest (Go units)";        cd ingest && go test ./...
 
@@ -43,4 +44,5 @@ test-live:
 	echo "==> ingest (Go integration)";   $(MAKE) -s -C ingest test-integration; \
 	echo "==> engine (integration)";      $(MAKE) -s -C engine test-integration; \
 	echo "==> hello_agent (e2e)";         $(MAKE) -s -C agents/hello_agent test-e2e; \
-	echo "==> hotpotqa_agent (e2e)";      $(MAKE) -s -C agents/hotpotqa_agent test-e2e
+	echo "==> hotpotqa_agent (e2e)";      $(MAKE) -s -C agents/hotpotqa_agent test-e2e; \
+	echo "==> tau2_retail_agent (e2e)";   $(MAKE) -s -C agents/tau2_retail_agent test-e2e

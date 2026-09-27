@@ -45,6 +45,14 @@ def _tcp_open(host: str, port: int) -> bool:
         return False
 
 
+def _skip_if_api_capped(exc: BaseException) -> None:
+    """If an exception is Anthropic's account usage-cap 400, skip loudly (distinct from a pass
+    and from a real failure); otherwise return so the caller re-raises the genuine error."""
+    text = str(exc).lower()
+    if "usage limit" in text or "regain access" in text:
+        pytest.skip("SKIPPED: API usage cap reached (Anthropic account usage limit)")
+
+
 def _require_stack_and_corpus() -> str:
     if not os.getenv("ANTHROPIC_API_KEY"):
         pytest.skip("ANTHROPIC_API_KEY not set (add it to the root .env)")
@@ -93,9 +101,11 @@ def test_hotpotqa_agent_end_to_end():
 
     # A two-hop bridge question that needs at least one search.
     question = "Which magazine was started first, Arthur's Magazine or First for Women?"
-    result = asyncio.run(
-        agent.run(client, question, eval_run_id=run_id, eval_case_id="q0")
-    )
+    try:
+        result = asyncio.run(agent.run(client, question, eval_run_id=run_id, eval_case_id="q0"))
+    except Exception as exc:
+        _skip_if_api_capped(exc)
+        raise
     vigil.shutdown()  # flush buffered spans to the receiver
 
     assert result.final_answer, "agent produced no final answer"

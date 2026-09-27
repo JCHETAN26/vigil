@@ -43,6 +43,14 @@ def _tcp_open(host: str, port: int) -> bool:
         return False
 
 
+def _skip_if_api_capped(exc: BaseException) -> None:
+    """If an exception is Anthropic's account usage-cap 400, skip loudly (distinct from a pass
+    and from a real failure); otherwise return so the caller re-raises the genuine error."""
+    text = str(exc).lower()
+    if "usage limit" in text or "regain access" in text:
+        pytest.skip("SKIPPED: API usage cap reached (Anthropic account usage limit)")
+
+
 def _require_stack():
     if not os.getenv("ANTHROPIC_API_KEY"):
         pytest.skip("ANTHROPIC_API_KEY not set (add it to the root .env)")
@@ -90,7 +98,11 @@ def test_hello_agent_end_to_end():
         )
         return calc, weather
 
-    calc, weather = asyncio.run(_run_both())
+    try:
+        calc, weather = asyncio.run(_run_both())
+    except Exception as exc:
+        _skip_if_api_capped(exc)
+        raise
 
     vigil.shutdown()  # flush the SDK's buffered spans to the receiver
 

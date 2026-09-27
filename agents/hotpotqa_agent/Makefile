@@ -27,7 +27,7 @@ test:
 
 # Live end-to-end against the running stack (needs ANTHROPIC_API_KEY + corpus); skips cleanly if absent.
 test-e2e:
-	$(LOADENV) $(ISOLATE) VIGIL_HOTPOTQA_CORPUS=$(CORPUS) PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 $(PY) -m pytest -q -m e2e
+	$(LOADENV) $(ISOLATE) VIGIL_HOTPOTQA_CORPUS=$(CORPUS) PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 $(PY) -m pytest -q -rs -m e2e
 
 lint:
 	$(ISOLATE) $(VENV)/bin/ruff check hotpotqa_agent tests

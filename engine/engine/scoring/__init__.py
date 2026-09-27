@@ -10,6 +10,7 @@ from .deterministic import (
     scorers_for,
 )
 from .retrieval import NDCG, AllGoldRetrieved, RetrievalRecall, merged_ranking
+from .tau_bench import TauBenchReward
 
 __all__ = [
     "CaseScore",
@@ -25,4 +26,5 @@ __all__ = [
     "AllGoldRetrieved",
     "merged_ranking",
     "scorers_for",
+    "TauBenchReward",
 ]

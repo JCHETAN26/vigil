@@ -14,6 +14,7 @@ from engine.datasets.base import Case
 
 from .base import ScoreResult
 from .retrieval import NDCG, AllGoldRetrieved, RetrievalRecall
+from .tau_bench import TauBenchReward
 
 _ARTICLES = {"a", "an", "the"}
 _PUNCT_TABLE = str.maketrans("", "", string.punctuation)
@@ -183,7 +184,7 @@ _INFERENCE = (
 # retrieval scorers). Retrieval scorers are opt-in via expected['scorers'] — they need
 # supporting_titles + the agent's retrievals, so they never apply by key inference.
 _BY_NAME = {cls.name: cls for _, cls in _INFERENCE}
-for _cls in (TokenF1, RetrievalRecall, NDCG, AllGoldRetrieved):
+for _cls in (TokenF1, RetrievalRecall, NDCG, AllGoldRetrieved, TauBenchReward):
     _BY_NAME[_cls.name] = _cls
 # Fixed-k recall variants, so a suite can report several cutoffs side by side (HotpotQA: @5, @10).
 _BY_NAME["RetrievalRecall@5"] = lambda: RetrievalRecall(5)
