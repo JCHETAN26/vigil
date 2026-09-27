@@ -4,6 +4,7 @@ read-guard test is a pure unit test."""
 
 from __future__ import annotations
 
+import os
 import socket
 
 import pytest
@@ -114,6 +115,51 @@ def test_cases_pagination_and_trace_roundtrip(client):
         body = t.json()
         assert body["n_spans"] >= 1
         assert any(s["name"] == "agent.run" for s in body["spans"])
+
+
+@pytest.mark.integration
+def test_api_postgres_connection_cannot_write():
+    # A write attempt over the API's own Postgres connection (the read-only role from pg_ro_dsn)
+    # is rejected by the grant, not just by convention.
+    import psycopg
+
+    from engine.config import pg_ro_dsn, uses_ro_pg
+
+    if not _stack_up():
+        pytest.skip("stack not reachable")
+    if not uses_ro_pg():
+        pytest.skip("no read-only Postgres role configured (deploy/create_readonly_users.sh)")
+    with psycopg.connect(pg_ro_dsn()) as conn:
+        with pytest.raises(psycopg.errors.InsufficientPrivilege):
+            conn.execute("CREATE TABLE _ro_probe (x int)")
+        conn.rollback()
+
+
+@pytest.mark.integration
+def test_api_clickhouse_connection_cannot_write():
+    # A write sent with the API's ClickHouse credentials (readonly=1 user) is rejected server
+    # side — proven by bypassing the client's own read-guard and posting a DDL directly.
+    import base64
+    import urllib.error
+    import urllib.request
+
+    if not _stack_up():
+        pytest.skip("stack not reachable")
+    ro_user = os.getenv("CLICKHOUSE_RO_USER")
+    if not ro_user:
+        pytest.skip("no read-only ClickHouse user configured")
+    ro_pass = os.getenv("CLICKHOUSE_RO_PASSWORD", "")
+    db = os.getenv("CLICKHOUSE_DB", "vigil")
+    token = base64.b64encode(f"{ro_user}:{ro_pass}".encode()).decode()
+    req = urllib.request.Request(
+        "http://127.0.0.1:8123/",
+        data=f"CREATE TABLE {db}._ro_probe (x Int8) ENGINE=Memory".encode(),
+        method="POST",
+        headers={"Authorization": f"Basic {token}"},
+    )
+    with pytest.raises(urllib.error.HTTPError) as exc:
+        urllib.request.urlopen(req, timeout=10)
+    assert exc.value.code in (403, 500)  # ClickHouse ACCESS_DENIED
 
 
 @pytest.mark.integration

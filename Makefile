@@ -29,6 +29,7 @@ test-unit:
 	@echo "==> tau2_retail_agent (offline)"; $(MAKE) -s -C agents/tau2_retail_agent test
 	@echo "==> bench (aggregation)";      $(ISOLATE) PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 $(BENCH_PY) -m pytest -q -p asyncio bench/tests
 	@echo "==> ingest (Go units)";        cd ingest && go test ./...
+	@echo "==> dashboard (typecheck)";    if [ -d dashboard/node_modules ]; then (cd dashboard && npm run -s typecheck); else echo "SKIP: dashboard/node_modules absent (run 'npm install' in dashboard/)"; fi
 
 # Live suites — gated on the stack + API key; skipped cleanly (exit 0) when unavailable.
 test-live:

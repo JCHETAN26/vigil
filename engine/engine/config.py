@@ -56,6 +56,32 @@ def pg_dsn() -> str:
     return f"postgresql://{quote(user)}:{quote(password)}@{host}:{port}/{quote(db)}"
 
 
+def pg_ro_dsn() -> str:
+    """Postgres DSN for the **read-only** dashboard API. ``VIGIL_API_PG_DSN`` wins; else, when
+    ``POSTGRES_RO_USER``/``POSTGRES_RO_PASSWORD`` are set, a DSN for that role is built (this is
+    what the API should use so a bug can't write). If no RO credentials are configured it falls
+    back to :func:`pg_dsn` so the API still runs — but then it is only read-only by discipline,
+    not by grant, so set up the RO role (deploy/create_readonly_users.sh)."""
+    dsn = os.getenv("VIGIL_API_PG_DSN")
+    if dsn:
+        return dsn
+    ro_user = os.getenv("POSTGRES_RO_USER")
+    ro_pass = os.getenv("POSTGRES_RO_PASSWORD")
+    if not (ro_user and ro_pass):
+        return pg_dsn()
+    host = os.getenv("POSTGRES_HOST", "127.0.0.1")
+    port = os.getenv("POSTGRES_PORT", "5432")
+    db = os.getenv("POSTGRES_DB", "vigil")
+    return f"postgresql://{quote(ro_user)}:{quote(ro_pass)}@{host}:{port}/{quote(db)}"
+
+
+def uses_ro_pg() -> bool:
+    """True when a dedicated read-only Postgres role is configured for the API."""
+    if os.getenv("VIGIL_API_PG_DSN"):
+        return True
+    return bool(os.getenv("POSTGRES_RO_USER") and os.getenv("POSTGRES_RO_PASSWORD"))
+
+
 def redis_url() -> str | None:
     """Redis URL for the dev LLM cache. ``VIGIL_REDIS_URL`` wins; otherwise built from
     ``REDIS_PASSWORD`` against the compose service. Returns None if neither is set (the

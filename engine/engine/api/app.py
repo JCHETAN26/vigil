@@ -22,7 +22,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from psycopg.rows import dict_row
 from psycopg_pool import AsyncConnectionPool
 
-from engine.config import pg_dsn
+from engine.config import pg_ro_dsn
 from engine.regression import HIGHER_IS_BETTER, METRIC_DIRECTION, paired_bootstrap_diff
 
 from .clickhouse import ClickHouseClient, ClickHouseError
@@ -36,7 +36,7 @@ _THRESHOLDS = {"passed": 0.05, "TokenF1": 0.05}
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     pool = AsyncConnectionPool(
-        pg_dsn(), min_size=1, max_size=8, open=False, kwargs={"row_factory": dict_row}
+        pg_ro_dsn(), min_size=1, max_size=8, open=False, kwargs={"row_factory": dict_row}
     )
     await pool.open()
     app.state.pool = pool

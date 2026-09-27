@@ -29,8 +29,15 @@ class ClickHouseClient:
         self.host = host or os.getenv("CLICKHOUSE_HOST", "127.0.0.1")
         self.port = int(port or os.getenv("CLICKHOUSE_HTTP_PORT", "8123"))
         self.database = database or os.getenv("CLICKHOUSE_DB", "vigil")
-        self.user = user or os.getenv("CLICKHOUSE_USER", "vigil")
-        self.password = password if password is not None else os.getenv("CLICKHOUSE_PASSWORD", "")
+        # Prefer the read-only user for the dashboard API; fall back to the admin user only when
+        # no RO user is configured (see deploy/create_readonly_users.sh).
+        self.user = user or os.getenv("CLICKHOUSE_RO_USER") or os.getenv("CLICKHOUSE_USER", "vigil")
+        if password is not None:
+            self.password = password
+        elif os.getenv("CLICKHOUSE_RO_USER"):
+            self.password = os.getenv("CLICKHOUSE_RO_PASSWORD", "")
+        else:
+            self.password = os.getenv("CLICKHOUSE_PASSWORD", "")
         self.timeout = timeout
 
     def query(self, sql: str, params: dict[str, object] | None = None) -> list[dict]:
