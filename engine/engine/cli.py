@@ -139,6 +139,71 @@ def cmd_show(args) -> int:
     return 0
 
 
+_REGRESS_ORDER = [
+    "passed", "TokenF1", "ExactMatch", "RetrievalRecall@5", "RetrievalRecall@10",
+    "NDCG", "AllGoldRetrieved", "cost_usd", "latency_ms",
+]
+_REGRESS_GATE = {"passed", "TokenF1"}  # these decide the verdict; others are informational
+
+
+def _load_run_series(conn, run_id: str) -> dict[str, dict[str, list[float]]]:
+    """Per-(case, trial) metric series for a run's OK units: {metric: {case_id: [trial values]}}.
+    'passed' is 0/1; scorer metrics come from the scores jsonb; plus cost_usd and latency_ms."""
+    rows = conn.execute(
+        "SELECT case_id, passed, scores, cost_usd, latency_ms FROM eval_case_results "
+        "WHERE run_id = %s AND status = 'ok'",
+        (run_id,),
+    ).fetchall()
+    series: dict[str, dict[str, list[float]]] = {}
+
+    def add(metric, case_id, value):
+        series.setdefault(metric, {}).setdefault(case_id, []).append(float(value))
+
+    for case_id, passed, scores, cost, lat in rows:
+        add("passed", case_id, 1.0 if passed else 0.0)
+        for name, entry in (scores or {}).items():
+            if isinstance(entry, dict) and isinstance(entry.get("score"), (int, float)):
+                add(name, case_id, entry["score"])
+        if cost is not None:
+            add("cost_usd", case_id, cost)
+        if lat is not None:
+            add("latency_ms", case_id, lat)
+    return series
+
+
+def cmd_regress(args) -> int:
+    from engine.regression import HIGHER_IS_BETTER, METRIC_DIRECTION, paired_bootstrap_diff
+
+    with _connect() as conn:
+        base = _load_run_series(conn, args.baseline)
+        cand = _load_run_series(conn, args.candidate)
+    if not base or not cand:
+        print("error: one of the runs has no OK results to compare", file=sys.stderr)
+        return 1
+
+    thresholds = {"passed": args.threshold_pass, "TokenF1": args.threshold_f1}
+    print(
+        f"regression: candidate {args.candidate[:12]} vs baseline {args.baseline[:12]} "
+        f"(alpha={args.alpha}, two_level={args.two_level})"
+    )
+    gated_regression = False
+    for m in _REGRESS_ORDER:
+        if m not in base or m not in cand:
+            continue
+        v = paired_bootstrap_diff(
+            base[m], cand[m], metric=m,
+            direction=METRIC_DIRECTION.get(m, HIGHER_IS_BETTER),
+            threshold=thresholds.get(m, 0.0),
+            alpha=args.alpha, n_boot=args.n_boot, seed=args.seed, two_level=args.two_level,
+        )
+        tag = "GATE" if m in _REGRESS_GATE else "info"
+        print(f"  [{tag}] {v.summary()}")
+        if m in _REGRESS_GATE and v.regressed:
+            gated_regression = True
+    print("VERDICT:", "REGRESSION on a gated metric" if gated_regression else "no gated regression")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser("engine")
     sub = p.add_subparsers(dest="command", required=True)
@@ -180,6 +245,17 @@ def build_parser() -> argparse.ArgumentParser:
     show = sub.add_parser("show", help="show a run's results")
     show.add_argument("--run", required=True)
     show.set_defaults(func=cmd_show)
+
+    reg = sub.add_parser("regress", help="paired bootstrap regression detection between two runs")
+    reg.add_argument("--baseline", required=True, help="baseline run id")
+    reg.add_argument("--candidate", required=True, help="candidate run id (same suite)")
+    reg.add_argument("--alpha", type=float, default=0.05, help="one-sided significance level")
+    reg.add_argument("--threshold-pass", type=float, default=0.05, help="practical threshold pass")
+    reg.add_argument("--threshold-f1", type=float, default=0.03, help="practical threshold (F1)")
+    reg.add_argument("--two-level", action="store_true", help="diagnostic: also resample trials")
+    reg.add_argument("--n-boot", type=int, default=10000)
+    reg.add_argument("--seed", type=int, default=1234)
+    reg.set_defaults(func=cmd_regress)
     return p
 
 
