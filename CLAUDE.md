@@ -22,8 +22,12 @@ more than feature count.
 ## Infrastructure
 - Redpanda (Kafka-compatible queue), ClickHouse (traces), Postgres (metadata,
   eval results), Redis (cache, job queue)
-- Everything runs in Docker on this machine (Ubuntu 22.04, Ryzen 7 5800H,
-  ~19 GiB RAM, RTX 3050 4 GB). Keep memory usage reasonable.
+- Primary environment: the owner's Oracle Cloud ARM machine (Ubuntu 22.04, aarch64, 4 cores,
+  23 GB RAM, ~40 GB free disk, no GPU). The stack runs in Docker (arm64 images); Python
+  agents/engine run natively in uv venvs. Not shared; Docker containers have normal egress.
+  Toolchain is user-space: Go and Node under `~/.local/{go,node}`, uv + CPython 3.12.
+  The old IdeaPad (x86_64, shared) is retired from Vigil — see docs/plans/status.md
+  "Environment" for its leftover workarounds. Keep memory usage reasonable.
 
 ## Conventions
 - Work in small, testable steps. Every component has tests.
@@ -37,7 +41,7 @@ more than feature count.
 - Run `make test-all` (repo root) at the end of every stage before committing. It runs every
   suite across all packages and skips the live suites cleanly when the stack or
   `ANTHROPIC_API_KEY` is missing.
-- Disk is tight and shared with the machine's owner (never touch their files). Before any eval
-  run, check free disk and refuse under 1 GB — `python -m engine run` enforces this (floor
-  `VIGIL_MIN_FREE_DISK_GB`, default 1.0). Never delete Docker images/volumes/build cache or
+- Before any eval run, check free disk and refuse under 1 GB — `python -m engine run` enforces
+  this (floor `VIGIL_MIN_FREE_DISK_GB`, default 1.0; the 1 GB margin was sized for the IdeaPad
+  and is under review, see status.md). Never delete Docker images/volumes/build cache or
   caches without asking the owner first.

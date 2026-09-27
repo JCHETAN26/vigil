@@ -611,7 +611,11 @@ Docker stack (`deploy/`).
   The published ports remain bound to `127.0.0.1` in `docker-compose.yml`, so ClickHouse
   is not exposed to the LAN.
 
-- **Container egress / where things run (decided).** The Docker daemon is configured with
+- **Container egress / where things run (decided — for the retired IdeaPad).** _Update
+  2026-09-27: Vigil now runs on the owner's Oracle Cloud ARM machine, where Docker uses
+  default iptables and bridge containers have normal egress, so the constraint below no
+  longer holds there. The workarounds are kept until an explicit decision (see
+  `docs/plans/status.md` "Environment")._ On the IdeaPad, the Docker daemon was configured with
   `"iptables": false` (in `/etc/docker/daemon.json`), so it installs no MASQUERADE/NAT rule
   for its bridge networks. Bridge containers can reach each other and the docker0 gateway,
   but have **no outbound egress or external DNS** — a bridge container cannot reach the

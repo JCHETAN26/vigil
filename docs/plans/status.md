@@ -1,6 +1,6 @@
 # Vigil — project status (resume guide)
 
-_Last updated: 2026-09-25. Purpose: let a fresh session resume without the prior chat._
+_Last updated: 2026-09-27. Purpose: let a fresh session resume without the prior chat._
 
 Vigil is an agent reliability + evaluation platform: it traces agents (OpenTelemetry →
 ClickHouse), runs them over datasets, scores them, and (later) detects regressions and
@@ -14,6 +14,67 @@ feature count (see `CLAUDE.md`).
   (`hello_agent`, `hotpotqa_agent`), `bench/`, `deploy/`, `docs/`.
 - Design docs: `docs/design/data-model.md` (ingest/ClickHouse), `docs/design/eval-engine.md`
   (the eval engine). This file is the living status/plan.
+
+## Environment (migrated 2026-09-27)
+
+**Primary environment: the owner's Oracle Cloud ARM machine** (Ubuntu 22.04, aarch64, 4 cores,
+23 GB RAM, ~40 GB free disk, no GPU; not shared). **The IdeaPad (x86_64, shared) is retired
+from Vigil** — nothing runs there any more.
+
+- **Toolchain (user-space, no sudo):** Go 1.27.1 in `~/.local/go`, Node 20 in `~/.local/node`,
+  uv in `~/.local/bin` with uv-managed CPython 3.12.14; PATH line in `~/.bashrc`. `make` and
+  `build-essential` come from apt.
+- **Stack:** `cd ingest && make up` builds the ingest image natively as arm64; all upstream
+  images (Redpanda, ClickHouse, Postgres, Redis) have arm64 variants. `make smoke` passes.
+  Fresh `.env` (new passwords) incl. `POSTGRES_RO_*`/`CLICKHOUSE_RO_*`; RO users created by
+  `deploy/create_readonly_users.sh`.
+- **Data migrated from the IdeaPad** (`~/vigil-export.tar.gz`, checksums verified):
+  - Postgres `pg_restore --no-owner` into the empty DB — every table matches the manifest
+    (version_manifests 3, eval_suites 3, eval_cases 130, eval_runs 4, eval_run_versions 4,
+    eval_case_results 360, schema_migrations 2).
+  - ClickHouse: `spans` 3,591 rows restored (+1 smoke span from this machine). **Restore
+    note:** `trace_index` and `agent_version_stats_daily` are fed by MVs on `spans`, so
+    inserting `spans` rebuilds both; loading `trace_index.native` on top (as the export's
+    manifest suggests) would **double** every trace's sums in the AggregatingMergeTree. The
+    MV-derived `trace_index` was instead diffed against the exported one: identical on every
+    column for all 534 traces. The rollup was then explicitly rebuilt from `spans` (the MV's
+    own SELECT) — 50 keys covering all spans. (The manifest's "10" rollup rows are not
+    comparable: 006 had reset the IdeaPad rollup, so it only held post-006 spans.)
+  - Migrated runs visible through the API/dashboard: HotpotQA dev20 `810133ff`, HotpotQA
+    base100 measurement baseline `785e9e33` (300/300 OK, pass rate 0.637, $1.99), τ² retail
+    dev10 `2b252b8d` and `72f45e90`.
+- **`data/hotpotqa/` rebuilt** with `bench/build_hotpotqa_corpus.py --n 500`: same HF revision
+  `14f0ace3…`, 4,913-paragraph corpus, 500 cases, dev20/base100 ids **identical** to the
+  migrated suites; all 120 migrated HotpotQA cases match question/answer/gold titles, all gold
+  titles are in the corpus. The CMU original is unreachable from here too (verification still
+  `skipped`). τ² venv rebuilt with `make -C agents/tau2_retail_agent tau2-setup` (pinned
+  `b7ea907`).
+- **`make test-all`:** all unit/offline suites + Go integration green; the four API-backed live
+  tests skip because the Anthropic account is still capped (verified: key authenticates, API
+  returns "regain access on 2026-10-01 at 00:00 UTC").
+
+### IdeaPad-era workarounds that may no longer be needed (not removed yet)
+
+Kept in place deliberately; each needs a decision before removal.
+
+1. **`build.network: host`** on the ingest image (`deploy/docker-compose.yml`). Existed because
+   bridge containers had no egress/DNS. Here Docker uses default iptables (no
+   `/etc/docker/daemon.json`) and a bridge container reached `proxy.golang.org` (200) and
+   `api.anthropic.com` — the default build network should work.
+2. **The `"iptables": false` / no-container-egress note** (`docs/design/data-model.md` §7
+   "Container egress"; the k8s-egress open decision below). Not true on this machine.
+   Tailscale is also installed and active here and coexists with Docker-managed iptables, so
+   the original reason doesn't apply. Consequences to revisit: agents/engine *could* run in
+   containers, and Week-6 k8s pods get egress by default.
+3. **The disk guard's tight margin** — `python -m engine run` refuses under 1 GB free
+   (`VIGIL_MIN_FREE_DISK_GB`, default 1.0), sized for the IdeaPad's nearly full shared disk.
+   With ~40 GB free here, the floor could be raised to a more meaningful safety margin (or
+   the guard kept as-is as a cheap backstop).
+4. Also IdeaPad-specific (not in the original list): **ROS `PYTHONPATH` isolation** — every
+   Makefile's `env -u PYTHONPATH` + `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1` (this machine has no ROS
+   and an empty `PYTHONPATH`; harmless to keep); the **Postgres password gotcha** (fresh volume
+   here, not applicable); Redpanda's "shared machine" low-footprint comment and the tight
+   per-container memory limits (23 GB RAM here, no one else on the box).
 
 ## What's done
 
@@ -88,6 +149,9 @@ feature count (see `CLAUDE.md`).
 
 ## What's next (in order)
 
+> **2026-09-27:** Vigil moved to the Oracle Cloud ARM machine (see "Environment" above); data,
+> suites and runs migrated and verified. The plan below is unchanged.
+>
 > **Current state (2026-09-26 pause):** Sessions 1–3 done. HotpotQA Stage D **done** (100×3
 > measurement baseline committed). Session 4 **τ²-bench retail done** (agent/adapter/scorer/
 > pass^k, τ² isolated in its own venv behind a subprocess domain server; commits `b96e9e5`,
@@ -147,7 +211,9 @@ feature count (see `CLAUDE.md`).
 
 ## Open decisions & known issues
 
-- **Kubernetes egress (owner decision needed).** Docker runs with `"iptables": false` so
+- **Kubernetes egress (owner decision needed) — IdeaPad-era; likely moot on the cloud
+  machine**, where containers have normal egress (see "Environment" workaround #2). Original
+  note, kept until that is decided: Docker runs with `"iptables": false` so
   bridge containers have no outbound NAT/DNS (deliberate — the host runs Tailscale, which
   Docker's iptables management would disrupt). The stack stays in Docker; Python
   agents/engine run natively on the host for Anthropic egress. **Week-6 k8s pods will need an
@@ -162,20 +228,25 @@ feature count (see `CLAUDE.md`).
   where the original is reachable (or `--original-url` a mirror) to record `"passed"`.
 - **GitHub contributors cache** — raised by the owner as an open item; **no corresponding code
   exists in the repo yet**. Clarify scope/intent on resume before acting (do not assume).
-- **ROS PYTHONPATH isolation.** The host has ROS on `PYTHONPATH`, which drags system packages
+- **ROS PYTHONPATH isolation (IdeaPad-era; kept, harmless).** The IdeaPad had ROS on `PYTHONPATH`, which drags system packages
   and a `launch_testing` pytest plugin (and a missing `yaml`) into the venvs. Every Makefile
   test/lint target uses `env -u PYTHONPATH` and `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1`; the engine
   also passes `-p asyncio` (autoload is off). The `ament-black` pip warning during installs is
   harmless ROS noise.
-- **Postgres password gotcha.** The Postgres data volume was initialized before the current
+- **Postgres password gotcha (IdeaPad-era; not applicable to the fresh cloud volume).** The Postgres data volume was initialized before the current
   `.env`, so host TCP auth can fail even though the container env matches. If so, align it once:
   `docker exec vigil-postgres psql -U vigil -d vigil -c "ALTER USER vigil PASSWORD '<.env value>'"`.
 
 ## How to resume
 
-Prereqs: Docker up, a repo-root `.env` (gitignored) with these variable **names** (values not
-recorded here): `CLICKHOUSE_DB`, `CLICKHOUSE_USER`, `CLICKHOUSE_PASSWORD`, `POSTGRES_DB`,
-`POSTGRES_USER`, `POSTGRES_PASSWORD`, `REDIS_PASSWORD`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`.
+Prereqs: Docker up, the toolchain on PATH (`~/.local/go/bin`, `~/.local/node/bin`,
+`~/.local/bin` — see "Environment"), a repo-root `.env` (gitignored) with these variable
+**names** (values not recorded here): `CLICKHOUSE_DB`, `CLICKHOUSE_USER`, `CLICKHOUSE_PASSWORD`,
+`POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `REDIS_PASSWORD`, `ANTHROPIC_API_KEY`,
+`OPENAI_API_KEY`, plus `POSTGRES_RO_USER`/`POSTGRES_RO_PASSWORD`/`CLICKHOUSE_RO_USER`/
+`CLICKHOUSE_RO_PASSWORD` for the dashboard API (`deploy/create_readonly_users.sh`).
+Extra first-time steps on a new machine: `make -C agents/tau2_retail_agent install tau2-setup`,
+`engine/.venv/bin/pip install -e "engine/.[bench]"` (pyarrow), `npm ci` in `dashboard/`.
 Optional runtime env: `VIGIL_HOTPOTQA_CORPUS` (agent corpus path), `VIGIL_OTLP_PROTOCOL`
 (`grpc`|`http`), and the `VIGIL_EVAL_*` knobs (see `engine/engine/config.py`).
 
