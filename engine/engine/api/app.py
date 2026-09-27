@@ -13,6 +13,7 @@ Bind to 127.0.0.1 only (see __main__).
 
 from __future__ import annotations
 
+import json
 import uuid
 from contextlib import asynccontextmanager
 from typing import Annotated
@@ -167,16 +168,45 @@ async def get_cases(
     }
 
 
+def _json_list(raw) -> list:
+    """Parse a JSON-array string (e.g. vigil.retrieval.doc_ids) to a list; [] on empty/invalid."""
+    if not raw:
+        return []
+    try:
+        val = json.loads(raw)
+        return val if isinstance(val, list) else []
+    except (ValueError, TypeError):
+        return []
+
+
+def _parse_event(name: str, attrs_json: str) -> dict:
+    """A captured content event → {name, content (text only), truncated}. Content is the
+    recorded text (not the raw attributes JSON); truncated reflects vigil.content.truncated."""
+    try:
+        obj = json.loads(attrs_json) if attrs_json else {}
+    except (ValueError, TypeError):
+        obj = {}
+    return {
+        "name": name,
+        "content": obj.get("content"),
+        "truncated": bool(obj.get("vigil.content.truncated", False)),
+        "tool_name": obj.get("gen_ai.tool.name"),
+    }
+
+
 @app.get("/traces/{trace_id}")
 async def get_trace(trace_id: TraceId):
     try:
         rows = app.state.ch.query(
             "SELECT span_id, parent_span_id, span_name, span_kind, role, "
+            "gen_ai_request_model AS model, "
             "toUnixTimestamp64Nano(start_time) AS start_ns, "
             "toUnixTimestamp64Nano(end_time) AS end_ns, "
             "gen_ai_usage_input_tokens AS in_tok, gen_ai_usage_output_tokens AS out_tok, "
             "gen_ai_usage_cache_creation_input_tokens AS cache_write, "
             "gen_ai_usage_cache_read_input_tokens AS cache_read, cost_usd, "
+            "span_attributes['vigil.retrieval.doc_ids'] AS doc_ids, "
+            "span_attributes['vigil.retrieval.k'] AS retrieval_k, "
             "`events.name` AS event_names, `events.attributes` AS event_attrs "
             "FROM spans WHERE trace_id = {tid:String} ORDER BY start_time LIMIT {lim:UInt32}",
             {"tid": trace_id, "lim": _MAX_TRACE_SPANS},
@@ -190,6 +220,7 @@ async def get_trace(trace_id: TraceId):
         r["start_ns"] = int(r["start_ns"])
         r["end_ns"] = int(r["end_ns"])
     root = min((r["start_ns"] for r in rows), default=0)
+    is_llm = lambda r: bool(r["model"]) and r["span_name"].startswith("gen_ai")  # noqa: E731
     spans = [
         {
             "span_id": r["span_id"],
@@ -197,16 +228,21 @@ async def get_trace(trace_id: TraceId):
             "name": r["span_name"],
             "kind": r["span_kind"],
             "role": r["role"] or None,
+            "model": r["model"] or None,
             "start_ms": (r["start_ns"] - root) / 1e6,
             "duration_ms": (r["end_ns"] - r["start_ns"]) / 1e6,
-            "input_tokens": r["in_tok"],
-            "output_tokens": r["out_tok"],
-            "cache_write_tokens": r["cache_write"],
-            "cache_read_tokens": r["cache_read"],
-            "cost_usd": r["cost_usd"],
-            # Captured content, as plain strings (client renders as text, never HTML).
+            # Token/cost fields only where they apply (LLM calls); null elsewhere.
+            "input_tokens": r["in_tok"] if is_llm(r) else None,
+            "output_tokens": r["out_tok"] if is_llm(r) else None,
+            "cache_write_tokens": r["cache_write"] if is_llm(r) else None,
+            "cache_read_tokens": r["cache_read"] if is_llm(r) else None,
+            "cost_usd": r["cost_usd"] if is_llm(r) else None,
+            # Retrieval spans: the document ids/titles that were retrieved (not just the query).
+            "retrieved_doc_ids": _json_list(r.get("doc_ids")),
+            "retrieval_k": int(r["retrieval_k"]) if r.get("retrieval_k") else None,
+            # Captured content parsed to its text + the recorded truncation flag.
             "events": [
-                {"name": n, "content": a}
+                _parse_event(n, a)
                 for n, a in zip(r.get("event_names") or [], r.get("event_attrs") or [])
             ],
         }

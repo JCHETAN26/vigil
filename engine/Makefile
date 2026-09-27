@@ -8,8 +8,10 @@ PY = $(VENV)/bin/python
 # uv-managed CPython (installed with `uv python install 3.12`); the host system Python is untouched.
 PYTHON_VERSION = 3.12
 ISOLATE = env -u PYTHONPATH
+ROOT_ENV = ../.env
+LOADENV = set -a; [ -f $(ROOT_ENV) ] && . $(ROOT_ENV); set +a;
 
-.PHONY: venv install test test-integration lint fmt migrate clean
+.PHONY: venv install test test-integration lint fmt migrate api clean
 
 venv:
 	uv venv --python $(PYTHON_VERSION) --seed $(VENV)
@@ -40,10 +42,10 @@ fmt:
 migrate:
 	$(ISOLATE) $(PY) -m engine.db.migrate
 
-# Run the read-only dashboard API locally, bound to 127.0.0.1 (needs the stack up + POSTGRES_*/
-# CLICKHOUSE_* in env). Source ../.env first.
+# Run the read-only dashboard API locally, bound to 127.0.0.1. Loads ../.env automatically
+# (read-only DB creds + ClickHouse creds); needs the stack up.
 api:
-	$(ISOLATE) $(PY) -m engine.api
+	$(LOADENV) $(ISOLATE) $(PY) -m engine.api
 
 clean:
 	rm -rf $(VENV) build dist *.egg-info

@@ -36,7 +36,9 @@ export interface CaseRow {
 
 export interface TraceEvent {
   name: string;
-  content: string;
+  content: string | null;
+  truncated: boolean;
+  tool_name?: string | null;
 }
 
 export interface SpanRow {
@@ -45,6 +47,7 @@ export interface SpanRow {
   name: string;
   kind: string;
   role: string | null;
+  model: string | null;
   start_ms: number;
   duration_ms: number;
   input_tokens: number | null;
@@ -52,6 +55,8 @@ export interface SpanRow {
   cache_write_tokens: number | null;
   cache_read_tokens: number | null;
   cost_usd: number | null;
+  retrieved_doc_ids: string[];
+  retrieval_k: number | null;
   events: TraceEvent[];
 }
 

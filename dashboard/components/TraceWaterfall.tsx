@@ -26,6 +26,24 @@ function categorize(s: SpanRow): Cat {
   return "other";
 }
 
+// Readable label; the full span name is available on hover/focus (SVG <title> + aria-label).
+function labelOf(s: SpanRow, cat: Cat): string {
+  switch (cat) {
+    case "run":
+      return "agent run";
+    case "sim":
+      return "user simulator";
+    case "retrieval":
+      return "Search";
+    case "llm":
+      return `LLM · ${s.model ?? "?"}`;
+    case "tool":
+      return `Tool · ${s.name.replace(/^tool\./, "")}`;
+    default:
+      return s.name;
+  }
+}
+
 function depthOf(span: SpanRow, byId: Map<string, SpanRow>): number {
   let d = 0;
   let cur = span.parent_span_id ? byId.get(span.parent_span_id) : undefined;
@@ -38,9 +56,17 @@ function depthOf(span: SpanRow, byId: Map<string, SpanRow>): number {
   return d;
 }
 
+function niceStep(target: number): number {
+  const pow = Math.pow(10, Math.floor(Math.log10(target)));
+  for (const m of [1, 2, 5, 10]) if (m * pow >= target) return m * pow;
+  return 10 * pow;
+}
+
 const ROW_H = 26;
 const LABEL_W = 220;
 const BAR_AREA = 520;
+const AXIS_H = 22;
+const MIN_BAR = 6; // very short spans stay visible and selectable
 
 export function TraceWaterfall({ spans }: { spans: SpanRow[] }) {
   const byId = useMemo(() => new Map(spans.map((s) => [s.span_id, s])), [spans]);
@@ -50,6 +76,13 @@ export function TraceWaterfall({ spans }: { spans: SpanRow[] }) {
   );
   const [selected, setSelected] = useState(0);
   const rowRefs = useRef<(SVGGElement | null)[]>([]);
+
+  const x = (ms: number) => LABEL_W + (ms / total) * BAR_AREA;
+  const step = niceStep(total / 5);
+  const ticks: number[] = [];
+  for (let t = 0; t <= total + 1e-9; t += step) ticks.push(t);
+
+  const height = AXIS_H + spans.length * ROW_H + 8;
 
   const focusRow = (i: number) => {
     const clamped = Math.max(0, Math.min(spans.length - 1, i));
@@ -63,8 +96,8 @@ export function TraceWaterfall({ spans }: { spans: SpanRow[] }) {
     <div className="flex flex-col gap-4">
       <Legend />
       <svg
-        width={LABEL_W + BAR_AREA}
-        height={spans.length * ROW_H + 8}
+        width={LABEL_W + BAR_AREA + 8}
+        height={height}
         role="group"
         aria-label="trace span timeline; use arrow keys to move between spans, Enter to inspect"
         className="border rounded-md bg-black/5"
@@ -72,13 +105,22 @@ export function TraceWaterfall({ spans }: { spans: SpanRow[] }) {
         <defs>
           <Patterns />
         </defs>
+        {/* Time axis (ms) with gridlines down the rows. */}
+        {ticks.map((t) => (
+          <g key={`tick-${t}`} aria-hidden="true">
+            <line x1={x(t)} y1={AXIS_H} x2={x(t)} y2={height} stroke="#98a2b3" strokeWidth={0.5} opacity={0.4} />
+            <text x={x(t)} y={14} fontSize={10} fill="currentColor" textAnchor="middle">
+              {Math.round(t)}ms
+            </text>
+          </g>
+        ))}
         {spans.map((s, i) => {
           const cat = categorize(s);
           const c = CATS[cat];
           const depth = depthOf(s, byId);
-          const x = LABEL_W + (s.start_ms / total) * BAR_AREA;
-          const w = Math.max(2, (s.duration_ms / total) * BAR_AREA);
-          const y = i * ROW_H + 4;
+          const bx = x(s.start_ms);
+          const w = Math.max(MIN_BAR, (s.duration_ms / total) * BAR_AREA);
+          const y = AXIS_H + i * ROW_H + 4;
           return (
             <g
               key={s.span_id}
@@ -87,7 +129,7 @@ export function TraceWaterfall({ spans }: { spans: SpanRow[] }) {
               }}
               tabIndex={0}
               role="button"
-              aria-label={`${c.label}: ${s.name}, start ${s.start_ms.toFixed(0)}ms, duration ${s.duration_ms.toFixed(0)}ms`}
+              aria-label={`${labelOf(s, cat)} (${s.name}), start ${s.start_ms.toFixed(0)}ms, duration ${s.duration_ms.toFixed(0)}ms`}
               aria-pressed={i === selected}
               onFocus={() => setSelected(i)}
               onClick={() => setSelected(i)}
@@ -105,18 +147,18 @@ export function TraceWaterfall({ spans }: { spans: SpanRow[] }) {
               }}
               style={{ cursor: "pointer" }}
             >
+              <title>{s.name}</title>
               <rect x={0} y={y} width={LABEL_W + BAR_AREA} height={ROW_H} fill={i === selected ? "#2563eb22" : "transparent"} />
               <text x={8 + depth * 12} y={y + ROW_H / 2 + 4} fontSize={12} fill="currentColor">
-                {truncate(s.name, 26 - depth * 2)}
+                {truncate(labelOf(s, cat), 26 - depth * 2)}
               </text>
-              {/* Bar: color + category pattern overlay so it reads without color. */}
-              <rect x={x} y={y + 5} width={w} height={ROW_H - 12} rx={2} fill={c.color} />
-              <rect x={x} y={y + 5} width={w} height={ROW_H - 12} rx={2} fill={`url(#${c.pattern})`} />
+              <rect x={bx} y={y + 5} width={w} height={ROW_H - 12} rx={2} fill={c.color} />
+              <rect x={bx} y={y + 5} width={w} height={ROW_H - 12} rx={2} fill={`url(#${c.pattern})`} />
             </g>
           );
         })}
       </svg>
-      {sel && <SpanDetail span={sel} />}
+      {sel && <SpanDetail span={sel} cat={categorize(sel)} />}
     </div>
   );
 }
@@ -144,8 +186,7 @@ function Legend() {
   );
 }
 
-// Distinct fill patterns per category (stripes / dots / crosshatch), so categories are
-// distinguishable in monochrome.
+// Distinct fill patterns per category (stripes / dots / crosshatch), distinguishable in mono.
 function Patterns() {
   return (
     <>
@@ -169,30 +210,67 @@ function Patterns() {
   );
 }
 
-function SpanDetail({ span }: { span: SpanRow }) {
+function SpanDetail({ span, cat }: { span: SpanRow; cat: Cat }) {
+  const query = span.events.find((e) => e.name.endsWith("retrieval.query"))?.content;
   return (
     <section aria-label="selected span detail" className="border rounded-md p-3 text-sm">
       <h3 className="font-semibold">
-        {span.name}
-        {span.role ? ` · role=${span.role}` : ""}
+        {labelOf(span, cat)}
+        <span className="font-normal opacity-60"> · {span.name}</span>
       </h3>
       <p className="opacity-70 mt-1">
         start {span.start_ms.toFixed(1)}ms · duration {span.duration_ms.toFixed(1)}ms
-        {span.input_tokens != null ? ` · in ${span.input_tokens}` : ""}
-        {span.output_tokens != null ? ` / out ${span.output_tokens} tok` : ""}
-        {span.cache_read_tokens ? ` · cache-read ${span.cache_read_tokens}` : ""}
-        {span.cache_write_tokens ? ` · cache-write ${span.cache_write_tokens}` : ""}
-        {span.cost_usd != null ? ` · $${span.cost_usd.toFixed(6)}` : ""}
       </p>
+
+      {/* Tokens & cost only for LLM calls (where they apply). */}
+      {cat === "llm" && (
+        <p className="opacity-70 mt-1">
+          {span.input_tokens ?? 0} in / {span.output_tokens ?? 0} out tok
+          {span.cache_read_tokens ? ` · cache-read ${span.cache_read_tokens}` : ""}
+          {span.cache_write_tokens ? ` · cache-write ${span.cache_write_tokens}` : ""}
+          {span.cost_usd != null ? ` · $${span.cost_usd.toFixed(6)}` : ""}
+        </p>
+      )}
+
+      {/* Retrieval spans: the retrieved document titles/ids, not just the query. */}
+      {cat === "retrieval" && (
+        <div className="mt-2">
+          {query && (
+            <p>
+              <span className="font-medium">Query:</span> {query}
+            </p>
+          )}
+          <p className="font-medium mt-1">
+            Retrieved{span.retrieval_k != null ? ` (top ${span.retrieval_k})` : ""}:
+          </p>
+          {span.retrieved_doc_ids.length > 0 ? (
+            <ol className="list-decimal ml-5">
+              {span.retrieved_doc_ids.map((d, i) => (
+                <li key={i}>{d}</li>
+              ))}
+            </ol>
+          ) : (
+            <p className="opacity-60">no documents recorded</p>
+          )}
+        </div>
+      )}
+
       {span.events.length > 0 && (
         <div className="mt-2">
           <p className="font-medium">Captured content</p>
           {span.events.map((ev, i) => (
             <details key={i} className="mt-1">
-              <summary className="cursor-pointer">{ev.name}</summary>
-              {/* Plain text only — React escapes text nodes; never dangerouslySetInnerHTML. */}
+              <summary className="cursor-pointer">
+                {ev.name}
+                {ev.truncated && (
+                  <span className="ml-2 px-1 rounded bg-black/20 text-xs" title="content was truncated at capture">
+                    truncated
+                  </span>
+                )}
+              </summary>
+              {/* Text only — React escapes text nodes; never dangerouslySetInnerHTML. */}
               <pre className="mt-1 whitespace-pre-wrap break-words text-xs bg-black/5 p-2 rounded">
-                {ev.content}
+                {ev.content ?? ""}
               </pre>
             </details>
           ))}

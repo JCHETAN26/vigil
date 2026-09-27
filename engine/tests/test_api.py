@@ -118,6 +118,43 @@ def test_cases_pagination_and_trace_roundtrip(client):
 
 
 @pytest.mark.integration
+def test_trace_surfaces_retrieval_docs_and_text_content(client):
+    # Find a HotpotQA run (its traces have `search` retrieval spans) and check the polish:
+    # retrieval spans carry the retrieved doc ids, and captured content is text (not raw JSON)
+    # with a truncated flag.
+    runs = client.get("/runs", params={"limit": 200}).json()["runs"]
+    hq = next((r for r in runs if "hotpotqa" in r["suite"]), None)
+    if not hq:
+        pytest.skip("no hotpotqa run to inspect")
+    cases = client.get(f"/runs/{hq['id']}/cases", params={"limit": 50}).json()["cases"]
+    trace_id = next((c["trace_id"] for c in cases if c.get("trace_id")), None)
+    if not trace_id:
+        pytest.skip("no trace on the hotpotqa run")
+    spans = client.get(f"/traces/{trace_id}").json()["spans"]
+
+    search = next((s for s in spans if s["name"] == "search"), None)
+    if search is None:
+        pytest.skip("no retrieval span in this trace")
+    assert isinstance(search["retrieved_doc_ids"], list) and len(search["retrieved_doc_ids"]) >= 1
+    assert isinstance(search["retrieval_k"], int)
+
+    # Captured content is the recorded text, not the raw attributes JSON.
+    ev = next((e for s in spans for e in s["events"] if e.get("content")), None)
+    assert ev is not None
+    assert isinstance(ev["content"], str)
+    assert "vigil.content.truncated" not in ev["content"]  # not the raw attrs blob
+    assert isinstance(ev["truncated"], bool)
+
+    # Token/cost fields are present on LLM spans and null elsewhere.
+    llm = next((s for s in spans if s["name"].startswith("gen_ai")), None)
+    if llm:
+        assert llm["input_tokens"] is not None and llm["model"]
+    run_span = next((s for s in spans if s["name"] == "agent.run"), None)
+    if run_span:
+        assert run_span["input_tokens"] is None  # not an LLM call
+
+
+@pytest.mark.integration
 def test_api_postgres_connection_cannot_write():
     # A write attempt over the API's own Postgres connection (the read-only role from pg_ro_dsn)
     # is rejected by the grant, not just by convention.

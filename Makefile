@@ -16,9 +16,19 @@ LOADENV := set -a; [ -f $(ENV) ] && . $(ENV); set +a;
 ISOLATE := env -u PYTHONPATH
 BENCH_PY := $(ROOT)/engine/.venv/bin/python
 
-.PHONY: test-all test-unit test-live
+.PHONY: test-all test-unit test-live dev
 
 test-all: test-unit test-live
+
+# Start the read-only API (127.0.0.1:8080) and the dashboard dev server (127.0.0.1:3000)
+# together; Ctrl-C stops both. Loads .env for the API's DB credentials.
+dev:
+	@$(LOADENV) bash -c 'set -m; \
+	  ( cd $(ROOT)/engine && env -u PYTHONPATH .venv/bin/python -m engine.api ) & apipid=$$!; \
+	  ( cd $(ROOT)/dashboard && npm run dev ) & webpid=$$!; \
+	  echo "API pid $$apipid on 127.0.0.1:8080; dashboard pid $$webpid on 127.0.0.1:3000. Ctrl-C stops both."; \
+	  trap "kill $$apipid $$webpid 2>/dev/null" INT TERM EXIT; \
+	  wait'
 
 # Always-runnable suites (no external services / no API key).
 test-unit:
