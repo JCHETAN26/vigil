@@ -20,7 +20,7 @@ venv:
 install: venv
 	$(PY) -m pip install -q --upgrade pip
 	$(PY) -m pip install -q -e "../sdk-python"
-	$(PY) -m pip install -q -e ".[dev]"
+	$(PY) -m pip install -q -e ".[dev,api]"
 	$(PY) -m pip install -q --no-deps -e "../agents/hello_agent"
 	$(PY) -m pip install -q -e "../agents/hotpotqa_agent"   # brings bm25s for the worker
 	$(PY) -m pip install -q --no-deps -e "../agents/tau2_retail_agent"  # deps satisfied; tau2 itself is isolated
@@ -39,6 +39,11 @@ fmt:
 
 migrate:
 	$(ISOLATE) $(PY) -m engine.db.migrate
+
+# Run the read-only dashboard API locally, bound to 127.0.0.1 (needs the stack up + POSTGRES_*/
+# CLICKHOUSE_* in env). Source ../.env first.
+api:
+	$(ISOLATE) $(PY) -m engine.api
 
 clean:
 	rm -rf $(VENV) build dist *.egg-info
