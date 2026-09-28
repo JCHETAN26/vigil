@@ -1,0 +1,26 @@
+{
+  "run_id": "pilot-http-20260928T085601Z",
+  "database": "vigil_load",
+  "drained_in": "5.03s",
+  "reconciliation": {
+    "acked_traces": 3015,
+    "acked_spans": 20326,
+    "stored_acked_unique_spans": 20326,
+    "missing_spans": 0,
+    "duplicate_rows": 0,
+    "unacked_spans": 0,
+    "unacked_stored": 0,
+    "unexpected_traces": 0,
+    "stored_rows": 20326
+  },
+  "clean": true,
+  "trace_index_span_count": 20326,
+  "dlq_records": 0,
+  "raw_topic_bytes": 59782599,
+  "e2e_latency_ms": {
+    "max": 2841.5927734375,
+    "p50": 1656.957763671875,
+    "p95": 2720.177978515625,
+    "p99": 2791.71630859375
+  }
+}

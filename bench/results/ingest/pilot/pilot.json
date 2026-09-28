@@ -1,0 +1,364 @@
+{
+  "generated_at": "2026-09-28T08:56:52.221475+00:00",
+  "hardware": {
+    "captured_at": "2026-09-28T08:56:00.999872+00:00",
+    "cpu": {
+      "model": "Neoverse-N1",
+      "vendor": "ARM",
+      "cpus": 4,
+      "architecture": "aarch64"
+    },
+    "memory_gib": 23.4,
+    "kernel": "6.8.0-1062-oracle",
+    "os": "Ubuntu 22.04.5 LTS",
+    "docker": "29.8.1",
+    "go": "go version go1.27.1 linux/arm64",
+    "git": {
+      "sha": "d887a813e86b10b2756b9b86fbca44e8e35223ad",
+      "dirty": false
+    },
+    "shared_machine": "Generator and pipeline share one host. Generator pinned to core 0 (taskset); load receiver/writer, ClickHouse and Redpanda pinned to cores 1-3 (docker cpuset). Host processes (dockerd, tailscaled, sshd, ...) are unpinned and may run on any core.",
+    "generator_core": "0",
+    "containers": [
+      {
+        "name": "vigil-load-receiver",
+        "cpuset": "1-3",
+        "memory": "256 MiB",
+        "status": "running"
+      },
+      {
+        "name": "vigil-load-writer",
+        "cpuset": "1-3",
+        "memory": "512 MiB",
+        "status": "running"
+      },
+      {
+        "name": "vigil-clickhouse",
+        "cpuset": "1-3",
+        "memory": "2048 MiB",
+        "status": "running"
+      },
+      {
+        "name": "vigil-redpanda",
+        "cpuset": "1-3",
+        "memory": "2048 MiB",
+        "status": "running"
+      }
+    ],
+    "writer_config": {
+      "VIGIL_BATCH_MAX_ROWS": "10000",
+      "VIGIL_BATCH_MAX_BYTES": "33554432",
+      "VIGIL_FLUSH_INTERVAL": "2s"
+    }
+  },
+  "templates": {
+    "exported_at": "2026-09-27T23:09:11Z",
+    "source_database": "vigil",
+    "source_user": "vigil_ro",
+    "agents": [
+      "hotpotqa-agent",
+      "tau2-retail-agent",
+      "hello-agent"
+    ],
+    "traces": 515,
+    "spans": 3464,
+    "per_agent_traces_spans": {
+      "hello-agent": [
+        106,
+        332
+      ],
+      "hotpotqa-agent": [
+        358,
+        2325
+      ],
+      "tau2-retail-agent": [
+        51,
+        807
+      ]
+    },
+    "file_bytes": 15054913,
+    "sha256": "afbb664d6bead6076d569af64d7fd9e8bcf9be020633649bb9ccc5611978e734",
+    "prices_as_of": "2026-09-25",
+    "fidelity": {
+      "traces": 515,
+      "spans": 3464,
+      "mismatches": 0,
+      "cost_mismatches": 0,
+      "legacy_rows_upgraded": 88
+    }
+  },
+  "runs": [
+    {
+      "summary": {
+        "config": {
+          "protocol": "grpc",
+          "endpoint": "127.0.0.1:14317",
+          "run_id": "pilot-grpc-20260928T085601Z",
+          "rate_spans_per_sec": 1000,
+          "duration_ns": 20000000000,
+          "max_spans_per_request": 512,
+          "max_bytes_per_request": 3145728,
+          "concurrency": 32,
+          "attempt_timeout_ns": 10000000000,
+          "max_retry_elapsed_ns": 300000000000,
+          "seed": 1
+        },
+        "start_ns": 1790585761491959029,
+        "end_ns": 1790585781393311354,
+        "gomaxprocs": 1,
+        "requests": 40,
+        "requests_ok": 40,
+        "requests_failed": 0,
+        "retries": 0,
+        "spans_sent": 20326,
+        "spans_acked": 20326,
+        "spans_unacked": 0,
+        "spans_rejected_partial": 0,
+        "acked_spans_per_sec": 1016.3,
+        "attempt_codes": {
+          "OK": 40
+        },
+        "request_latency_ms": {
+          "n": 40,
+          "mean": 81.30203384999999,
+          "p50": 81.626685,
+          "p95": 88.638218,
+          "p99": 91.616107,
+          "max": 91.616107
+        },
+        "service_latency_ms": {
+          "n": 40,
+          "mean": 80.24251022499999,
+          "p50": 80.92665,
+          "p95": 87.519477,
+          "p99": 90.129567,
+          "max": 90.129567
+        },
+        "schedule_lag_ms": {
+          "n": 40,
+          "mean": 1.059523625,
+          "p50": 1.075485,
+          "p95": 1.552399,
+          "p99": 1.617531,
+          "max": 1.617531
+        },
+        "cpu_samples": [
+          0.03270758195312062,
+          0.015253841489506138,
+          0.015601903696080192,
+          0.016396826036446266,
+          0.014977988047565538,
+          0.01515400576314958,
+          0.015358600725761567,
+          0.0157301243714302,
+          0.014744497943147533,
+          0.014527215450005786,
+          0.015743850714641683,
+          0.015231101164973938,
+          0.014922360566657375,
+          0.016937457411465528,
+          0.015155997281448888,
+          0.0150222260699351,
+          0.03251151750731319,
+          0.017119800278636074,
+          0.014677226043958304
+        ],
+        "cpu_fraction": {
+          "n": 19,
+          "mean": 0.017251269606065444,
+          "p50": 0.015253841489506138,
+          "p95": 0.03270758195312062,
+          "p99": 0.03270758195312062,
+          "max": 0.03270758195312062
+        },
+        "templates": "/home/ubuntu/projects/vigil/data/loadtest/templates.v1.pb",
+        "templates_sha256": "afbb664d6bead6076d569af64d7fd9e8bcf9be020633649bb9ccc5611978e734"
+      },
+      "reconcile": {
+        "run_id": "pilot-grpc-20260928T085601Z",
+        "database": "vigil_load",
+        "drained_in": "5.03s",
+        "reconciliation": {
+          "acked_traces": 3015,
+          "acked_spans": 20326,
+          "stored_acked_unique_spans": 20326,
+          "missing_spans": 0,
+          "duplicate_rows": 0,
+          "unacked_spans": 0,
+          "unacked_stored": 0,
+          "unexpected_traces": 0,
+          "stored_rows": 20326
+        },
+        "clean": true,
+        "trace_index_span_count": 20326,
+        "dlq_records": 0,
+        "raw_topic_bytes": 45872802,
+        "e2e_latency_ms": {
+          "max": 2791.965576171875,
+          "p50": 1656.639404296875,
+          "p95": 2713.202880859375,
+          "p99": 2753.353271484375
+        }
+      },
+      "flags": []
+    },
+    {
+      "summary": {
+        "config": {
+          "protocol": "http",
+          "endpoint": "127.0.0.1:14318",
+          "run_id": "pilot-http-20260928T085601Z",
+          "rate_spans_per_sec": 1000,
+          "duration_ns": 20000000000,
+          "max_spans_per_request": 512,
+          "max_bytes_per_request": 3145728,
+          "concurrency": 32,
+          "attempt_timeout_ns": 10000000000,
+          "max_retry_elapsed_ns": 300000000000,
+          "seed": 1
+        },
+        "start_ns": 1790585786844707301,
+        "end_ns": 1790585806736419500,
+        "gomaxprocs": 1,
+        "requests": 40,
+        "requests_ok": 40,
+        "requests_failed": 0,
+        "retries": 0,
+        "spans_sent": 20326,
+        "spans_acked": 20326,
+        "spans_unacked": 0,
+        "spans_rejected_partial": 0,
+        "acked_spans_per_sec": 1016.3,
+        "attempt_codes": {
+          "200": 40
+        },
+        "request_latency_ms": {
+          "n": 40,
+          "mean": 89.824851775,
+          "p50": 87.314595,
+          "p95": 110.844502,
+          "p99": 115.944416,
+          "max": 115.944416
+        },
+        "service_latency_ms": {
+          "n": 40,
+          "mean": 88.613044375,
+          "p50": 85.979471,
+          "p95": 110.097969,
+          "p99": 114.531308,
+          "max": 114.531308
+        },
+        "schedule_lag_ms": {
+          "n": 40,
+          "mean": 1.2118073999999996,
+          "p50": 1.191868,
+          "p95": 1.693636,
+          "p99": 2.38359,
+          "max": 2.38359
+        },
+        "cpu_samples": [
+          0.018025077456716877,
+          0.0169988885042903,
+          0.017132436151228118,
+          0.033596486766354565,
+          0.01616069267788866,
+          0.015058780289332606,
+          0.016382680236855424,
+          0.01714409068129803,
+          0.03274465028713494,
+          0.015126959440918545,
+          0.014789998635497867,
+          0.01563735256318087,
+          0.015303368121110028,
+          0.03209263261606169,
+          0.014918516865034093,
+          0.014648758579125867,
+          0.01957196268733775,
+          0.015152910448558595,
+          0.03169510134611418
+        ],
+        "cpu_fraction": {
+          "n": 19,
+          "mean": 0.019588491808107317,
+          "p50": 0.016382680236855424,
+          "p95": 0.033596486766354565,
+          "p99": 0.033596486766354565,
+          "max": 0.033596486766354565
+        },
+        "templates": "/home/ubuntu/projects/vigil/data/loadtest/templates.v1.pb",
+        "templates_sha256": "afbb664d6bead6076d569af64d7fd9e8bcf9be020633649bb9ccc5611978e734"
+      },
+      "reconcile": {
+        "run_id": "pilot-http-20260928T085601Z",
+        "database": "vigil_load",
+        "drained_in": "5.03s",
+        "reconciliation": {
+          "acked_traces": 3015,
+          "acked_spans": 20326,
+          "stored_acked_unique_spans": 20326,
+          "missing_spans": 0,
+          "duplicate_rows": 0,
+          "unacked_spans": 0,
+          "unacked_stored": 0,
+          "unexpected_traces": 0,
+          "stored_rows": 20326
+        },
+        "clean": true,
+        "trace_index_span_count": 20326,
+        "dlq_records": 0,
+        "raw_topic_bytes": 59782599,
+        "e2e_latency_ms": {
+          "max": 2841.5927734375,
+          "p50": 1656.957763671875,
+          "p95": 2720.177978515625,
+          "p99": 2791.71630859375
+        }
+      },
+      "flags": []
+    }
+  ],
+  "calibration": {
+    "ch_rows": 40652,
+    "ch_bytes": 28704144,
+    "ch_bytes_per_span": 706.0942635048706,
+    "spans_sent": 40652,
+    "topic_bytes_delta": 27822065,
+    "topic_bytes_per_span": 684.3959706779494,
+    "topic_cap": 2147483648,
+    "planning_ch_bytes_per_span": 706.0942635048706
+  },
+  "stage2_projection": [
+    {
+      "rate": 500,
+      "spans": 360000,
+      "peak_bytes": 754770419
+    },
+    {
+      "rate": 1000,
+      "spans": 720000,
+      "peak_bytes": 1509540838
+    },
+    {
+      "rate": 2000,
+      "spans": 1440000,
+      "peak_bytes": 3019081676
+    },
+    {
+      "rate": 5000,
+      "spans": 3600000,
+      "peak_bytes": 7231362345
+    },
+    {
+      "rate": 10000,
+      "spans": 7200000,
+      "peak_bytes": 12315241042
+    },
+    {
+      "rate": 20000,
+      "spans": 14400000,
+      "peak_bytes": 22482998436
+    }
+  ],
+  "free_bytes": 32358047744,
+  "largest_step_fits": true
+}
