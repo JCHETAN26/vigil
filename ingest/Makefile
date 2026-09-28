@@ -9,7 +9,7 @@ COMPOSE = docker compose --env-file $(ENVFILE) -f ../deploy/docker-compose.yml
 # Source ../.env (if present) into the recipe's shell.
 LOADENV = set -a; [ -f $(ENVFILE) ] && . $(ENVFILE); set +a;
 
-.PHONY: all build fmt vet test test-integration tidy topics migrate receiver writer smoke up down logs clean
+.PHONY: all build fmt vet test test-integration tidy topics migrate receiver writer smoke loadgen up down logs clean
 
 all: build
 
@@ -64,6 +64,10 @@ logs:
 # receiver`/`make writer` (host).
 smoke:
 	$(LOADENV) go run ./cmd/smoke
+
+# Build the load generator (bench/ingest_load.py drives it; see cmd/loadgen).
+loadgen:
+	go build -o bin/loadgen ./cmd/loadgen
 
 clean:
 	rm -rf bin dist

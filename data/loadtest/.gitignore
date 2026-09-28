@@ -1,0 +1,3 @@
+# Generated load-test templates (rebuild with bench/ingest_load.py export)
+*
+!.gitignore

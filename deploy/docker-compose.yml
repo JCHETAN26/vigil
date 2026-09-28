@@ -242,6 +242,117 @@ services:
           memory: 512m
     restart: unless-stopped
 
+  # --- Load-test pipeline (profile "loadtest"; bench/ingest_load.py drives it) ---
+  # The same ingest image and binaries as receiver/writer above, configured to an isolated
+  # database (vigil_load), topics (otlp.spans.load / spans.dlq.load), and consumer group, so
+  # load data never mixes with real eval data and is removed by dropping the database and
+  # topics. Receiver/writer are pinned to cores 1-3 (VIGIL_LOAD_CPUSET): the load generator
+  # runs pinned to core 0. Memory limits default to the main services' limits (the
+  # "as-is" baseline) and are overridable for the sized run.
+
+  load-db:
+    image: clickhouse/clickhouse-server:24.8.4.13
+    container_name: vigil-load-db
+    profiles: ["loadtest"]
+    environment:
+      <<: *clickhouse-env
+    # Credentials come from the environment (not argv), so they stay out of `docker inspect`.
+    entrypoint: ["sh", "-c", "clickhouse-client --host clickhouse --user \"$$CLICKHOUSE_USER\" --password \"$$CLICKHOUSE_PASSWORD\" --query 'CREATE DATABASE IF NOT EXISTS vigil_load'"]
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    restart: "no"
+
+  load-migrate:
+    <<: *ingest-image
+    container_name: vigil-load-migrate
+    profiles: ["loadtest"]
+    command: ["/usr/local/bin/migrate"]
+    environment:
+      <<: *clickhouse-env
+      CLICKHOUSE_DB: vigil_load
+    depends_on:
+      load-db:
+        condition: service_completed_successfully
+    restart: "no"
+
+  load-topics:
+    <<: *ingest-image
+    container_name: vigil-load-topics
+    profiles: ["loadtest"]
+    command: ["/usr/local/bin/topics"]
+    environment:
+      VIGIL_KAFKA_BROKERS: redpanda:9092
+      VIGIL_RAW_TOPIC: otlp.spans.load
+      VIGIL_DLQ_TOPIC: spans.dlq.load
+      # Disk budget for the load topic (bytes, all partitions); bench/ingest_load.py also
+      # checks projected disk before every run.
+      VIGIL_RAW_RETENTION_BYTES: ${VIGIL_LOAD_RETENTION_BYTES:-2147483648}
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    restart: "no"
+
+  load-receiver:
+    <<: *ingest-image
+    container_name: vigil-load-receiver
+    profiles: ["loadtest"]
+    command: ["/usr/local/bin/receiver"]
+    cpuset: ${VIGIL_LOAD_CPUSET:-1-3}
+    environment:
+      VIGIL_KAFKA_BROKERS: redpanda:9092
+      VIGIL_RAW_TOPIC: otlp.spans.load
+      VIGIL_DLQ_TOPIC: spans.dlq.load
+      VIGIL_OTLP_GRPC_ADDR: 0.0.0.0:4317
+      VIGIL_OTLP_HTTP_ADDR: 0.0.0.0:4318
+      VIGIL_HEALTH_ADDR: 0.0.0.0:8088
+    ports:
+      - "127.0.0.1:14317:4317"   # OTLP/gRPC (load)
+      - "127.0.0.1:14318:4318"   # OTLP/HTTP (load)
+    depends_on:
+      load-topics:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:8088/readyz || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    deploy:
+      resources:
+        limits:
+          memory: ${VIGIL_LOAD_RECEIVER_MEM:-256m}
+    restart: unless-stopped
+
+  load-writer:
+    <<: *ingest-image
+    container_name: vigil-load-writer
+    profiles: ["loadtest"]
+    command: ["/usr/local/bin/writer"]
+    cpuset: ${VIGIL_LOAD_CPUSET:-1-3}
+    environment:
+      <<: *clickhouse-env
+      CLICKHOUSE_DB: vigil_load
+      VIGIL_KAFKA_BROKERS: redpanda:9092
+      VIGIL_RAW_TOPIC: otlp.spans.load
+      VIGIL_DLQ_TOPIC: spans.dlq.load
+      VIGIL_KAFKA_GROUP: vigil-writer-load
+      VIGIL_WRITER_HEALTH_ADDR: 0.0.0.0:8089
+    depends_on:
+      load-migrate:
+        condition: service_completed_successfully
+      load-topics:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:8089/readyz || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    deploy:
+      resources:
+        limits:
+          memory: ${VIGIL_LOAD_WRITER_MEM:-512m}
+    restart: unless-stopped
+
 volumes:
   redpanda_data:
   clickhouse_data:

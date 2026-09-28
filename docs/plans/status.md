@@ -147,6 +147,40 @@ Kept in place deliberately; each needs a decision before removal.
   tests (async stub + tiny retriever) pass. Live smoke validated: bridge → "Yoruba" (4
   searches), comparison → "Northwestern University" (3 searches).
 
+### Week 6 — ingestion load test & backpressure (no LLM calls; in progress)
+Plan approved 2026-09-27 (owner decisions: separate DB + topic; Go generator in
+`ingest/cmd/loadgen`, Python orchestration in `bench/`; **sustained throughput = highest rate
+holding e2e p99 < 5 s with zero loss over a 10-min steady-state window after warm-up**; baseline
+with current container limits, then a separately labeled run with limits sized for this machine;
+generator pinned to core 0, pipeline to cores 1-3, generator CPU recorded and generator-bound
+runs flagged; RetryInfo on gRPC RESOURCE_EXHAUSTED / 429 + Retry-After on HTTP, verified with a
+real OTel SDK exporter; refuse fault injection while a real eval run is in progress).
+- **Stage 1 — done (pending review):** `internal/loadgen` + `cmd/loadgen` (`export` / `run` /
+  `reconcile`): templates rebuilt from real `spans` rows via the read-only user and verified
+  row-for-row against the production normalizer (515 traces / 3,464 spans, 0 mismatches; 88
+  pre-005 rows compared after lifting `vigil.eval.trial` to its column); per-replay deterministic
+  ids, shifted timestamps, load-test tags (`vigil-loadtest` identity, `run_kind=live`, no eval
+  linkage, `vigil.loadtest.*`); open-loop scheduler, OTLP-spec retries (RetryInfo / Retry-After);
+  reconciliation (missing / duplicate / unexpected, `trace_index` consistency, DLQ, e2e latency
+  from `ingested_at − sent_at`). Compose profile `loadtest` (`vigil_load`, `otlp.spans.load`,
+  `spans.dlq.load`, group `vigil-writer-load`, ports 14317/14318). `bench/ingest_load.py`
+  (`up` / `export` / `pilot` / `cleanup` / `hardware`). Pilot (`bench/results/ingest/pilot/`):
+  gRPC + HTTP at 1k spans/s, both clean; calibration 704 B/span ClickHouse, 684 B/span Redpanda;
+  stage-2 projection peaks at ~21 GB for the 20k spans/s step (tables truncated between steps).
+- **Next:** stage 2 baseline (as-is), stage 3 fault injection, stage 4 improvements (single
+  produce per request, producer batching, in-writer retry with identical dedup token, lag-aware
+  admission control), stage 5 results + design doc.
+- **Added 2026-09-28 (from a review of job descriptions; not started — each gets a proposal
+  and owner review first):**
+  - **AWS via Terraform** (`deploy/terraform/`): the cheapest reasonable design to run the
+    stack on AWS briefly, capture results and screenshots, then a **full teardown** (verified:
+    nothing left billing). Propose the design and a **cost estimate before creating anything**.
+  - **Pipeline monitoring:** metrics and dashboards for throughput, consumer lag, and error
+    rates (receiver, writer, Redpanda, ClickHouse), plus a short **runbook** for failures such
+    as a ClickHouse outage (builds on the stage-3 fault-injection findings).
+  - **CI:** a GitHub Actions workflow running the unit/offline suites on every push, with a
+    README status badge.
+
 ## What's next (in order)
 
 > **2026-09-27:** Vigil moved to the Oracle Cloud ARM machine (see "Environment" above); data,
