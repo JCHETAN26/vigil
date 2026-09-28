@@ -883,10 +883,19 @@ def ensure_clean_pipeline(env: dict, wait_s: int = 120) -> dict:
     )
 
 
-def truncate_load_tables(env: dict) -> None:
+def truncate_load_tables(env: dict, attempts: int = 6) -> None:
+    """Empty the load tables between steps. Under the as-is 1.5 GiB cap even a TRUNCATE can
+    lose to ClickHouse's overcommit tracker (MEMORY_LIMIT_EXCEEDED), so retry with backoff."""
     db = assert_load_db(LOAD_DB)
     for t in LOAD_TABLES:
-        ch_query(env, f"TRUNCATE TABLE IF EXISTS {db}.{t}")
+        for i in range(attempts):
+            try:
+                ch_query(env, f"TRUNCATE TABLE IF EXISTS {db}.{t}")
+                break
+            except RuntimeError as e:
+                if "MEMORY_LIMIT_EXCEEDED" not in str(e) or i == attempts - 1:
+                    raise
+                time.sleep(5 * 2**i)
 
 
 # ---------------------------------------------------------------- commands
@@ -1022,12 +1031,12 @@ def cmd_baseline(args) -> int:
         "sustained": {},
     }
     previous = out / "baseline.json"
-    if previous.exists():  # re-running some protocols keeps the others' steps
+    if previous.exists():  # a re-run replaces only the (protocol, rate) steps it runs
         old = json.loads(previous.read_text())
-        report["steps"] = [st for st in old["steps"] if st["protocol"] not in protocols]
-        report["sustained"] = {
-            p: v for p, v in old.get("sustained", {}).items() if p not in protocols
-        }
+        rerun = {(p, int(r)) for p in protocols for r in args.rates.split(",")}
+        report["steps"] = [
+            st for st in old["steps"] if (st["protocol"], st["rate"]) not in rerun
+        ]
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     for protocol in protocols:
         for rate in (int(r) for r in args.rates.split(",")):
@@ -1097,9 +1106,11 @@ def cmd_baseline(args) -> int:
                     "    pipeline saturated: stopping this protocol's ramp", flush=True
                 )
                 break
-        report["sustained"][protocol] = sustained(
-            [st for st in report["steps"] if st["protocol"] == protocol]
-        )
+    report["steps"].sort(key=lambda st: (st["protocol"], st["rate"]))
+    report["sustained"] = {
+        p: sustained([st for st in report["steps"] if st["protocol"] == p])
+        for p in sorted({st["protocol"] for st in report["steps"]})
+    }
     truncate_load_tables(env)
     report["generated_at"] = datetime.now(timezone.utc).isoformat()
     (out / "baseline.json").write_text(json.dumps(report, indent=2) + "\n")
