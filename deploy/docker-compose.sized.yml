@@ -1,0 +1,52 @@
+# Load-test "sized" limits: memory limits sized for the Oracle ARM host (4 cores, 23.4 GiB)
+# instead of the IdeaPad-era defaults in docker-compose.yml. Applied on top of it by
+#   python bench/ingest_load.py limits sized     (and reverted with: limits asis)
+# CPU allocation is unchanged (pipeline pinned to cores 1-3, Redpanda --smp=1), so a sized
+# run differs from the as-is baseline only in memory. Budget: ClickHouse 8 GiB + Redpanda
+# 5 GiB + load writer 2 GiB + load receiver 1 GiB + the rest of the stack (~2.5 GiB) + host
+# and load generator (~2 GiB) ~= 20 GiB of 23.4 GiB.
+name: vigil
+
+services:
+  clickhouse:
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - ./clickhouse/config.sized.d:/etc/clickhouse-server/config.d:ro
+    deploy:
+      resources:
+        limits:
+          memory: 8g
+
+  redpanda:
+    command:
+      - redpanda
+      - start
+      - --kafka-addr=internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr=internal://redpanda:9092,external://localhost:19092
+      - --pandaproxy-addr=internal://0.0.0.0:8082,external://0.0.0.0:18082
+      - --advertise-pandaproxy-addr=internal://redpanda:8082,external://localhost:18082
+      - --schema-registry-addr=internal://0.0.0.0:8081,external://0.0.0.0:18081
+      - --rpc-addr=redpanda:33145
+      - --advertise-rpc-addr=redpanda:33145
+      - --mode=dev-container
+      - --smp=1
+      - --memory=4G
+      - --reserve-memory=0M
+      - --overprovisioned
+      - --default-log-level=info
+    deploy:
+      resources:
+        limits:
+          memory: 5g
+
+  load-receiver:
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+
+  load-writer:
+    deploy:
+      resources:
+        limits:
+          memory: 2g

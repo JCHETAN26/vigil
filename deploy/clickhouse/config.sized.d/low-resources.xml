@@ -1,0 +1,12 @@
+<clickhouse>
+    <!-- "Sized" variant of config.d/low-resources.xml for the load test's sized run
+         (deploy/docker-compose.sized.yml): server memory 6.4 GiB = 80% of the 8 GiB container
+         limit, instead of the IdeaPad-era 1.5 GiB. Everything else matches config.d. -->
+    <max_server_memory_usage>6871947673</max_server_memory_usage> <!-- 6.4 GiB -->
+    <mark_cache_size>536870912</mark_cache_size>              <!-- 512 MiB -->
+    <uncompressed_cache_size>0</uncompressed_cache_size>
+
+    <!-- Same as config.d: listen on all interfaces inside the container (published ports stay
+         bound to 127.0.0.1 in docker-compose.yml). -->
+    <listen_host>0.0.0.0</listen_host>
+</clickhouse>

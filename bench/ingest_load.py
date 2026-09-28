@@ -9,6 +9,7 @@ spans.dlq.load), CPU pinning, disk checks, hardware capture, and reporting.
     python bench/ingest_load.py export      # templates from real traces (read-only user)
     python bench/ingest_load.py pilot       # small gRPC + HTTP runs: correctness + disk calibration
     python bench/ingest_load.py baseline --label asis   # stage 2: sustained-throughput ramp
+    python bench/ingest_load.py limits sized            # apply sized memory limits (or: asis)
     python bench/ingest_load.py hardware    # print the hardware/setup record
     python bench/ingest_load.py cleanup     # remove ALL load data and unpin CPUs
 
@@ -49,6 +50,7 @@ COMPOSE = [
     "--profile",
     "loadtest",
 ]
+SIZED_OVERRIDE = ROOT / "deploy/docker-compose.sized.yml"
 TEMPLATES = ROOT / "data/loadtest/templates.v1.pb"
 RESULTS = ROOT / "bench/results/ingest"
 
@@ -451,6 +453,12 @@ def render_baseline(report: dict) -> str:
         ),
         f"- **Writer:** {', '.join(f'{k}={v}' for k, v in hw['writer_config'].items())}",
         (
+            f"- **ClickHouse** max_server_memory_usage {hw.get('clickhouse_max_server_memory_usage', 0) / 1024**3:.1f} GiB; "
+            f"**Redpanda** `{hw.get('redpanda_memory_flag') or 'n/a'}`. ClickHouse at start: uptime "
+            f"{hw.get('clickhouse_uptime_s', 0) / 3600:.1f} h, tracked memory "
+            f"{hw.get('clickhouse_memory_tracking_bytes', 0) / 1024**3:.2f} GiB."
+        ),
+        (
             f"- **Method:** open-loop offered load of real replayed traces; each step = {report['warmup_s']} s "
             f"warm-up + {report['steady_s']} s steady-state window; load tables truncated between steps. "
             f"**Sustained** = highest rate with zero loss (nothing missing / duplicated / unacked / DLQ'd) "
@@ -581,6 +589,41 @@ def hardware() -> dict:
         "shared_machine": SHARED_MACHINE_NOTE,
         "generator_core": GENERATOR_CORE,
         "containers": [container_info(c) for c in PINNED_CONTAINERS],
+        # ClickHouse state at capture: memory use creeps with uptime under a tight cap (failing
+        # background merges of wide system tables), so results record both.
+        "clickhouse_uptime_s": int(ch_query(base_env(), "SELECT uptime()") or 0),
+        "clickhouse_memory_tracking_bytes": int(
+            ch_query(
+                base_env(),
+                "SELECT value FROM system.metrics WHERE metric = 'MemoryTracking'",
+            )
+            or 0
+        ),
+        "clickhouse_max_server_memory_usage": int(
+            ch_query(
+                base_env(),
+                "SELECT value FROM system.server_settings WHERE name = 'max_server_memory_usage'",
+            )
+            or 0
+        ),
+        "redpanda_memory_flag": next(
+            (
+                a
+                for a in json.loads(
+                    sh(
+                        [
+                            "docker",
+                            "inspect",
+                            "vigil-redpanda",
+                            "--format",
+                            "{{json .Args}}",
+                        ]
+                    )
+                )
+                if a.startswith("--memory=")
+            ),
+            None,
+        ),
         "writer_config": {
             k: base_env().get(k)
             for k in (
@@ -986,6 +1029,39 @@ def cmd_baseline(args) -> int:
     return 0
 
 
+def cmd_limits(args) -> int:
+    """Recreate ClickHouse, Redpanda and the load receiver/writer with the as-is or sized
+    memory limits. ClickHouse/Redpanda are shared with the real stack (data volumes persist;
+    the real receiver/writer reconnect), so this refuses while a real eval run is active."""
+    env = base_env()
+    eval_guard(
+        active_eval_runs(env), engine_run_processes(), set(args.allow_stale_run or [])
+    )
+    files = (
+        COMPOSE[:6]
+        + (["-f", str(SIZED_OVERRIDE)] if args.which == "sized" else [])
+        + COMPOSE[6:]
+    )
+    subprocess.run(
+        files
+        + [
+            "up",
+            "-d",
+            "--wait",
+            "clickhouse",
+            "redpanda",
+            "load-receiver",
+            "load-writer",
+        ],
+        check=True,
+    )
+    pin_pipeline()
+    hw = hardware()
+    print(json.dumps({k: hw[k] for k in ("containers", "clickhouse_max_server_memory_usage",
+                                         "redpanda_memory_flag")}, indent=2))  # fmt: skip
+    return 0
+
+
 def cmd_cleanup(args) -> int:
     env = base_env()
     if not args.yes:
@@ -1053,6 +1129,10 @@ def main(argv=None) -> int:
         help="eval_runs id known to be stale (repeatable)",
     )
     b.set_defaults(func=cmd_baseline)
+    lim = sub.add_parser("limits")
+    lim.add_argument("which", choices=("asis", "sized"))
+    lim.add_argument("--allow-stale-run", action="append")
+    lim.set_defaults(func=cmd_limits)
     c = sub.add_parser("cleanup")
     c.add_argument("--yes", action="store_true")
     c.set_defaults(func=cmd_cleanup)
