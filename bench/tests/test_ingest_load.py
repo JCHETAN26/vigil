@@ -182,3 +182,230 @@ def test_render_pilot_records_hardware_setup_and_every_run():
     assert (
         md.count("| 20000 | 14,400,000 |") == 1
     )  # the 20k spans/s step of the projection
+
+
+# ---------------------------------------------------------------- stage 2 (baseline ramp)
+
+
+def test_eval_guard_refuses_active_runs_and_live_processes():
+    il.eval_guard([], [], set())  # nothing running: fine
+    with pytest.raises(RuntimeError, match="in progress"):
+        il.eval_guard(["run-1"], [], set())
+    with pytest.raises(RuntimeError, match="in progress"):
+        il.eval_guard([], ["1234 python -m engine run --suite x"], set())
+    il.eval_guard(["stale-1"], [], {"stale-1"})  # an explicitly allowed stale row
+    with pytest.raises(RuntimeError):
+        il.eval_guard(["stale-1", "run-2"], [], {"stale-1"})
+
+
+@pytest.mark.parametrize(
+    ("text", "want"),
+    [
+        ("512MiB", 512 * 1024**2),
+        ("1.5GiB", 1.5 * 1024**3),
+        ("800kB", 800_000),
+        ("12B", 12),
+        ("?", 0.0),
+    ],
+)
+def test_parse_size(text, want):
+    assert il.parse_size(text) == want
+
+
+def test_parse_docker_stats_and_lag():
+    assert il.parse_docker_stats("vigil-clickhouse|183.50%|1.2GiB / 2GiB") == (
+        "vigil-clickhouse",
+        1.835,
+        1.2 * 1024**3,
+    )
+    assert il.parse_docker_stats("garbage") is None
+    rpk = (
+        "GROUP  vigil-writer-load\nSTATE  Stable\nTOTAL-LAG  4521\n\nTOPIC  PARTITION\n"
+    )
+    assert il.parse_group_lag(rpk) == 4521
+    assert il.parse_group_lag("GROUP x\n") is None
+
+
+def test_window_throughput_counts_only_acked_spans_scheduled_in_window():
+    sec = 10**9
+    recs = [
+        {
+            "intended_ns": str(0 * sec),
+            "spans": "100",
+            "rejected_spans": "0",
+            "ok": "true",
+        },  # warm-up
+        {
+            "intended_ns": str(10 * sec),
+            "spans": "500",
+            "rejected_spans": "0",
+            "ok": "true",
+        },
+        {
+            "intended_ns": str(15 * sec),
+            "spans": "500",
+            "rejected_spans": "20",
+            "ok": "true",
+        },
+        {
+            "intended_ns": str(19 * sec),
+            "spans": "500",
+            "rejected_spans": "0",
+            "ok": "false",
+        },
+        {
+            "intended_ns": str(20 * sec),
+            "spans": "999",
+            "rejected_spans": "0",
+            "ok": "true",
+        },  # after
+    ]
+    assert il.window_throughput(recs, 10 * sec, 20 * sec) == (500 + 480) / 10
+
+
+def _step_inputs(**over):
+    summary = {"cpu_fraction": {"p95": 0.2}, "schedule_lag_ms": {"p99": 3.0}}
+    rec = {
+        "reconciliation": {
+            "missing_spans": 0,
+            "duplicate_rows": 0,
+            "unacked_spans": 0,
+            "unexpected_traces": 0,
+            "stored_rows": 1000,
+        },
+        "dlq_records": 0,
+        "trace_index_span_count": 1000,
+        "e2e_latency_ms": {
+            "p99": 9000.0
+        },  # whole run incl. warm-up: ignored when a window exists
+        "e2e_window_latency_ms": {"p99": 2500.0},
+    }
+    for k, v in over.items():
+        if k in rec["reconciliation"]:
+            rec["reconciliation"][k] = v
+        else:
+            rec[k] = v
+    return summary, rec
+
+
+def test_step_verdict_pass_uses_the_steady_state_window():
+    assert il.step_verdict(*_step_inputs()) == ("pass", [])
+
+
+@pytest.mark.parametrize(
+    ("over", "reason"),
+    [
+        ({"missing_spans": 3}, "3 missing"),
+        ({"duplicate_rows": 2}, "2 duplicate rows"),
+        ({"unacked_spans": 512}, "512 unacked"),
+        ({"dlq_records": 1}, "1 DLQ records"),
+        ({"trace_index_span_count": 999}, "trace_index inconsistent"),
+        ({"e2e_window_latency_ms": {"p99": 5000.0}}, "e2e p99 5000 ms >= 5000 ms"),
+    ],
+)
+def test_step_verdict_fail_reasons(over, reason):
+    verdict, reasons = il.step_verdict(*_step_inputs(**over))
+    assert verdict == "fail" and reason in reasons
+
+
+def test_step_verdict_generator_bound_is_inconclusive_and_undrained_fails():
+    summary, rec = _step_inputs()
+    summary["cpu_fraction"]["p95"] = 0.95
+    assert il.step_verdict(summary, rec)[0] == "inconclusive"
+    summary["cpu_fraction"]["p95"] = 0.2
+    assert il.step_verdict(summary, None)[0] == "fail"
+
+
+@pytest.mark.parametrize(
+    ("verdict", "reasons", "throughput", "want"),
+    [
+        ("pass", [], 1995.0, False),
+        (
+            "fail",
+            ["e2e p99 5200 ms >= 5000 ms"],
+            1990.0,
+            False,
+        ),  # latency-only: keep ramping
+        ("fail", ["e2e p99 5200 ms >= 5000 ms"], 1900.0, True),  # not keeping up
+        ("fail", ["3 missing"], 2000.0, True),  # any loss stops the ramp
+        (
+            "fail",
+            ["writer did not drain within the timeout (no reconciliation)"],
+            2000.0,
+            True,
+        ),
+        ("inconclusive", ["generator CPU-bound"], 2000.0, True),
+    ],
+)
+def test_saturated(verdict, reasons, throughput, want):
+    assert il.saturated(verdict, reasons, 2000, throughput) is want
+
+
+def test_sustained_is_the_highest_passing_rate_even_after_a_latency_miss():
+    steps = [
+        {
+            "rate": 500,
+            "verdict": "fail",
+            "window_throughput": 499.0,
+            "saturated": False,
+        },  # sparse: slow flush
+        {
+            "rate": 2000,
+            "verdict": "pass",
+            "window_throughput": 1995.0,
+            "saturated": False,
+        },
+        {
+            "rate": 5000,
+            "verdict": "pass",
+            "window_throughput": 4990.0,
+            "saturated": False,
+        },
+        {
+            "rate": 10000,
+            "verdict": "fail",
+            "window_throughput": 7100.0,
+            "saturated": True,
+        },
+    ]
+    assert il.sustained(steps) == {
+        "sustained_rate": 5000,
+        "sustained_window_throughput": 4990.0,
+        "non_pass_rates": [500, 10000],
+        "saturated_at": 10000,
+    }
+    none = il.sustained(
+        [
+            {
+                "rate": 500,
+                "verdict": "inconclusive",
+                "window_throughput": 0.0,
+                "saturated": True,
+            }
+        ]
+    )
+    assert none["sustained_rate"] is None and none["saturated_at"] == 500
+
+
+def test_render_baseline():
+    base = _report()
+    summary, rec = _step_inputs()
+    summary.update({"request_latency_ms": {"p99": 90.0}})
+    rec["e2e_window_latency_ms"] = {"p50": 1600.0, "p95": 2400.0, "p99": 2500.0}
+    res = {
+        c: {"cpu_mean": 0.5, "cpu_max": 0.9, "mem_max_bytes": 1.0}
+        for c in il.PINNED_CONTAINERS
+    }
+    res["max_lag"] = 1200
+    step = {"protocol": "grpc", "rate": 2000, "verdict": "pass", "reasons": [], "window_throughput": 1998.0,
+            "summary": summary, "reconcile": rec, "resources": res}  # fmt: skip
+    base["hardware"]["writer_config"] = {"VIGIL_FLUSH_INTERVAL": "2s"}
+    report = {"generated_at": "2026-09-28T12:00:00Z", "label": "asis", "limits_note": "current limits", "warmup_s": 120, "steady_s": 600,
+              "hardware": base["hardware"], "steps": [step],
+              "sustained": {"grpc": il.sustained([step])}}  # fmt: skip
+    md = il.render_baseline(report)
+    assert "| grpc | 2000 | 1998 | — | — (not reached) |" in md
+    assert (
+        "| grpc | 2000 | 1998 | 1600 / 2400 / 2500 | 90 | 0 | 0 | 0 | 0 | 1200 |" in md
+    )
+    assert "pinned to core 0" in md and "e2e p99 < 5 s" in md

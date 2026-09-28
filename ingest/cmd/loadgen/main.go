@@ -276,6 +276,12 @@ type ReconcileReport struct {
 	DLQRecords          int64                  `json:"dlq_records"`            // total in the load DLQ topic
 	RawTopicBytes       int64                  `json:"raw_topic_bytes"`        // on-disk size of the raw topic
 	E2ELatencyMs        map[string]float64     `json:"e2e_latency_ms"`         // ingested_at - sent_at, per span
+	// The same, restricted to spans first sent inside [WindowStartNs, WindowEndNs) — the
+	// steady-state window after warm-up. Absent when no window is given.
+	WindowStartNs int64              `json:"window_start_ns,omitempty"`
+	WindowEndNs   int64              `json:"window_end_ns,omitempty"`
+	E2EWindowMs   map[string]float64 `json:"e2e_window_latency_ms,omitempty"`
+	WindowSpans   uint64             `json:"window_spans,omitempty"` // stored spans sent in the window
 }
 
 type runSummary struct {
@@ -288,6 +294,8 @@ func cmdReconcile(args []string) error {
 	fs := flag.NewFlagSet("reconcile", flag.ExitOnError)
 	runDir := fs.String("run-dir", "", "directory written by loadgen run (required)")
 	drainTimeout := fs.Duration("drain-timeout", 5*time.Minute, "max wait for the writer to catch up")
+	winStart := fs.Int64("window-start-ns", 0, "steady-state window start (unix ns of first send); 0 = none")
+	winEnd := fs.Int64("window-end-ns", 0, "steady-state window end (unix ns, exclusive)")
 	_ = fs.Parse(args)
 	if *runDir == "" {
 		return errors.New("--run-dir is required")
@@ -379,16 +387,15 @@ func cmdReconcile(args []string) error {
 		rep.Clean = false
 	}
 
-	var q []float64
-	var mx float64
-	if err := conn.QueryRow(ctx, `
-SELECT quantilesExact(0.5, 0.95, 0.99)(lat), max(lat) FROM (
-  SELECT toFloat64(toUnixTimestamp64Milli(ingested_at))
-         - toInt64(resource_attributes['`+loadgen.KeySentAtNano+`']) / 1e6 AS lat
-  FROM spans WHERE run_id = $1)`, rs.Config.RunID).Scan(&q, &mx); err != nil {
+	if rep.E2ELatencyMs, _, err = e2eLatency(ctx, conn, rs.Config.RunID, 0, 0); err != nil {
 		return err
 	}
-	rep.E2ELatencyMs = map[string]float64{"p50": q[0], "p95": q[1], "p99": q[2], "max": mx}
+	if *winStart > 0 && *winEnd > *winStart {
+		rep.WindowStartNs, rep.WindowEndNs = *winStart, *winEnd
+		if rep.E2EWindowMs, rep.WindowSpans, err = e2eLatency(ctx, conn, rs.Config.RunID, *winStart, *winEnd); err != nil {
+			return err
+		}
+	}
 
 	if rep.DLQRecords, err = dlqRecords(ctx); err != nil {
 		return err
@@ -407,11 +414,30 @@ SELECT quantilesExact(0.5, 0.95, 0.99)(lat), max(lat) FROM (
 		"unacked %d (%d stored), trace_index %d, dlq %d, e2e p50/p99 %.0f/%.0f ms -> clean=%v\n",
 		rep.RunID, r.AckedSpans, r.StoredAckedUnique, r.AckedSpans, r.MissingSpans, r.DuplicateRows,
 		r.UnexpectedTraces, r.UnackedSpans, r.UnackedStored, rep.TraceIndexSpanCount, rep.DLQRecords,
-		q[0], q[2], rep.Clean)
+		rep.E2ELatencyMs["p50"], rep.E2ELatencyMs["p99"], rep.Clean)
 	if !rep.Clean {
 		return errors.New("reconciliation NOT clean")
 	}
 	return nil
+}
+
+// e2eLatency returns end-to-end latency percentiles (ClickHouse ingested_at minus the
+// first-send stamp) over the run's stored spans, optionally only those first sent in
+// [from, to) (unix ns), and the number of spans it covered.
+func e2eLatency(ctx context.Context, conn driver.Conn, runID string, from, to int64) (map[string]float64, uint64, error) {
+	var q []float64
+	var mx float64
+	var n uint64
+	err := conn.QueryRow(ctx, `
+SELECT quantilesExact(0.5, 0.95, 0.99)(lat), max(lat), count() FROM (
+  SELECT toInt64(resource_attributes['`+loadgen.KeySentAtNano+`']) AS sent,
+         toFloat64(toUnixTimestamp64Milli(ingested_at)) - sent / 1e6 AS lat
+  FROM spans WHERE run_id = $1)
+WHERE ($2 = 0 OR (sent >= $2 AND sent < $3))`, runID, from, to).Scan(&q, &mx, &n)
+	if err != nil {
+		return nil, 0, err
+	}
+	return map[string]float64{"p50": q[0], "p95": q[1], "p99": q[2], "max": mx}, n, nil
 }
 
 // waitDrained waits until the load writer's consumer group has no lag on the raw topic and

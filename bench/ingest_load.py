@@ -8,6 +8,7 @@ spans.dlq.load), CPU pinning, disk checks, hardware capture, and reporting.
     python bench/ingest_load.py up          # start the load pipeline, pin CPUs
     python bench/ingest_load.py export      # templates from real traces (read-only user)
     python bench/ingest_load.py pilot       # small gRPC + HTTP runs: correctness + disk calibration
+    python bench/ingest_load.py baseline --label asis   # stage 2: sustained-throughput ramp
     python bench/ingest_load.py hardware    # print the hardware/setup record
     python bench/ingest_load.py cleanup     # remove ALL load data and unpin CPUs
 
@@ -20,6 +21,8 @@ are unpinned.
 from __future__ import annotations
 
 import argparse
+import csv
+import gzip
 import json
 import os
 import platform
@@ -27,8 +30,11 @@ import re
 import shutil
 import subprocess
 import sys
+import threading
+import time
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Self
 
 ROOT = Path(__file__).resolve().parent.parent
 INGEST = ROOT / "ingest"
@@ -215,6 +221,116 @@ def parse_logdirs(text: str, topic: str) -> int:
     return total
 
 
+E2E_P99_LIMIT_MS = 5000.0  # sustained-throughput bar (owner decision, 2026-09-27)
+
+
+def eval_guard(
+    active_runs: list[str], engine_procs: list[str], allow: set[str]
+) -> None:
+    """Refuse to load the shared ClickHouse/Redpanda while a real eval run may be in progress:
+    any eval_runs row still pending/running (unless explicitly allowed by id, for a known
+    stale row left by a crash) or any live `engine run` process."""
+    blocking = [r for r in active_runs if r not in allow]
+    if blocking or engine_procs:
+        raise RuntimeError(
+            "refusing: a real eval run may be in progress "
+            f"(eval_runs pending/running: {blocking or 'none'}; processes: {engine_procs or 'none'}). "
+            "If a row is stale from a crash, pass --allow-stale-run <id>."
+        )
+
+
+def parse_size(text: str) -> float:
+    """Docker's human sizes ('512MiB', '1.5GiB', '800kB', '12B') to bytes."""
+    m = re.fullmatch(r"\s*([\d.]+)\s*([kKMGT]?)(i?)B\s*", text)
+    if not m:
+        return 0.0
+    base = 1024 if m.group(3) else 1000
+    power = " KMGT".index(m.group(2).upper() or " ")
+    return float(m.group(1)) * base**power
+
+
+def parse_docker_stats(line: str) -> tuple[str, float, float] | None:
+    """One `docker stats --format '{{.Name}}|{{.CPUPerc}}|{{.MemUsage}}'` line to
+    (name, cpu in cores, memory bytes). Docker reports CPU as % of one core."""
+    parts = line.strip().split("|")
+    if len(parts) != 3 or not parts[1].endswith("%"):
+        return None
+    return parts[0], float(parts[1][:-1]) / 100.0, parse_size(parts[2].split("/")[0])
+
+
+def parse_group_lag(text: str) -> int | None:
+    """TOTAL-LAG from `rpk group describe` (None if absent)."""
+    m = re.search(r"^TOTAL-LAG\s+(\d+)", text, re.MULTILINE)
+    return int(m.group(1)) if m else None
+
+
+def window_throughput(records: list[dict], start_ns: int, end_ns: int) -> float:
+    """Acked spans/sec among requests scheduled inside [start_ns, end_ns)."""
+    spans = sum(
+        int(r["spans"]) - int(r["rejected_spans"])
+        for r in records
+        if r["ok"] == "true" and start_ns <= int(r["intended_ns"]) < end_ns
+    )
+    return spans / ((end_ns - start_ns) / 1e9)
+
+
+def step_verdict(
+    summary: dict, rec: dict | None, e2e_limit_ms: float = E2E_P99_LIMIT_MS
+) -> tuple[str, list[str]]:
+    """Classify one ramp step. 'pass' needs zero loss (nothing missing, duplicated, unacked,
+    unexpected, or DLQ'd; trace_index consistent) and steady-state e2e p99 under the limit.
+    A generator-bound step is 'inconclusive': it measured the generator, not the pipeline."""
+    flags = generator_flags(summary)
+    if flags:
+        return "inconclusive", flags
+    if rec is None:
+        return "fail", ["writer did not drain within the timeout (no reconciliation)"]
+    reasons = []
+    rc = rec["reconciliation"]
+    for key, label in (
+        ("missing_spans", "missing"),
+        ("duplicate_rows", "duplicate rows"),
+        ("unacked_spans", "unacked"),
+        ("unexpected_traces", "unexpected traces"),
+    ):
+        if rc[key]:
+            reasons.append(f"{rc[key]} {label}")
+    if rec["dlq_records"]:
+        reasons.append(f"{rec['dlq_records']} DLQ records")
+    if rec["trace_index_span_count"] != rc["stored_rows"]:
+        reasons.append("trace_index inconsistent")
+    p99 = rec.get("e2e_window_latency_ms", rec["e2e_latency_ms"])["p99"]
+    if p99 >= e2e_limit_ms:
+        reasons.append(f"e2e p99 {p99:.0f} ms >= {e2e_limit_ms:.0f} ms")
+    return ("fail" if reasons else "pass"), reasons
+
+
+def saturated(
+    verdict: str, reasons: list[str], rate: float, window_throughput: float
+) -> bool:
+    """Whether the ramp should stop after this step: the pipeline (or generator) can no longer
+    keep up — loss of any kind, no drain, acked throughput under 99% of offered, or a
+    generator-bound step. A latency-only miss does NOT stop the ramp: latency is not monotonic
+    in rate (the writer's time-based flush waits on the poll, so sparse traffic can be slower
+    than dense traffic), and the bar is the HIGHEST rate that passes."""
+    if verdict == "inconclusive" or window_throughput < 0.99 * rate:
+        return True
+    return any(not r.startswith("e2e p99") for r in reasons)
+
+
+def sustained(steps: list[dict]) -> dict:
+    """Highest passing rate of a ramp, the non-passing rates, and where the ramp saturated."""
+    passing = [st for st in steps if st["verdict"] == "pass"]
+    best = max(passing, key=lambda st: st["rate"], default=None)
+    sat = next((st for st in steps if st.get("saturated")), None)
+    return {
+        "sustained_rate": best["rate"] if best else None,
+        "sustained_window_throughput": best["window_throughput"] if best else None,
+        "non_pass_rates": sorted(st["rate"] for st in steps if st["verdict"] != "pass"),
+        "saturated_at": sat["rate"] if sat else None,
+    }
+
+
 def gb(n: float) -> str:
     return f"{n / 1024**3:.2f} GB"
 
@@ -306,6 +422,84 @@ def render_pilot(report: dict) -> str:
         ),
         "",
     ]
+    return "\n".join(lines)
+
+
+def render_baseline(report: dict) -> str:
+    hw = report["hardware"]
+    lines = [
+        f"# Ingestion load test — stage 2 baseline (`{report['label']}`)",
+        "",
+        (
+            f"_Generated {report['generated_at']} by `bench/ingest_load.py baseline --label {report['label']}` "
+            f"(commit `{hw['git']['sha'][:10]}`{', dirty' if hw['git']['dirty'] else ''})._"
+        ),
+        "",
+        f"**Limits:** {report['limits_note']}",
+        "",
+        (
+            f"- **Host:** {hw['cpu']['cpus']}× {hw['cpu']['model']} ({hw['cpu']['architecture']}), "
+            f"{hw['memory_gib']} GiB RAM, kernel {hw['kernel']}, Docker {hw['docker']}."
+        ),
+        f"- **Setup:** {hw['shared_machine']}",
+        (
+            "- **Containers:** "
+            + "; ".join(
+                f"`{c['name']}` cpuset {c['cpuset'] or 'all'}, mem {c['memory'] or 'unlimited'}"
+                for c in hw["containers"]
+            )
+        ),
+        f"- **Writer:** {', '.join(f'{k}={v}' for k, v in hw['writer_config'].items())}",
+        (
+            f"- **Method:** open-loop offered load of real replayed traces; each step = {report['warmup_s']} s "
+            f"warm-up + {report['steady_s']} s steady-state window; load tables truncated between steps. "
+            f"**Sustained** = highest rate with zero loss (nothing missing / duplicated / unacked / DLQ'd) "
+            f"and steady-state e2e p99 < {E2E_P99_LIMIT_MS / 1000:.0f} s. A step where the generator is "
+            "CPU-bound or behind schedule is *inconclusive* (it measured the generator)."
+        ),
+        "",
+        "## Sustained throughput",
+        "",
+        "| protocol | sustained offered spans/s | measured acked spans/s (window) | non-passing steps | ramp saturated at |",
+        "|---|---|---|---|---|",
+    ]
+    for proto, res in report["sustained"].items():
+        thr = res["sustained_window_throughput"]
+        lines.append(
+            f"| {proto} | {res['sustained_rate'] or 'none'} | {f'{thr:.0f}' if thr else '—'} "
+            f"| {', '.join(map(str, res['non_pass_rates'])) or '—'} | {res['saturated_at'] or '— (not reached)'} |"
+        )
+    lines += [
+        "",
+        "## Steps",
+        "",
+        (
+            "| protocol | offered | acked/s (window) | e2e p50 / p95 / p99 ms (window) | req p99 ms | missing "
+            "| dup | unacked | DLQ | max lag | CPU cores (recv / writer / CH / RP, mean) | gen CPU p95 "
+            "| gen lag p99 ms | verdict |"
+        ),
+        "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|",
+    ]
+    for st in report["steps"]:
+        s, rec, res = st["summary"], st["reconcile"], st["resources"]
+        cpu = " / ".join(f"{res[c]['cpu_mean']:.2f}" for c in PINNED_CONTAINERS)
+        if rec:
+            rc = rec["reconciliation"]
+            w = rec.get("e2e_window_latency_ms", rec["e2e_latency_ms"])
+            e2e = f"{w['p50']:.0f} / {w['p95']:.0f} / {w['p99']:.0f}"
+            cols = f"{rc['missing_spans']} | {rc['duplicate_rows']} | {rc['unacked_spans']} | {rec['dlq_records']}"
+        else:
+            e2e, cols = "not drained", "— | — | — | —"
+        verdict = st["verdict"] + (
+            f": {'; '.join(st['reasons'])}" if st["reasons"] else ""
+        )
+        verdict += " (ramp saturated)" if st.get("saturated") else ""
+        lines.append(
+            f"| {st['protocol']} | {st['rate']} | {st['window_throughput']:.0f} | {e2e} "
+            f"| {s['request_latency_ms']['p99']:.0f} | {cols} | {res['max_lag']} | {cpu} "
+            f"| {s['cpu_fraction']['p95']:.2f} | {s['schedule_lag_ms']['p99']:.0f} | {verdict} |"
+        )
+    lines.append("")
     return "\n".join(lines)
 
 
@@ -449,43 +643,133 @@ def free_bytes() -> int:
 
 def run_loadgen(
     env: dict, run_dir: Path, protocol: str, run_id: str, rate: float, duration: str
-) -> tuple[dict, dict]:
-    lenv = loadgen_env(env)
-    # Pin the generator to its core; GOMAXPROCS follows the affinity mask (recorded in the summary).
+) -> dict:
+    """Run the generator pinned to its core (GOMAXPROCS follows the affinity mask, and is
+    recorded in the summary)."""
     subprocess.run(
         [
-            "taskset",
-            "-c",
-            GENERATOR_CORE,
-            str(LOADGEN),
-            "run",
-            "--templates",
-            str(TEMPLATES),
-            "--protocol",
-            protocol,
-            "--run-id",
-            run_id,
-            "--rate",
-            str(rate),
-            "--duration",
-            duration,
-            "--out-dir",
-            str(run_dir),
+            "taskset", "-c", GENERATOR_CORE, str(LOADGEN), "run",
+            "--templates", str(TEMPLATES), "--protocol", protocol, "--run-id", run_id,
+            "--rate", str(rate), "--duration", duration, "--out-dir", str(run_dir),
         ],
-        cwd=INGEST,
-        env=lenv,
-        check=True,
-    )
-    subprocess.run(
-        [str(LOADGEN), "reconcile", "--run-dir", str(run_dir)],
-        cwd=INGEST,
-        env=lenv,
-        check=True,
-    )
-    return (
-        json.loads((run_dir / "summary.json").read_text()),
-        json.loads((run_dir / "reconcile.json").read_text()),
-    )
+        cwd=INGEST, env=loadgen_env(env), check=True,
+    )  # fmt: skip
+    return json.loads((run_dir / "summary.json").read_text())
+
+
+def reconcile(
+    env: dict,
+    run_dir: Path,
+    window: tuple[int, int] | None = None,
+    drain_timeout: str = "5m",
+) -> dict | None:
+    """Reconcile a run (optionally with a steady-state window). Returns reconcile.json, or
+    None if the writer did not drain in time. A non-clean reconciliation still returns its
+    report (loadgen exits non-zero, but has written it)."""
+    cmd = [
+        str(LOADGEN),
+        "reconcile",
+        "--run-dir",
+        str(run_dir),
+        "--drain-timeout",
+        drain_timeout,
+    ]
+    if window:
+        cmd += ["--window-start-ns", str(window[0]), "--window-end-ns", str(window[1])]
+    (run_dir / "reconcile.json").unlink(missing_ok=True)
+    subprocess.run(cmd, cwd=INGEST, env=loadgen_env(env), check=False)
+    path = run_dir / "reconcile.json"
+    return json.loads(path.read_text()) if path.exists() else None
+
+
+def read_requests(run_dir: Path) -> list[dict]:
+    with gzip.open(run_dir / "requests.csv.gz", "rt") as f:
+        return list(csv.DictReader(f))
+
+
+def active_eval_runs(env: dict) -> list[str]:
+    out = sh(
+        [
+            "docker", "exec", "-e", f"PGPASSWORD={env['POSTGRES_PASSWORD']}", "vigil-postgres",
+            "psql", "-U", env["POSTGRES_USER"], "-d", env["POSTGRES_DB"], "-Atc",
+            "SELECT id FROM eval_runs WHERE status IN ('pending', 'running')",
+        ]
+    )  # fmt: skip
+    return [line for line in out.splitlines() if line]
+
+
+def engine_run_processes() -> list[str]:
+    out = sh(["pgrep", "-af", r"engine(\.__main__)? run"], check=False)
+    return [line for line in out.splitlines() if line and "pgrep" not in line]
+
+
+class ResourceSampler:
+    """Samples pipeline container CPU/memory (docker stats) and the load writer's consumer
+    lag (rpk) every `interval` seconds in a background thread."""
+
+    def __init__(self, interval: float = 5.0):
+        self.interval = interval
+        self.samples: list[dict] = []
+        self._stop = threading.Event()
+        self._thread = threading.Thread(target=self._loop, daemon=True)
+
+    def __enter__(self) -> Self:
+        self._thread.start()
+        return self
+
+    def __exit__(self, *exc) -> None:
+        self._stop.set()
+        self._thread.join()
+
+    def _loop(self) -> None:
+        while not self._stop.is_set():
+            t = time.time()
+            stats = sh(
+                ["docker", "stats", "--no-stream", "--format",
+                 "{{.Name}}|{{.CPUPerc}}|{{.MemUsage}}", *PINNED_CONTAINERS],
+                check=False,
+            )  # fmt: skip
+            lag = parse_group_lag(
+                sh(
+                    [
+                        "docker",
+                        "exec",
+                        "vigil-redpanda",
+                        "rpk",
+                        "group",
+                        "describe",
+                        LOAD_GROUP,
+                    ],
+                    check=False,
+                )
+            )
+            sample = {"t": t, "lag": lag, "containers": {}}
+            for line in stats.splitlines():
+                parsed = parse_docker_stats(line)
+                if parsed:
+                    sample["containers"][parsed[0]] = {
+                        "cpu_cores": parsed[1],
+                        "mem_bytes": parsed[2],
+                    }
+            self.samples.append(sample)
+            self._stop.wait(max(0.0, self.interval - (time.time() - t)))
+
+    def summary(self, start: float, end: float) -> dict:
+        """Mean/max CPU (cores) and max memory per container, and max lag, within [start, end)."""
+        win = [x for x in self.samples if start <= x["t"] < end]
+        out: dict = {
+            "samples": len(win),
+            "max_lag": max((x["lag"] or 0 for x in win), default=0),
+        }
+        for c in PINNED_CONTAINERS:
+            cpu = [x["containers"][c]["cpu_cores"] for x in win if c in x["containers"]]
+            mem = [x["containers"][c]["mem_bytes"] for x in win if c in x["containers"]]
+            out[c] = {
+                "cpu_mean": sum(cpu) / len(cpu) if cpu else 0.0,
+                "cpu_max": max(cpu, default=0.0),
+                "mem_max_bytes": max(mem, default=0.0),
+            }
+        return out
 
 
 def truncate_load_tables(env: dict) -> None:
@@ -547,7 +831,7 @@ def cmd_pilot(args) -> int:
     runs = []
     for protocol in ("grpc", "http"):
         run_dir = out / protocol
-        summary, rec = run_loadgen(
+        summary = run_loadgen(
             env,
             run_dir,
             protocol,
@@ -555,6 +839,9 @@ def cmd_pilot(args) -> int:
             args.rate,
             f"{args.seconds}s",
         )
+        rec = reconcile(env, run_dir)
+        if rec is None:
+            raise RuntimeError(f"pilot {protocol}: writer did not drain")
         runs.append(
             {"summary": summary, "reconcile": rec, "flags": generator_flags(summary)}
         )
@@ -604,6 +891,101 @@ def cmd_pilot(args) -> int:
     return 0 if all(r["reconcile"]["clean"] for r in runs) else 1
 
 
+def cmd_baseline(args) -> int:
+    env = base_env()
+    require_load_pipeline()
+    pin_pipeline()
+    build_loadgen(env)
+    cal = json.loads((RESULTS / "pilot" / "pilot.json").read_text())["calibration"]
+    allow = set(args.allow_stale_run or [])
+    out = RESULTS / f"baseline-{args.label}"
+    out.mkdir(parents=True, exist_ok=True)
+    report = {
+        "label": args.label,
+        "limits_note": args.limits_note,
+        "warmup_s": args.warmup,
+        "steady_s": args.steady,
+        "hardware": hardware(),
+        "steps": [],
+        "sustained": {},
+    }
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    for protocol in args.protocols.split(","):
+        for rate in (int(r) for r in args.rates.split(",")):
+            eval_guard(active_eval_runs(env), engine_run_processes(), allow)
+            spans = rate * (args.warmup + args.steady)
+            check_disk(
+                project_disk(
+                    spans,
+                    cal["planning_ch_bytes_per_span"],
+                    cal["topic_bytes_per_span"],
+                    cal["topic_cap"],
+                ),
+                free_bytes(),
+            )
+            truncate_load_tables(env)
+            run_dir = out / protocol / str(rate)
+            if run_dir.exists():
+                shutil.rmtree(run_dir)
+            run_id = f"{args.label}-{protocol}-{rate}-{stamp}"
+            print(
+                f"==> {args.label} {protocol} {rate} spans/s ({spans:,} spans)",
+                flush=True,
+            )
+            with ResourceSampler() as sampler:
+                summary = run_loadgen(
+                    env,
+                    run_dir,
+                    protocol,
+                    run_id,
+                    rate,
+                    f"{args.warmup + args.steady}s",
+                )
+                start = summary["start_ns"] + args.warmup * 10**9
+                end = summary["start_ns"] + (args.warmup + args.steady) * 10**9
+                rec = reconcile(
+                    env, run_dir, (start, end), drain_timeout=args.drain_timeout
+                )
+            resources = sampler.summary(start / 1e9, end / 1e9)
+            (run_dir / "resources.json").write_text(
+                json.dumps(sampler.samples, indent=1) + "\n"
+            )
+            verdict, reasons = step_verdict(summary, rec)
+            throughput = window_throughput(read_requests(run_dir), start, end)
+            step = {
+                "protocol": protocol,
+                "rate": rate,
+                "run_id": run_id,
+                "verdict": verdict,
+                "reasons": reasons,
+                "window_throughput": throughput,
+                "saturated": saturated(verdict, reasons, rate, throughput),
+                "summary": summary,
+                "reconcile": rec,
+                "resources": resources,
+            }
+            report["steps"].append(step)
+            print(
+                f"    {verdict}{': ' + '; '.join(reasons) if reasons else ''}",
+                flush=True,
+            )
+            (out / "baseline.json").write_text(json.dumps(report, indent=2) + "\n")
+            if step["saturated"]:
+                print(
+                    "    pipeline saturated: stopping this protocol's ramp", flush=True
+                )
+                break
+        report["sustained"][protocol] = sustained(
+            [st for st in report["steps"] if st["protocol"] == protocol]
+        )
+    truncate_load_tables(env)
+    report["generated_at"] = datetime.now(timezone.utc).isoformat()
+    (out / "baseline.json").write_text(json.dumps(report, indent=2) + "\n")
+    (out / "baseline.md").write_text(render_baseline(report))
+    print((out / "baseline.md").read_text())
+    return 0
+
+
 def cmd_cleanup(args) -> int:
     env = base_env()
     if not args.yes:
@@ -649,6 +1031,28 @@ def main(argv=None) -> int:
     p.add_argument("--rate", type=float, default=1000)
     p.add_argument("--seconds", type=int, default=20)
     p.set_defaults(func=cmd_pilot)
+    b = sub.add_parser("baseline")
+    b.add_argument(
+        "--label",
+        required=True,
+        help="e.g. asis or sized (results go to baseline-<label>/)",
+    )
+    b.add_argument(
+        "--limits-note",
+        required=True,
+        help="one line describing the container limits in force",
+    )
+    b.add_argument("--protocols", default="grpc,http")
+    b.add_argument("--rates", default=",".join(str(r) for r in RAMP_RATES))
+    b.add_argument("--warmup", type=int, default=WARMUP_S)
+    b.add_argument("--steady", type=int, default=STEADY_S)
+    b.add_argument("--drain-timeout", default="15m")
+    b.add_argument(
+        "--allow-stale-run",
+        action="append",
+        help="eval_runs id known to be stale (repeatable)",
+    )
+    b.set_defaults(func=cmd_baseline)
     c = sub.add_parser("cleanup")
     c.add_argument("--yes", action="store_true")
     c.set_defaults(func=cmd_cleanup)
