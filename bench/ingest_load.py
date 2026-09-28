@@ -502,6 +502,9 @@ def render_baseline(report: dict) -> str:
             f": {'; '.join(st['reasons'])}" if st["reasons"] else ""
         )
         verdict += " (ramp saturated)" if st.get("saturated") else ""
+        pre = st.get("pre_step")
+        if pre and pre.get("reset"):
+            verdict += f"; started after a pipeline reset ({pre['discarded_records']} backlog records discarded)"
         lines.append(
             f"| {st['protocol']} | {st['rate']} | {st['window_throughput']:.0f} | {e2e} "
             f"| {s['request_latency_ms']['p99']:.0f} | {cols} | {res['max_lag']} | {cpu} "
@@ -815,6 +818,71 @@ class ResourceSampler:
         return out
 
 
+def pipeline_state(env: dict) -> dict:
+    """The load writer group's state and membership-independent lag (`loadgen lag`)."""
+    out = subprocess.run([str(LOADGEN), "lag"], cwd=INGEST, env=loadgen_env(env),
+                         check=True, capture_output=True, text=True).stdout  # fmt: skip
+    return json.loads(out)
+
+
+def clickhouse_state(env: dict) -> dict:
+    return {
+        "uptime_s": int(ch_query(env, "SELECT uptime()")),
+        "memory_tracking_bytes": int(
+            ch_query(
+                env, "SELECT value FROM system.metrics WHERE metric = 'MemoryTracking'"
+            )
+        ),
+    }
+
+
+def ensure_clean_pipeline(env: dict, wait_s: int = 120) -> dict:
+    """Make sure a step starts on an idle, healthy pipeline. If the load writer is not a live,
+    stable, drained consumer (e.g. a previous step left a backlog it cannot work off), discard
+    the LOAD topic's backlog — by seeking the load group to the end — and restart the load
+    writer. Returns what was found and done, for the step record."""
+    before = pipeline_state(env)
+    record = {"before": before, "reset": False, "discarded_records": 0}
+    if before["drained"]:
+        return record
+    group, topic = LOAD_GROUP, assert_load_topic(LOAD_TOPICS[0])
+    subprocess.run(
+        ["docker", "stop", "vigil-load-writer"], check=True, capture_output=True
+    )
+    for _ in range(60):  # the stopped writer leaves the group; seek needs it empty
+        if pipeline_state(env)["members"] == 0:
+            break
+        time.sleep(2)
+    sh(
+        [
+            "docker",
+            "exec",
+            "vigil-redpanda",
+            "rpk",
+            "group",
+            "seek",
+            group,
+            "--to",
+            "end",
+            "--topics",
+            topic,
+        ]
+    )
+    subprocess.run(
+        ["docker", "start", "vigil-load-writer"], check=True, capture_output=True
+    )
+    record.update(reset=True, discarded_records=before["lag"])
+    for _ in range(wait_s // 3):
+        state = pipeline_state(env)
+        if state["drained"]:
+            record["after"] = state
+            return record
+        time.sleep(3)
+    raise RuntimeError(
+        f"load pipeline did not become healthy after a reset: {pipeline_state(env)}"
+    )
+
+
 def truncate_load_tables(env: dict) -> None:
     db = assert_load_db(LOAD_DB)
     for t in LOAD_TABLES:
@@ -943,6 +1011,7 @@ def cmd_baseline(args) -> int:
     allow = set(args.allow_stale_run or [])
     out = RESULTS / f"baseline-{args.label}"
     out.mkdir(parents=True, exist_ok=True)
+    protocols = args.protocols.split(",")
     report = {
         "label": args.label,
         "limits_note": args.limits_note,
@@ -952,8 +1021,15 @@ def cmd_baseline(args) -> int:
         "steps": [],
         "sustained": {},
     }
+    previous = out / "baseline.json"
+    if previous.exists():  # re-running some protocols keeps the others' steps
+        old = json.loads(previous.read_text())
+        report["steps"] = [st for st in old["steps"] if st["protocol"] not in protocols]
+        report["sustained"] = {
+            p: v for p, v in old.get("sustained", {}).items() if p not in protocols
+        }
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    for protocol in args.protocols.split(","):
+    for protocol in protocols:
         for rate in (int(r) for r in args.rates.split(",")):
             eval_guard(active_eval_runs(env), engine_run_processes(), allow)
             spans = rate * (args.warmup + args.steady)
@@ -966,7 +1042,9 @@ def cmd_baseline(args) -> int:
                 ),
                 free_bytes(),
             )
+            pre_step = ensure_clean_pipeline(env)
             truncate_load_tables(env)
+            pre_step["clickhouse"] = clickhouse_state(env)
             run_dir = out / protocol / str(rate)
             if run_dir.exists():
                 shutil.rmtree(run_dir)
@@ -1003,6 +1081,7 @@ def cmd_baseline(args) -> int:
                 "reasons": reasons,
                 "window_throughput": throughput,
                 "saturated": saturated(verdict, reasons, rate, throughput),
+                "pre_step": pre_step,
                 "summary": summary,
                 "reconcile": rec,
                 "resources": resources,

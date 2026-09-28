@@ -8,6 +8,7 @@
 //	loadgen reconcile  wait for the writer to drain, then compare what was acked with what
 //	                   ClickHouse stored (missing / duplicate / unexpected spans), and
 //	                   compute end-to-end latency (reconcile.json)
+//	loadgen lag        print the load writer group's state and membership-independent lag
 //
 // Load data goes to the dedicated load pipeline (database vigil_load, topic
 // otlp.spans.load); bench/ingest_load.py orchestrates runs and generates the results.
@@ -44,7 +45,7 @@ import (
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Fprintln(os.Stderr, "usage: loadgen export|run|reconcile [flags]")
+		fmt.Fprintln(os.Stderr, "usage: loadgen export|run|reconcile|lag [flags]")
 		os.Exit(2)
 	}
 	var err error
@@ -55,6 +56,8 @@ func main() {
 		err = cmdRun(os.Args[2:])
 	case "reconcile":
 		err = cmdReconcile(os.Args[2:])
+	case "lag":
+		err = cmdLag(os.Args[2:])
 	default:
 		err = fmt.Errorf("unknown subcommand %q", os.Args[1])
 	}
@@ -440,40 +443,99 @@ WHERE ($2 = 0 OR (sent >= $2 AND sent < $3))`, runID, from, to).Scan(&q, &mx, &n
 	return map[string]float64{"p50": q[0], "p95": q[1], "p99": q[2], "max": mx}, n, nil
 }
 
-// waitDrained waits until the load writer's consumer group has no lag on the raw topic and
-// the run's stored row count has stopped changing across two flush intervals.
+// groupLag reads the load writer group's state, member count, and lag on the raw topic
+// (committed vs. log end offsets, independent of membership — see loadgen.GroupLag).
+func groupLag(ctx context.Context, adm *kadm.Client) (loadgen.GroupLag, error) {
+	wcfg := config.WriterFromEnv()
+	var g loadgen.GroupLag
+	groups, err := adm.DescribeGroups(ctx, wcfg.Group)
+	if err != nil {
+		return g, err
+	}
+	if dg, ok := groups[wcfg.Group]; ok {
+		g.State, g.Members = dg.State, len(dg.Members)
+	}
+	ends, err := adm.ListEndOffsets(ctx, wcfg.RawTopic)
+	if err != nil {
+		return g, err
+	}
+	starts, err := adm.ListStartOffsets(ctx, wcfg.RawTopic)
+	if err != nil {
+		return g, err
+	}
+	commits, err := adm.FetchOffsets(ctx, wcfg.Group)
+	if err != nil {
+		return g, err
+	}
+	start, end, committed := map[int32]int64{}, map[int32]int64{}, map[int32]int64{}
+	ends.Each(func(o kadm.ListedOffset) { end[o.Partition] = o.Offset })
+	starts.Each(func(o kadm.ListedOffset) { start[o.Partition] = o.Offset })
+	commits.Each(func(o kadm.OffsetResponse) {
+		if o.Topic == wcfg.RawTopic && o.Err == nil {
+			committed[o.Partition] = o.At
+		}
+	})
+	g.Lag = loadgen.TotalLag(start, end, committed)
+	return g, nil
+}
+
+func newAdmin() (*kadm.Client, func(), error) {
+	cl, err := kgo.NewClient(kgo.SeedBrokers(config.KafkaFromEnv().Brokers...))
+	if err != nil {
+		return nil, nil, err
+	}
+	return kadm.NewClient(cl), cl.Close, nil
+}
+
+// waitDrained waits until the load writer's group is Stable with a live member, has
+// consumed everything, and the run's stored row count has stopped changing across two
+// flush intervals.
 func waitDrained(ctx context.Context, conn driver.Conn, runID string, timeout time.Duration) error {
-	kcfg, wcfg := config.KafkaFromEnv(), config.WriterFromEnv()
-	cl, err := kgo.NewClient(kgo.SeedBrokers(kcfg.Brokers...))
+	adm, closeAdm, err := newAdmin()
 	if err != nil {
 		return err
 	}
-	defer cl.Close()
-	adm := kadm.NewClient(cl)
+	defer closeAdm()
 	deadline := time.Now().Add(timeout)
 	var prev uint64 = ^uint64(0)
+	var g loadgen.GroupLag
 	for time.Now().Before(deadline) {
-		lags, err := adm.Lag(ctx, wcfg.Group)
-		if err != nil {
+		if g, err = groupLag(ctx, adm); err != nil {
 			return err
 		}
-		total := int64(0)
-		lags.Each(func(l kadm.DescribedGroupLag) {
-			for _, pl := range l.Lag[wcfg.RawTopic] {
-				total += pl.Lag
-			}
-		})
 		var n uint64
 		if err := conn.QueryRow(ctx, `SELECT count() FROM spans WHERE run_id = $1`, runID).Scan(&n); err != nil {
 			return err
 		}
-		if total == 0 && n == prev {
+		if g.Drained() && n == prev {
 			return nil
 		}
 		prev = n
-		time.Sleep(wcfg.FlushInterval + 500*time.Millisecond)
+		time.Sleep(config.WriterFromEnv().FlushInterval + 500*time.Millisecond)
 	}
-	return fmt.Errorf("writer did not drain within %s", timeout)
+	return fmt.Errorf("writer did not drain within %s (group %s, %d members, lag %d)", timeout, g.State, g.Members, g.Lag)
+}
+
+// cmdLag prints the load writer group's state and lag as JSON (used by bench/ingest_load.py
+// to check that the pipeline is idle and healthy before a step).
+func cmdLag(_ []string) error {
+	adm, closeAdm, err := newAdmin()
+	if err != nil {
+		return err
+	}
+	defer closeAdm()
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	g, err := groupLag(ctx, adm)
+	if err != nil {
+		return err
+	}
+	b, _ := json.Marshal(struct {
+		loadgen.GroupLag
+		Drained bool `json:"drained"`
+	}{g, g.Drained()})
+	fmt.Println(string(b))
+	return nil
 }
 
 func dlqRecords(ctx context.Context) (int64, error) {

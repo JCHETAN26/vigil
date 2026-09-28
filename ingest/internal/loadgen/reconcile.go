@@ -59,3 +59,33 @@ func Reconcile(acked, unacked map[string]int, stored map[string]StoredTrace) Rec
 func (r Reconciliation) Clean() bool {
 	return r.MissingSpans == 0 && r.DuplicateRows == 0 && r.UnexpectedTraces == 0
 }
+
+// GroupLag is a consumer group's position on one topic, computed from committed offsets
+// against each partition's log start/end — independent of group membership. (A group with
+// no live member, e.g. while its consumer crash-loops, has no assignments, and
+// assignment-based lag reports 0 even with a large backlog.)
+type GroupLag struct {
+	State   string `json:"state"`
+	Members int    `json:"members"`
+	Lag     int64  `json:"lag"`
+}
+
+// Drained reports whether the group is actively consuming (Stable, with a member) and has
+// consumed everything.
+func (g GroupLag) Drained() bool { return g.State == "Stable" && g.Members > 0 && g.Lag == 0 }
+
+// TotalLag sums end - committed over every partition in end. A partition without a commit
+// is lagging from its log start (the writer resets to the earliest offset).
+func TotalLag(start, end, committed map[int32]int64) int64 {
+	var lag int64
+	for p, e := range end {
+		c, ok := committed[p]
+		if !ok || c < start[p] {
+			c = start[p]
+		}
+		if e > c {
+			lag += e - c
+		}
+	}
+	return lag
+}

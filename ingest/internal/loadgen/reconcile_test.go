@@ -57,3 +57,32 @@ func TestReconcile(t *testing.T) {
 		})
 	}
 }
+
+func TestTotalLag(t *testing.T) {
+	tests := []struct {
+		name                  string
+		start, end, committed map[int32]int64
+		want                  int64
+	}{
+		{"caught up", map[int32]int64{0: 0, 1: 0}, map[int32]int64{0: 10, 1: 5}, map[int32]int64{0: 10, 1: 5}, 0},
+		{"behind", map[int32]int64{0: 0, 1: 0}, map[int32]int64{0: 10, 1: 5}, map[int32]int64{0: 4, 1: 5}, 6},
+		{"no commit counts from log start", map[int32]int64{0: 3}, map[int32]int64{0: 10}, map[int32]int64{}, 7},
+		{"commit below retained start", map[int32]int64{0: 8}, map[int32]int64{0: 10}, map[int32]int64{0: 2}, 2},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := TotalLag(tc.start, tc.end, tc.committed); got != tc.want {
+				t.Fatalf("got %d, want %d", got, tc.want)
+			}
+		})
+	}
+	if (GroupLag{State: "PreparingRebalance", Members: 2, Lag: 0}).Drained() {
+		t.Fatal("a group that is not Stable must not count as drained")
+	}
+	if (GroupLag{State: "Stable", Members: 0, Lag: 0}).Drained() {
+		t.Fatal("a group without members must not count as drained")
+	}
+	if !(GroupLag{State: "Stable", Members: 1, Lag: 0}).Drained() {
+		t.Fatal("stable, member, zero lag is drained")
+	}
+}
