@@ -1,0 +1,35 @@
+{
+  "run_id": "asis-http-1000-20260928T103936Z",
+  "database": "vigil_load",
+  "drained_in": "5.108s",
+  "reconciliation": {
+    "acked_traces": 107110,
+    "acked_spans": 720408,
+    "stored_acked_unique_spans": 720408,
+    "missing_spans": 0,
+    "duplicate_rows": 0,
+    "unacked_spans": 0,
+    "unacked_stored": 0,
+    "unexpected_traces": 0,
+    "stored_rows": 720408
+  },
+  "clean": true,
+  "trace_index_span_count": 720408,
+  "dlq_records": 0,
+  "raw_topic_bytes": 2495638383,
+  "e2e_latency_ms": {
+    "max": 5621.79248046875,
+    "p50": 1673.462158203125,
+    "p95": 2761.580322265625,
+    "p99": 3088.809814453125
+  },
+  "window_start_ns": 1790592102315349696,
+  "window_end_ns": 1790592702315349696,
+  "e2e_window_latency_ms": {
+    "max": 5621.79248046875,
+    "p50": 1673.890625,
+    "p95": 2762.833740234375,
+    "p99": 3112.806884765625
+  },
+  "window_spans": 600203
+}
