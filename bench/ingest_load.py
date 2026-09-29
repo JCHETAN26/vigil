@@ -658,11 +658,19 @@ def unpin_pipeline() -> None:
         sh(["docker", "update", "--cpuset-cpus", f"0-{ncpu - 1}", c], check=False)
 
 
-def require_load_pipeline() -> None:
+def require_load_pipeline(wait_s: int = 120) -> None:
+    """The load receiver/writer must exist and be up. A container that is momentarily
+    "restarting" (e.g. a writer crash-looping against a memory-starved ClickHouse, itself a
+    result worth measuring) is waited for, not treated as absent."""
     for c in ("vigil-load-receiver", "vigil-load-writer"):
-        if container_info(c)["status"] != "running":
+        deadline = time.time() + wait_s
+        while (
+            status := container_info(c)["status"]
+        ) == "restarting" and time.time() < deadline:
+            time.sleep(2)
+        if status != "running":
             raise RuntimeError(
-                f"{c} is not running — run `python bench/ingest_load.py up` first"
+                f"{c} is {status}: run `python bench/ingest_load.py up` first"
             )
 
 

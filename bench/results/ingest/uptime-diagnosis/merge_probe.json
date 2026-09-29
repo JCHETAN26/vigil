@@ -1,0 +1,21 @@
+{
+  "rows": 129442,
+  "columns": 991,
+  "parts": 3,
+  "results": [
+    {
+      "algorithm": "Horizontal",
+      "requested": "horizontal",
+      "peak_bytes": 4404395745,
+      "seconds": 8.687196016311646
+    },
+    {
+      "algorithm": "Vertical",
+      "requested": "vertical",
+      "peak_bytes": 23842050,
+      "seconds": 9.057268142700195
+    }
+  ],
+  "measured_at": "2026-09-29T10:12:24.063791+00:00",
+  "max_server_memory_usage": 6871947673.0
+}

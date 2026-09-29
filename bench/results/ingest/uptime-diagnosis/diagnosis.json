@@ -1,0 +1,437 @@
+{
+  "generated_at": "2026-09-29T10:12:37.556870+00:00",
+  "window": {
+    "from": "2026-09-27 22:13:05",
+    "to": "2026-09-28 09:30:40",
+    "cap_gib": 1.5
+  },
+  "hourly": [
+    {
+      "h": "2026-09-27 22:00:00",
+      "tracked_max": 0.6618537902832031,
+      "tracked_avg": 0.5566948130584551,
+      "inserts": "24",
+      "merges": "290",
+      "rss": 0.6618537902832031,
+      "mark_mib": 0.03275299072265625,
+      "parts": 44
+    },
+    {
+      "h": "2026-09-27 23:00:00",
+      "tracked_max": 0.9238512385636568,
+      "tracked_avg": 0.6784507648667527,
+      "inserts": "151",
+      "merges": "1134",
+      "rss": 0.8877372741699219,
+      "mark_mib": 0.0632171630859375,
+      "parts": 58
+    },
+    {
+      "h": "2026-09-28 00:00:00",
+      "tracked_max": 0.8393645863980055,
+      "tracked_avg": 0.7433635883599831,
+      "inserts": "0",
+      "merges": "1270",
+      "rss": 0.8348426818847656,
+      "mark_mib": 0.0632171630859375,
+      "parts": 46
+    },
+    {
+      "h": "2026-09-28 01:00:00",
+      "tracked_max": 1.5321102971211076,
+      "tracked_avg": 0.7888380956645735,
+      "inserts": "0",
+      "merges": "1471",
+      "rss": 0.8781890869140625,
+      "mark_mib": 0.0632171630859375,
+      "parts": 45
+    },
+    {
+      "h": "2026-09-28 02:00:00",
+      "tracked_max": 1.9078311854973435,
+      "tracked_avg": 0.8486416596089094,
+      "inserts": "0",
+      "merges": "2408",
+      "rss": 0.9196128845214844,
+      "mark_mib": 0.0632171630859375,
+      "parts": 46
+    },
+    {
+      "h": "2026-09-28 03:00:00",
+      "tracked_max": 1.6673485124483705,
+      "tracked_avg": 0.877469356317694,
+      "inserts": "0",
+      "merges": "836",
+      "rss": 0.9754753112792969,
+      "mark_mib": 0.0632171630859375,
+      "parts": 44
+    },
+    {
+      "h": "2026-09-28 04:00:00",
+      "tracked_max": 1.6172323012724519,
+      "tracked_avg": 0.9173642226205104,
+      "inserts": "0",
+      "merges": "2774",
+      "rss": 1.0340957641601562,
+      "mark_mib": 0.0632171630859375,
+      "parts": 46
+    },
+    {
+      "h": "2026-09-28 05:00:00",
+      "tracked_max": 1.5764339519664645,
+      "tracked_avg": 0.9849255833634316,
+      "inserts": "0",
+      "merges": "3237",
+      "rss": 1.0890731811523438,
+      "mark_mib": 0.0632171630859375,
+      "parts": 46
+    },
+    {
+      "h": "2026-09-28 06:00:00",
+      "tracked_max": 1.5930830528959632,
+      "tracked_avg": 1.0255917815476034,
+      "inserts": "0",
+      "merges": "2973",
+      "rss": 1.1147384643554688,
+      "mark_mib": 0.0632171630859375,
+      "parts": 44
+    },
+    {
+      "h": "2026-09-28 07:00:00",
+      "tracked_max": 1.6266672695055604,
+      "tracked_avg": 1.0582427476017944,
+      "inserts": "0",
+      "merges": "4398",
+      "rss": 1.179229736328125,
+      "mark_mib": 0.0632171630859375,
+      "parts": 49
+    },
+    {
+      "h": "2026-09-28 08:00:00",
+      "tracked_max": 1.6452927300706506,
+      "tracked_avg": 1.0929108589251215,
+      "inserts": "108",
+      "merges": "5677",
+      "rss": 1.2919578552246094,
+      "mark_mib": 0.08245086669921875,
+      "parts": 67
+    },
+    {
+      "h": "2026-09-28 09:00:00",
+      "tracked_max": 1.772942440584302,
+      "tracked_avg": 1.2529828364256161,
+      "inserts": "2962",
+      "merges": "6216",
+      "rss": 1.8438682556152344,
+      "mark_mib": 0.15006256103515625,
+      "parts": 76
+    }
+  ],
+  "memory_errors_hourly": [
+    {
+      "h": "2026-09-28 01:00:00",
+      "merge_failures": "388",
+      "other_failures": "1"
+    },
+    {
+      "h": "2026-09-28 02:00:00",
+      "merge_failures": "1531",
+      "other_failures": "1"
+    },
+    {
+      "h": "2026-09-28 03:00:00",
+      "merge_failures": "128",
+      "other_failures": "0"
+    },
+    {
+      "h": "2026-09-28 04:00:00",
+      "merge_failures": "2044",
+      "other_failures": "1"
+    },
+    {
+      "h": "2026-09-28 05:00:00",
+      "merge_failures": "2784",
+      "other_failures": "2"
+    },
+    {
+      "h": "2026-09-28 06:00:00",
+      "merge_failures": "2542",
+      "other_failures": "0"
+    },
+    {
+      "h": "2026-09-28 07:00:00",
+      "merge_failures": "3749",
+      "other_failures": "0"
+    },
+    {
+      "h": "2026-09-28 08:00:00",
+      "merge_failures": "4784",
+      "other_failures": "1"
+    },
+    {
+      "h": "2026-09-28 09:00:00",
+      "merge_failures": "2892",
+      "other_failures": "143"
+    }
+  ],
+  "memory_errors_by_source": [
+    {
+      "source": "background merge",
+      "n": "20271",
+      "first": "2026-09-28 01:39:56",
+      "last": "2026-09-28 09:30:40",
+      "table": "system.metric_log"
+    },
+    {
+      "source": "background merge",
+      "n": "533",
+      "first": "2026-09-28 08:56:29",
+      "last": "2026-09-28 09:27:11",
+      "table": "vigil_load.spans"
+    },
+    {
+      "source": "TCPHandler",
+      "n": "69",
+      "first": "2026-09-28 09:04:07",
+      "last": "2026-09-28 09:27:11",
+      "table": ""
+    },
+    {
+      "source": "executeQuery",
+      "n": "69",
+      "first": "2026-09-28 09:04:07",
+      "last": "2026-09-28 09:27:11",
+      "table": ""
+    },
+    {
+      "source": "background merge",
+      "n": "13",
+      "first": "2026-09-28 05:20:32",
+      "last": "2026-09-28 09:11:55",
+      "table": "system.text_log"
+    },
+    {
+      "source": "background merge",
+      "n": "11",
+      "first": "2026-09-28 02:25:14",
+      "last": "2026-09-28 09:29:05",
+      "table": "system.asynchronous_metric_log"
+    },
+    {
+      "source": "system log flush",
+      "n": "11",
+      "first": "2026-09-28 01:54:25",
+      "last": "2026-09-28 09:18:09",
+      "table": ""
+    },
+    {
+      "source": "background merge",
+      "n": "10",
+      "first": "2026-09-28 09:12:55",
+      "last": "2026-09-28 09:23:18",
+      "table": "vigil_load.trace_index"
+    },
+    {
+      "source": "background merge",
+      "n": "1",
+      "first": "2026-09-28 09:22:59",
+      "last": "2026-09-28 09:22:59",
+      "table": "system.processors_profile_log"
+    },
+    {
+      "source": "background merge",
+      "n": "1",
+      "first": "2026-09-28 09:03:21",
+      "last": "2026-09-28 09:03:21",
+      "table": "system.query_log"
+    },
+    {
+      "source": "background merge",
+      "n": "1",
+      "first": "2026-09-28 09:17:59",
+      "last": "2026-09-28 09:17:59",
+      "table": "system.part_log"
+    },
+    {
+      "source": "background merge",
+      "n": "1",
+      "first": "2026-09-28 08:17:15",
+      "last": "2026-09-28 08:17:15",
+      "table": "system.error_log"
+    },
+    {
+      "source": "span INSERT (writer)",
+      "table": "",
+      "n": "72",
+      "first": "2026-09-28 09:04:07",
+      "last": "2026-09-28 09:27:08"
+    }
+  ],
+  "trend": {
+    "tracked_avg_gib_per_h": 0.05323768631202203,
+    "rss_gib_per_h": 0.07272937747981999,
+    "first_hour_over_cap": "2026-09-28 01:00:00"
+  },
+  "parts": [
+    {
+      "database": "system",
+      "table": "processors_profile_log",
+      "partition": "202609",
+      "active_parts": "8",
+      "total_rows": "823209",
+      "max_level": 156
+    },
+    {
+      "database": "system",
+      "table": "part_log",
+      "partition": "202609",
+      "active_parts": "8",
+      "total_rows": "237991",
+      "max_level": 186
+    },
+    {
+      "database": "system",
+      "table": "text_log",
+      "partition": "202609",
+      "active_parts": "8",
+      "total_rows": "3524994",
+      "max_level": 656
+    },
+    {
+      "database": "system",
+      "table": "asynchronous_metric_log",
+      "partition": "202609",
+      "active_parts": "7",
+      "total_rows": "25909974",
+      "max_level": 3060
+    },
+    {
+      "database": "system",
+      "table": "trace_log",
+      "partition": "202609",
+      "active_parts": "6",
+      "total_rows": "2516915",
+      "max_level": 2237
+    },
+    {
+      "database": "system",
+      "table": "query_log",
+      "partition": "202609",
+      "active_parts": "5",
+      "total_rows": "62571",
+      "max_level": 285
+    },
+    {
+      "database": "system",
+      "table": "query_views_log",
+      "partition": "202609",
+      "active_parts": "3",
+      "total_rows": "59398",
+      "max_level": 501
+    },
+    {
+      "database": "system",
+      "table": "metric_log",
+      "partition": "202609",
+      "active_parts": "2",
+      "total_rows": "129495",
+      "max_level": 385
+    },
+    {
+      "database": "vigil",
+      "table": "spans",
+      "partition": "2026-09-29",
+      "active_parts": "2",
+      "total_rows": "14",
+      "max_level": 1
+    },
+    {
+      "database": "vigil",
+      "table": "spans",
+      "partition": "2026-09-27",
+      "active_parts": "2",
+      "total_rows": "447",
+      "max_level": 5
+    },
+    {
+      "database": "system",
+      "table": "error_log",
+      "partition": "202609",
+      "active_parts": "1",
+      "total_rows": "16574",
+      "max_level": 602
+    },
+    {
+      "database": "vigil",
+      "table": "trace_index",
+      "partition": "tuple()",
+      "active_parts": "1",
+      "total_rows": "557",
+      "max_level": 7
+    },
+    {
+      "database": "vigil",
+      "table": "spans",
+      "partition": "2026-09-25",
+      "active_parts": "1",
+      "total_rows": "57",
+      "max_level": 0
+    },
+    {
+      "database": "vigil",
+      "table": "agent_version_stats_daily",
+      "partition": "202609",
+      "active_parts": "1",
+      "total_rows": "16",
+      "max_level": 6
+    },
+    {
+      "database": "vigil",
+      "table": "spans",
+      "partition": "2026-09-26",
+      "active_parts": "1",
+      "total_rows": "3144",
+      "max_level": 0
+    }
+  ],
+  "merges": [],
+  "unfinished_mutations": 0,
+  "caches": {
+    "IndexMarkCacheBytes": 672.0,
+    "UncompressedCacheBytes": 0.0,
+    "MarkCacheBytes": 996504.0,
+    "MMapCacheCells": 0.0
+  },
+  "metric_log_columns": 991,
+  "settings": {
+    "max_server_memory_usage": 6871947673.0,
+    "merges_mutations_memory_usage_soft_limit": 0.0,
+    "merges_mutations_memory_usage_to_ram_ratio": 0.5,
+    "uncompressed_cache_size": 0.0,
+    "mark_cache_size": 536870912.0,
+    "background_pool_size": 16.0,
+    "vertical_merge_algorithm_min_rows_to_activate": 131072.0,
+    "vertical_merge_algorithm_min_columns_to_activate": 11.0
+  },
+  "merge_probe": {
+    "rows": 129442,
+    "columns": 991,
+    "parts": 3,
+    "results": [
+      {
+        "algorithm": "Horizontal",
+        "requested": "horizontal",
+        "peak_bytes": 4404395745,
+        "seconds": 8.687196016311646
+      },
+      {
+        "algorithm": "Vertical",
+        "requested": "vertical",
+        "peak_bytes": 23842050,
+        "seconds": 9.057268142700195
+      }
+    ],
+    "measured_at": "2026-09-29T10:12:24.063791+00:00",
+    "max_server_memory_usage": 6871947673.0
+  }
+}

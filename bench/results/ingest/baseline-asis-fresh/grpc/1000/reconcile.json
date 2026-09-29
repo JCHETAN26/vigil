@@ -1,0 +1,35 @@
+{
+  "run_id": "asis-fresh-grpc-1000-20260929T101412Z",
+  "database": "vigil_load",
+  "drained_in": "5.051s",
+  "reconciliation": {
+    "acked_traces": 107110,
+    "acked_spans": 720408,
+    "stored_acked_unique_spans": 720408,
+    "missing_spans": 0,
+    "duplicate_rows": 0,
+    "unacked_spans": 0,
+    "unacked_stored": 0,
+    "unexpected_traces": 0,
+    "stored_rows": 720408
+  },
+  "clean": true,
+  "trace_index_span_count": 720408,
+  "dlq_records": 0,
+  "raw_topic_bytes": 2697839746,
+  "e2e_latency_ms": {
+    "max": 4088.783447265625,
+    "p50": 1655.240234375,
+    "p95": 2731.814453125,
+    "p99": 2789.843505859375
+  },
+  "window_start_ns": 1790677765768914557,
+  "window_end_ns": 1790678365768914557,
+  "e2e_window_latency_ms": {
+    "max": 4088.783447265625,
+    "p50": 1657.294189453125,
+    "p95": 2734.406982421875,
+    "p99": 2796.401611328125
+  },
+  "window_spans": 600203
+}
