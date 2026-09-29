@@ -1,0 +1,3214 @@
+[
+ {
+  "t": 1790645674.2111151,
+  "lag": 740,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5289,
+    "mem_bytes": 51547996.16
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.48369999999999996,
+    "mem_bytes": 82082529.28
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.0281,
+    "mem_bytes": 1832877293.568
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2469,
+    "mem_bytes": 3237331599.36
+   }
+  }
+ },
+ {
+  "t": 1790645679.2112176,
+  "lag": 1689,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6008,
+    "mem_bytes": 53561262.08
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5217,
+    "mem_bytes": 161690419.2
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.159,
+    "mem_bytes": 1837172260.864
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2051,
+    "mem_bytes": 3237331599.36
+   }
+  }
+ },
+ {
+  "t": 1790645684.211315,
+  "lag": 1381,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6304,
+    "mem_bytes": 70590136.32
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.4917,
+    "mem_bytes": 218732953.6
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 1.3686,
+    "mem_bytes": 2027224563.712
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2046,
+    "mem_bytes": 3238405341.184
+   }
+  }
+ },
+ {
+  "t": 1790645689.2114444,
+  "lag": 1475,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.626,
+    "mem_bytes": 52565114.88
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.6748000000000001,
+    "mem_bytes": 212860928.0
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.0617,
+    "mem_bytes": 1971389988.864
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2894,
+    "mem_bytes": 3238405341.184
+   }
+  }
+ },
+ {
+  "t": 1790645694.2115462,
+  "lag": 1453,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6222,
+    "mem_bytes": 54683238.4
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5428000000000001,
+    "mem_bytes": 165465292.8
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.5746,
+    "mem_bytes": 2091649073.152
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2788,
+    "mem_bytes": 3238405341.184
+   }
+  }
+ },
+ {
+  "t": 1790645699.2116427,
+  "lag": 928,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5781000000000001,
+    "mem_bytes": 51474595.84
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5779,
+    "mem_bytes": 197866291.2
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.2839,
+    "mem_bytes": 1895154319.36
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2102,
+    "mem_bytes": 3239479083.008
+   }
+  }
+ },
+ {
+  "t": 1790645704.2117126,
+  "lag": 1205,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6238,
+    "mem_bytes": 56308531.2
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5686,
+    "mem_bytes": 159278694.4
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.63,
+    "mem_bytes": 1950988894.208
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2314,
+    "mem_bytes": 3239479083.008
+   }
+  }
+ },
+ {
+  "t": 1790645709.211822,
+  "lag": 1125,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6029,
+    "mem_bytes": 50751078.4
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.6036,
+    "mem_bytes": 190316544.0
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.5202,
+    "mem_bytes": 1825361100.8
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2984,
+    "mem_bytes": 3239479083.008
+   }
+  }
+ },
+ {
+  "t": 1790645714.211923,
+  "lag": 729,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6344,
+    "mem_bytes": 54305751.04
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.6892,
+    "mem_bytes": 210449203.2
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.2973,
+    "mem_bytes": 1952062636.032
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2569,
+    "mem_bytes": 3239479083.008
+   }
+  }
+ },
+ {
+  "t": 1790645719.2120485,
+  "lag": 946,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6162,
+    "mem_bytes": 53875834.88
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.6015999999999999,
+    "mem_bytes": 167247872.0
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 1.1289,
+    "mem_bytes": 2325724790.784
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2293,
+    "mem_bytes": 3240552824.832
+   }
+  }
+ },
+ {
+  "t": 1790645724.2121837,
+  "lag": 1212,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6193,
+    "mem_bytes": 55710842.88
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5519,
+    "mem_bytes": 160432128.0
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 1.0978,
+    "mem_bytes": 2109902684.16
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.223,
+    "mem_bytes": 3240552824.832
+   }
+  }
+ },
+ {
+  "t": 1790645729.212313,
+  "lag": 1168,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6076,
+    "mem_bytes": 57189335.04
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.6389,
+    "mem_bytes": 193671987.2
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.5550999999999999,
+    "mem_bytes": 1856499613.696
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2439,
+    "mem_bytes": 3240552824.832
+   }
+  }
+ },
+ {
+  "t": 1790645734.2124224,
+  "lag": 783,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6461,
+    "mem_bytes": 60439920.64
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.6344,
+    "mem_bytes": 209295769.6
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 1.0263,
+    "mem_bytes": 2101312749.568
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.22219999999999998,
+    "mem_bytes": 3250216501.248
+   }
+  }
+ },
+ {
+  "t": 1790645739.2125416,
+  "lag": 989,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6306,
+    "mem_bytes": 57640222.72
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5959,
+    "mem_bytes": 201536307.2
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.42619999999999997,
+    "mem_bytes": 1864015806.464
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.22829999999999998,
+    "mem_bytes": 3264175144.96
+   }
+  }
+ },
+ {
+  "t": 1790645744.2126586,
+  "lag": 1029,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6095,
+    "mem_bytes": 57461964.8
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.6031,
+    "mem_bytes": 185388236.8
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.5777,
+    "mem_bytes": 2003602243.584
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2632,
+    "mem_bytes": 3281355014.144
+   }
+  }
+ },
+ {
+  "t": 1790645749.212712,
+  "lag": 2299,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.7139,
+    "mem_bytes": 129184563.2
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.1888,
+    "mem_bytes": 204891750.4
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.054400000000000004,
+    "mem_bytes": 1816771166.208
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.171,
+    "mem_bytes": 3311419785.216
+   }
+  }
+ },
+ {
+  "t": 1790645754.2128203,
+  "lag": 1879,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.642,
+    "mem_bytes": 53928263.68
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5512,
+    "mem_bytes": 297376153.6
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.8212,
+    "mem_bytes": 1938103992.32
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2202,
+    "mem_bytes": 3322157203.456
+   }
+  }
+ },
+ {
+  "t": 1790645759.2129364,
+  "lag": 1465,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6624,
+    "mem_bytes": 63271075.84
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.6877,
+    "mem_bytes": 261200281.6
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.8422,
+    "mem_bytes": 2590939021.312
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2073,
+    "mem_bytes": 3339337072.64
+   }
+  }
+ },
+ {
+  "t": 1790645764.213048,
+  "lag": 895,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.609,
+    "mem_bytes": 58992885.76
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.6748999999999999,
+    "mem_bytes": 243898777.6
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.7479,
+    "mem_bytes": 1983201148.928
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2721,
+    "mem_bytes": 3357590683.648
+   }
+  }
+ },
+ {
+  "t": 1790645769.2131712,
+  "lag": 885,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.604,
+    "mem_bytes": 52764344.32
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.6103999999999999,
+    "mem_bytes": 212860928.0
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.585,
+    "mem_bytes": 1969242505.216
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.22390000000000002,
+    "mem_bytes": 3381213003.776
+   }
+  }
+ },
+ {
+  "t": 1790645774.2132733,
+  "lag": 1083,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6128,
+    "mem_bytes": 52732887.04
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.6379,
+    "mem_bytes": 193671987.2
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.6322,
+    "mem_bytes": 1835024777.216
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.25239999999999996,
+    "mem_bytes": 3396245389.312
+   }
+  }
+ },
+ {
+  "t": 1790645779.213394,
+  "lag": 730,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6165999999999999,
+    "mem_bytes": 55427727.36
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.669,
+    "mem_bytes": 233308160.0
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.45640000000000003,
+    "mem_bytes": 1924145348.608
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2643,
+    "mem_bytes": 3416646483.968
+   }
+  }
+ },
+ {
+  "t": 1790645784.2137234,
+  "lag": 1064,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6061,
+    "mem_bytes": 56780390.4
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.6454000000000001,
+    "mem_bytes": 203528601.6
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 1.0141,
+    "mem_bytes": 2139967455.232
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2625,
+    "mem_bytes": 3434900094.976
+   }
+  }
+ },
+ {
+  "t": 1790645789.2138276,
+  "lag": 957,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6322,
+    "mem_bytes": 53907292.16
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5175,
+    "mem_bytes": 195559424.0
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 1.3969,
+    "mem_bytes": 1885490642.944
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.1827,
+    "mem_bytes": 3461743640.576
+   }
+  }
+ },
+ {
+  "t": 1790645794.2139277,
+  "lag": 2022,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6543000000000001,
+    "mem_bytes": 59223572.48
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5784,
+    "mem_bytes": 268016025.6
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.145,
+    "mem_bytes": 1784558911.488
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.3107,
+    "mem_bytes": 3477849767.936
+   }
+  }
+ },
+ {
+  "t": 1790645799.2145247,
+  "lag": 1635,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6185,
+    "mem_bytes": 61373153.28
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5755,
+    "mem_bytes": 223241830.4
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.096,
+    "mem_bytes": 1997159792.64
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.3079,
+    "mem_bytes": 3491808411.648
+   }
+  }
+ },
+ {
+  "t": 1790645804.2146125,
+  "lag": 1539,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6136,
+    "mem_bytes": 57430507.52
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5678,
+    "mem_bytes": 207093760.0
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.561,
+    "mem_bytes": 2396591751.168
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.19690000000000002,
+    "mem_bytes": 3513283248.128
+   }
+  }
+ },
+ {
+  "t": 1790645809.2147062,
+  "lag": 1459,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6413,
+    "mem_bytes": 53750005.76
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5667,
+    "mem_bytes": 193042841.6
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.6653,
+    "mem_bytes": 2049773142.016
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2579,
+    "mem_bytes": 3531536859.136
+   }
+  }
+ },
+ {
+  "t": 1790645814.214823,
+  "lag": 1281,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6115999999999999,
+    "mem_bytes": 52795801.6
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.675,
+    "mem_bytes": 200592588.8
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.1561,
+    "mem_bytes": 1862942064.64
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2211,
+    "mem_bytes": 3553011695.616
+   }
+  }
+ },
+ {
+  "t": 1790645819.2149396,
+  "lag": 1043,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5694,
+    "mem_bytes": 61016637.44
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.6047,
+    "mem_bytes": 199544012.8
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.3985,
+    "mem_bytes": 1865089548.288
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2095,
+    "mem_bytes": 3575560273.92
+   }
+  }
+ },
+ {
+  "t": 1790645824.2150424,
+  "lag": 754,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6167,
+    "mem_bytes": 60219719.68
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5607,
+    "mem_bytes": 192308838.4
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 1.4702000000000002,
+    "mem_bytes": 1962800054.272
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.32939999999999997,
+    "mem_bytes": 3588445175.808
+   }
+  }
+ },
+ {
+  "t": 1790645829.2151504,
+  "lag": 704,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.638,
+    "mem_bytes": 57986252.8
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.6177,
+    "mem_bytes": 218523238.4
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.502,
+    "mem_bytes": 1972463730.688
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2274,
+    "mem_bytes": 3613141237.76
+   }
+  }
+ },
+ {
+  "t": 1790645834.2153447,
+  "lag": 2254,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.496,
+    "mem_bytes": 99310632.96
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.3368,
+    "mem_bytes": 211602636.8
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.1887,
+    "mem_bytes": 1930587799.552
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2438,
+    "mem_bytes": 3628173623.296
+   }
+  }
+ },
+ {
+  "t": 1790645839.2153933,
+  "lag": 1275,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5777,
+    "mem_bytes": 53057945.6
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5738,
+    "mem_bytes": 199019724.8
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.5207,
+    "mem_bytes": 2002528501.76
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2593,
+    "mem_bytes": 3649648459.776
+   }
+  }
+ },
+ {
+  "t": 1790645844.2155042,
+  "lag": 998,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5724,
+    "mem_bytes": 59118714.88
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.4989,
+    "mem_bytes": 287414681.6
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.13,
+    "mem_bytes": 1924145348.608
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2464,
+    "mem_bytes": 3664680845.312
+   }
+  }
+ },
+ {
+  "t": 1790645849.215644,
+  "lag": 873,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5952000000000001,
+    "mem_bytes": 56549703.68
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5309,
+    "mem_bytes": 198180864.0
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.6929000000000001,
+    "mem_bytes": 2474974904.32
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.24539999999999998,
+    "mem_bytes": 3688303165.44
+   }
+  }
+ },
+ {
+  "t": 1790645854.2157435,
+  "lag": 624,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.588,
+    "mem_bytes": 55522099.2
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5677,
+    "mem_bytes": 290036121.6
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 1.2555,
+    "mem_bytes": 2163589775.36
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.223,
+    "mem_bytes": 3706556776.448
+   }
+  }
+ },
+ {
+  "t": 1790645859.215873,
+  "lag": 926,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5574,
+    "mem_bytes": 66458746.88
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5394,
+    "mem_bytes": 255433113.6
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 1.2786,
+    "mem_bytes": 2045478174.72
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2879,
+    "mem_bytes": 3721589161.984
+   }
+  }
+ },
+ {
+  "t": 1790645864.2159986,
+  "lag": 1085,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5768,
+    "mem_bytes": 57021562.88
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5724,
+    "mem_bytes": 211392921.6
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 1.1997,
+    "mem_bytes": 2285996343.296
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.24670000000000003,
+    "mem_bytes": 3745211482.112
+   }
+  }
+ },
+ {
+  "t": 1790645869.2161155,
+  "lag": 634,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5859000000000001,
+    "mem_bytes": 53162803.2
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5297,
+    "mem_bytes": 277138636.8
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.4056,
+    "mem_bytes": 1827508584.448
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.3256,
+    "mem_bytes": 3760243867.648
+   }
+  }
+ },
+ {
+  "t": 1790645874.216333,
+  "lag": 857,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5829,
+    "mem_bytes": 55993958.4
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5769,
+    "mem_bytes": 227331276.8
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.5017,
+    "mem_bytes": 1888711868.416
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2575,
+    "mem_bytes": 3778497478.656
+   }
+  }
+ },
+ {
+  "t": 1790645879.2164814,
+  "lag": 704,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5688,
+    "mem_bytes": 58384711.68
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.6037,
+    "mem_bytes": 196083712.0
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.5386,
+    "mem_bytes": 2058363076.608
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.3422,
+    "mem_bytes": 3797824831.488
+   }
+  }
+ },
+ {
+  "t": 1790645884.216887,
+  "lag": 2866,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6609999999999999,
+    "mem_bytes": 70663536.64
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.8373,
+    "mem_bytes": 292028416.0
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 1.2168999999999999,
+    "mem_bytes": 1872605741.056
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2274,
+    "mem_bytes": 3822520893.44
+   }
+  }
+ },
+ {
+  "t": 1790645889.2169876,
+  "lag": 1380,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5947,
+    "mem_bytes": 58625884.16
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.4164,
+    "mem_bytes": 369937612.8
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 1.2637,
+    "mem_bytes": 2759516487.68
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.1955,
+    "mem_bytes": 3839700762.624
+   }
+  }
+ },
+ {
+  "t": 1790645894.2171154,
+  "lag": 2174,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6411,
+    "mem_bytes": 66836234.24
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.6339,
+    "mem_bytes": 251133952.0
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 1.6238,
+    "mem_bytes": 2819646029.824
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2571,
+    "mem_bytes": 3860101857.28
+   }
+  }
+ },
+ {
+  "t": 1790645899.2173314,
+  "lag": 2452,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6509,
+    "mem_bytes": 59034828.8
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.281,
+    "mem_bytes": 377382502.4
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.7859999999999999,
+    "mem_bytes": 2456721293.312
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.22030000000000002,
+    "mem_bytes": 3876207984.64
+   }
+  }
+ },
+ {
+  "t": 1790645904.2174377,
+  "lag": 1802,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5532,
+    "mem_bytes": 58216939.52
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.428,
+    "mem_bytes": 376858214.4
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.063,
+    "mem_bytes": 2012192178.176
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2023,
+    "mem_bytes": 3900904046.592
+   }
+  }
+ },
+ {
+  "t": 1790645909.2175531,
+  "lag": 1114,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5735,
+    "mem_bytes": 51747225.6
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5504,
+    "mem_bytes": 242325913.6
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.9545,
+    "mem_bytes": 2324651048.96
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.209,
+    "mem_bytes": 3907346497.536
+   }
+  }
+ },
+ {
+  "t": 1790645914.217676,
+  "lag": 3022,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6033,
+    "mem_bytes": 59569602.56
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.1411,
+    "mem_bytes": 246729932.8
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.1547,
+    "mem_bytes": 1841467228.16
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.15539999999999998,
+    "mem_bytes": 3908420239.36
+   }
+  }
+ },
+ {
+  "t": 1790645919.2177773,
+  "lag": 4235,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.3652,
+    "mem_bytes": 202584883.2
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.188,
+    "mem_bytes": 566545612.8
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.1602,
+    "mem_bytes": 1784558911.488
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.0462,
+    "mem_bytes": 3912715206.656
+   }
+  }
+ },
+ {
+  "t": 1790645924.217883,
+  "lag": 4229,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.9434999999999999,
+    "mem_bytes": 311636787.2
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.9906999999999999,
+    "mem_bytes": 666684620.8
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.30519999999999997,
+    "mem_bytes": 1898375544.832
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.1697,
+    "mem_bytes": 3913788948.48
+   }
+  }
+ },
+ {
+  "t": 1790645929.2179978,
+  "lag": 1463,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5888,
+    "mem_bytes": 68094525.44
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.6157,
+    "mem_bytes": 395942297.6
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 1.0334,
+    "mem_bytes": 2013265920.0
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.1979,
+    "mem_bytes": 3914862690.304
+   }
+  }
+ },
+ {
+  "t": 1790645934.2181947,
+  "lag": 1150,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5746,
+    "mem_bytes": 54001664.0
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5931000000000001,
+    "mem_bytes": 286261248.0
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.39380000000000004,
+    "mem_bytes": 2010044694.528
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2311,
+    "mem_bytes": 3914862690.304
+   }
+  }
+ },
+ {
+  "t": 1790645939.2183197,
+  "lag": 984,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5979,
+    "mem_bytes": 66846720.0
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5793,
+    "mem_bytes": 278501785.6
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 1.1844,
+    "mem_bytes": 2262374023.168
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.24280000000000002,
+    "mem_bytes": 3915936432.128
+   }
+  }
+ },
+ {
+  "t": 1790645944.2184324,
+  "lag": 853,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5714,
+    "mem_bytes": 65284341.76
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.6145,
+    "mem_bytes": 265604300.8
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.6962,
+    "mem_bytes": 1998233534.464
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.249,
+    "mem_bytes": 3915936432.128
+   }
+  }
+ },
+ {
+  "t": 1790645949.218543,
+  "lag": 800,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5670000000000001,
+    "mem_bytes": 62285414.4
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.6271,
+    "mem_bytes": 349280665.6
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.7306,
+    "mem_bytes": 2068026753.024
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2753,
+    "mem_bytes": 3915936432.128
+   }
+  }
+ },
+ {
+  "t": 1790645954.2186387,
+  "lag": 700,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5943,
+    "mem_bytes": 64088965.12
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5706,
+    "mem_bytes": 338794905.6
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.6306,
+    "mem_bytes": 2013265920.0
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2159,
+    "mem_bytes": 3917010173.952
+   }
+  }
+ },
+ {
+  "t": 1790645959.2207084,
+  "lag": 751,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6468,
+    "mem_bytes": 73987522.56
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5103,
+    "mem_bytes": 344562073.6
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 1.0068000000000001,
+    "mem_bytes": 2079837913.088
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2985,
+    "mem_bytes": 3917010173.952
+   }
+  }
+ },
+ {
+  "t": 1790645964.2208116,
+  "lag": 1087,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5782,
+    "mem_bytes": 59852718.08
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.4892,
+    "mem_bytes": 363226726.4
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.9490000000000001,
+    "mem_bytes": 1836098519.04
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2667,
+    "mem_bytes": 3918083915.776
+   }
+  }
+ },
+ {
+  "t": 1790645969.220886,
+  "lag": 1811,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.579,
+    "mem_bytes": 58762199.04
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.601,
+    "mem_bytes": 238236467.2
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.09960000000000001,
+    "mem_bytes": 1955283861.504
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.245,
+    "mem_bytes": 3919157657.6
+   }
+  }
+ },
+ {
+  "t": 1790645974.221062,
+  "lag": 1321,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5954,
+    "mem_bytes": 55238983.68
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5599000000000001,
+    "mem_bytes": 266128588.8
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.41590000000000005,
+    "mem_bytes": 2065879269.376
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.19879999999999998,
+    "mem_bytes": 3919157657.6
+   }
+  }
+ },
+ {
+  "t": 1790645979.2212048,
+  "lag": 1286,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5966,
+    "mem_bytes": 61960355.84
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5129,
+    "mem_bytes": 256796262.4
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 1.5027000000000001,
+    "mem_bytes": 2055141851.136
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2928,
+    "mem_bytes": 3919157657.6
+   }
+  }
+ },
+ {
+  "t": 1790645984.2213626,
+  "lag": 1216,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6139,
+    "mem_bytes": 63564677.12
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5409,
+    "mem_bytes": 276928921.6
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 1.6059,
+    "mem_bytes": 3092376453.12
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.1943,
+    "mem_bytes": 3920231399.424
+   }
+  }
+ },
+ {
+  "t": 1790645989.2214808,
+  "lag": 1345,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5525,
+    "mem_bytes": 54777610.24
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5278,
+    "mem_bytes": 238655897.6
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.09119999999999999,
+    "mem_bytes": 2126008811.52
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.1999,
+    "mem_bytes": 3920231399.424
+   }
+  }
+ },
+ {
+  "t": 1790645994.2216363,
+  "lag": 1200,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.583,
+    "mem_bytes": 57787023.36
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.6268,
+    "mem_bytes": 252497100.8
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 1.0036,
+    "mem_bytes": 2225866801.152
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2159,
+    "mem_bytes": 3921305141.248
+   }
+  }
+ },
+ {
+  "t": 1790645999.22728,
+  "lag": 1823,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6743000000000001,
+    "mem_bytes": 70684508.16
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.4865,
+    "mem_bytes": 364065587.2
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.9987999999999999,
+    "mem_bytes": 2046551916.544
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.24710000000000001,
+    "mem_bytes": 3921305141.248
+   }
+  }
+ },
+ {
+  "t": 1790646004.2274268,
+  "lag": 2771,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6790999999999999,
+    "mem_bytes": 296432435.2
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.7021999999999999,
+    "mem_bytes": 271895756.8
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.0862,
+    "mem_bytes": 1838246002.688
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2827,
+    "mem_bytes": 3922378883.072
+   }
+  }
+ },
+ {
+  "t": 1790646009.2275414,
+  "lag": 1506,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.645,
+    "mem_bytes": 132120576.0
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.6177,
+    "mem_bytes": 318347673.6
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.0537,
+    "mem_bytes": 1867237031.936
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.26039999999999996,
+    "mem_bytes": 3922378883.072
+   }
+  }
+ },
+ {
+  "t": 1790646014.227628,
+  "lag": 1083,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5841,
+    "mem_bytes": 58237911.04
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5777,
+    "mem_bytes": 283010662.4
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 1.2928,
+    "mem_bytes": 1911260446.72
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.20629999999999998,
+    "mem_bytes": 3923452624.896
+   }
+  }
+ },
+ {
+  "t": 1790646019.2277594,
+  "lag": 713,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6365999999999999,
+    "mem_bytes": 54096035.84
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5925,
+    "mem_bytes": 316984524.8
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.6705,
+    "mem_bytes": 2219424350.208
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2736,
+    "mem_bytes": 3924526366.72
+   }
+  }
+ },
+ {
+  "t": 1790646024.2278728,
+  "lag": 783,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5881000000000001,
+    "mem_bytes": 55700357.12
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5777,
+    "mem_bytes": 328728576.0
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 1.1695,
+    "mem_bytes": 2259152797.696
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2634,
+    "mem_bytes": 3924526366.72
+   }
+  }
+ },
+ {
+  "t": 1790646029.227986,
+  "lag": 693,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.598,
+    "mem_bytes": 62841159.68
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.6095,
+    "mem_bytes": 352321536.0
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.7297,
+    "mem_bytes": 2021855854.592
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2712,
+    "mem_bytes": 3924526366.72
+   }
+  }
+ },
+ {
+  "t": 1790646034.2281275,
+  "lag": 770,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.568,
+    "mem_bytes": 60754493.44
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.4782,
+    "mem_bytes": 365009305.6
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.9426000000000001,
+    "mem_bytes": 2064805527.552
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.29109999999999997,
+    "mem_bytes": 3925600108.544
+   }
+  }
+ },
+ {
+  "t": 1790646039.2282302,
+  "lag": 1778,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6520999999999999,
+    "mem_bytes": 64718110.72
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.6004999999999999,
+    "mem_bytes": 314887372.8
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.105,
+    "mem_bytes": 1993938567.168
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.3164,
+    "mem_bytes": 3925600108.544
+   }
+  }
+ },
+ {
+  "t": 1790646044.2283545,
+  "lag": 1629,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6626000000000001,
+    "mem_bytes": 56874762.24
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5722999999999999,
+    "mem_bytes": 288777830.4
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.7243,
+    "mem_bytes": 2312839888.896
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.3211,
+    "mem_bytes": 3926673850.368
+   }
+  }
+ },
+ {
+  "t": 1790646049.2284856,
+  "lag": 1664,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6531,
+    "mem_bytes": 56277073.92
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5529999999999999,
+    "mem_bytes": 253545676.8
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.3569,
+    "mem_bytes": 2116345135.104
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.1993,
+    "mem_bytes": 3926673850.368
+   }
+  }
+ },
+ {
+  "t": 1790646054.228639,
+  "lag": 1403,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.647,
+    "mem_bytes": 56832819.2
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5676,
+    "mem_bytes": 316774809.6
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.3182,
+    "mem_bytes": 2176474677.248
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.3054,
+    "mem_bytes": 3927747592.192
+   }
+  }
+ },
+ {
+  "t": 1790646059.2287514,
+  "lag": 1504,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6082,
+    "mem_bytes": 67035463.68
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5388000000000001,
+    "mem_bytes": 240228761.6
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.2339,
+    "mem_bytes": 2012192178.176
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2279,
+    "mem_bytes": 3928821334.016
+   }
+  }
+ },
+ {
+  "t": 1790646064.2288675,
+  "lag": 1143,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6072,
+    "mem_bytes": 59076771.84
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.6107,
+    "mem_bytes": 302199603.2
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.9581999999999999,
+    "mem_bytes": 2662879723.52
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.21289999999999998,
+    "mem_bytes": 3928821334.016
+   }
+  }
+ },
+ {
+  "t": 1790646069.2289886,
+  "lag": 975,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5857,
+    "mem_bytes": 62232985.6
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5405,
+    "mem_bytes": 334810316.8
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 1.5526,
+    "mem_bytes": 2303176212.48
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.1796,
+    "mem_bytes": 3929895075.84
+   }
+  }
+ },
+ {
+  "t": 1790646074.2290974,
+  "lag": 869,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5885,
+    "mem_bytes": 59716403.2
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.4943,
+    "mem_bytes": 396781158.4
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.1935,
+    "mem_bytes": 2024003338.24
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2177,
+    "mem_bytes": 3929895075.84
+   }
+  }
+ },
+ {
+  "t": 1790646079.2292047,
+  "lag": 760,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6042000000000001,
+    "mem_bytes": 56958648.32
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5621,
+    "mem_bytes": 373502771.2
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.4576,
+    "mem_bytes": 2005749727.232
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2586,
+    "mem_bytes": 3930968817.664
+   }
+  }
+ },
+ {
+  "t": 1790646084.2293084,
+  "lag": 1284,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6307,
+    "mem_bytes": 60523806.72
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5635,
+    "mem_bytes": 332922880.0
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.7004,
+    "mem_bytes": 1974611214.336
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.27399999999999997,
+    "mem_bytes": 3930968817.664
+   }
+  }
+ },
+ {
+  "t": 1790646089.2294374,
+  "lag": 852,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6221,
+    "mem_bytes": 57619251.2
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5869,
+    "mem_bytes": 296117862.4
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.6696,
+    "mem_bytes": 2121713844.224
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2368,
+    "mem_bytes": 3932042559.488
+   }
+  }
+ },
+ {
+  "t": 1790646094.229556,
+  "lag": 1796,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5824,
+    "mem_bytes": 70086819.84
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.341,
+    "mem_bytes": 261305139.2
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.23079999999999998,
+    "mem_bytes": 1855425871.872
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.1445,
+    "mem_bytes": 3932042559.488
+   }
+  }
+ },
+ {
+  "t": 1790646099.2296708,
+  "lag": 1771,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5839,
+    "mem_bytes": 56623104.0
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.6861,
+    "mem_bytes": 308386201.6
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 1.2074,
+    "mem_bytes": 2115271393.28
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.23929999999999998,
+    "mem_bytes": 3933116301.312
+   }
+  }
+ },
+ {
+  "t": 1790646104.2297754,
+  "lag": 1113,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6102000000000001,
+    "mem_bytes": 62599987.2
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5820000000000001,
+    "mem_bytes": 314992230.4
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 1.2971000000000001,
+    "mem_bytes": 2084132880.384
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.233,
+    "mem_bytes": 3933116301.312
+   }
+  }
+ },
+ {
+  "t": 1790646109.2313414,
+  "lag": 723,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5992999999999999,
+    "mem_bytes": 69677875.2
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.508,
+    "mem_bytes": 379374796.8
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 1.4201,
+    "mem_bytes": 2902324150.272
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2908,
+    "mem_bytes": 3934190043.136
+   }
+  }
+ },
+ {
+  "t": 1790646114.2314665,
+  "lag": 1975,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6018,
+    "mem_bytes": 59842232.32
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5167,
+    "mem_bytes": 310902784.0
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.061900000000000004,
+    "mem_bytes": 2031519531.008
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2455,
+    "mem_bytes": 3934190043.136
+   }
+  }
+ },
+ {
+  "t": 1790646119.23158,
+  "lag": 1751,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6186,
+    "mem_bytes": 62327357.44
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5385,
+    "mem_bytes": 259732275.2
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 1.1217,
+    "mem_bytes": 2298881245.184
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.1791,
+    "mem_bytes": 3935263784.96
+   }
+  }
+ },
+ {
+  "t": 1790646124.2317166,
+  "lag": 1263,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6085,
+    "mem_bytes": 53907292.16
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.6034,
+    "mem_bytes": 247883366.4
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.2225,
+    "mem_bytes": 1999307276.288
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.204,
+    "mem_bytes": 3936337526.784
+   }
+  }
+ },
+ {
+  "t": 1790646129.231832,
+  "lag": 899,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6032,
+    "mem_bytes": 68870471.68
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.6175,
+    "mem_bytes": 279760076.8
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.763,
+    "mem_bytes": 2219424350.208
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2502,
+    "mem_bytes": 3936337526.784
+   }
+  }
+ },
+ {
+  "t": 1790646134.2319472,
+  "lag": 848,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6185,
+    "mem_bytes": 67297607.68
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.6132,
+    "mem_bytes": 299997593.6
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.4155,
+    "mem_bytes": 2003602243.584
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.1856,
+    "mem_bytes": 3937411268.608
+   }
+  }
+ },
+ {
+  "t": 1790646139.2320724,
+  "lag": 887,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5921,
+    "mem_bytes": 63795363.84
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5132,
+    "mem_bytes": 362387865.6
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 1.1738,
+    "mem_bytes": 2002528501.76
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2634,
+    "mem_bytes": 3937411268.608
+   }
+  }
+ },
+ {
+  "t": 1790646144.2322233,
+  "lag": 1857,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6589,
+    "mem_bytes": 63984107.52
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5616,
+    "mem_bytes": 288672972.8
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.6033,
+    "mem_bytes": 2264521506.816
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2992,
+    "mem_bytes": 3938485010.432
+   }
+  }
+ },
+ {
+  "t": 1790646149.2323594,
+  "lag": 1660,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6014,
+    "mem_bytes": 53938749.44
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5172,
+    "mem_bytes": 250819379.2
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.0571,
+    "mem_bytes": 2101312749.568
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.231,
+    "mem_bytes": 3938485010.432
+   }
+  }
+ },
+ {
+  "t": 1790646154.2324867,
+  "lag": 1717,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5996,
+    "mem_bytes": 64822968.32
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5768,
+    "mem_bytes": 272944332.8
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 1.3814,
+    "mem_bytes": 2347199627.264
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2713,
+    "mem_bytes": 3939558752.256
+   }
+  }
+ },
+ {
+  "t": 1790646159.232633,
+  "lag": 1206,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6257,
+    "mem_bytes": 59401830.4
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.6006,
+    "mem_bytes": 285422387.2
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.0475,
+    "mem_bytes": 2103460233.216
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2082,
+    "mem_bytes": 3939558752.256
+   }
+  }
+ },
+ {
+  "t": 1790646164.2327466,
+  "lag": 1166,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5952000000000001,
+    "mem_bytes": 61876469.76
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5916,
+    "mem_bytes": 246939648.0
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.4153,
+    "mem_bytes": 2186138353.664
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2273,
+    "mem_bytes": 3939558752.256
+   }
+  }
+ },
+ {
+  "t": 1790646169.2328634,
+  "lag": 761,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.581,
+    "mem_bytes": 57021562.88
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5223,
+    "mem_bytes": 407686348.8
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.8167,
+    "mem_bytes": 1995012308.992
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.19899999999999998,
+    "mem_bytes": 3940632494.08
+   }
+  }
+ },
+ {
+  "t": 1790646174.235161,
+  "lag": 642,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6006,
+    "mem_bytes": 60146319.36
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5057,
+    "mem_bytes": 350643814.4
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.9693999999999999,
+    "mem_bytes": 2122787586.048
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2115,
+    "mem_bytes": 3940632494.08
+   }
+  }
+ },
+ {
+  "t": 1790646179.2352765,
+  "lag": 1249,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6381,
+    "mem_bytes": 58961428.48
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5121,
+    "mem_bytes": 301360742.4
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 1.2661,
+    "mem_bytes": 2024003338.24
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2705,
+    "mem_bytes": 3941706235.904
+   }
+  }
+ },
+ {
+  "t": 1790646184.2353826,
+  "lag": 1892,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6564,
+    "mem_bytes": 68608327.68
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5324,
+    "mem_bytes": 266757734.4
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 1.4442,
+    "mem_bytes": 2767032680.448
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.21100000000000002,
+    "mem_bytes": 3941706235.904
+   }
+  }
+ },
+ {
+  "t": 1790646189.2355342,
+  "lag": 1524,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5575,
+    "mem_bytes": 71565312.0
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.44939999999999997,
+    "mem_bytes": 300521881.6
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 1.5763999999999998,
+    "mem_bytes": 2847563317.248
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.17600000000000002,
+    "mem_bytes": 3942779977.728
+   }
+  }
+ },
+ {
+  "t": 1790646194.2357047,
+  "lag": 1869,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6053000000000001,
+    "mem_bytes": 65221427.2
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.4878,
+    "mem_bytes": 346868940.8
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 1.2544,
+    "mem_bytes": 2815351062.528
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.1718,
+    "mem_bytes": 3942779977.728
+   }
+  }
+ },
+ {
+  "t": 1790646199.2358532,
+  "lag": 1664,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6245,
+    "mem_bytes": 71638712.32
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.3651,
+    "mem_bytes": 461058867.2
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 1.3828,
+    "mem_bytes": 2416992845.824
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.1555,
+    "mem_bytes": 3943853719.552
+   }
+  }
+ },
+ {
+  "t": 1790646204.2359865,
+  "lag": 1954,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5998,
+    "mem_bytes": 72666316.8
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5845,
+    "mem_bytes": 292762419.2
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.059800000000000006,
+    "mem_bytes": 1997159792.64
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.1804,
+    "mem_bytes": 3943853719.552
+   }
+  }
+ },
+ {
+  "t": 1790646209.2361422,
+  "lag": 2724,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5928,
+    "mem_bytes": 58908999.68
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.0647,
+    "mem_bytes": 362178150.4
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.2126,
+    "mem_bytes": 1961726312.448
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.16870000000000002,
+    "mem_bytes": 3944927461.376
+   }
+  }
+ },
+ {
+  "t": 1790646214.2362475,
+  "lag": 4922,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.563,
+    "mem_bytes": 63617105.92
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5514,
+    "mem_bytes": 542113792.0
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.20190000000000002,
+    "mem_bytes": 1868310773.76
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.15869999999999998,
+    "mem_bytes": 3944927461.376
+   }
+  }
+ },
+ {
+  "t": 1790646219.2363458,
+  "lag": 4321,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6028,
+    "mem_bytes": 130547712.0
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.9856,
+    "mem_bytes": 455396556.8
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.0623,
+    "mem_bytes": 2004675985.408
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.11869999999999999,
+    "mem_bytes": 3944927461.376
+   }
+  }
+ },
+ {
+  "t": 1790646224.2364647,
+  "lag": 2848,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5922,
+    "mem_bytes": 65210941.44
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5622,
+    "mem_bytes": 422471270.4
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.5139,
+    "mem_bytes": 1992864825.344
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2606,
+    "mem_bytes": 3946001203.2
+   }
+  }
+ },
+ {
+  "t": 1790646229.2366233,
+  "lag": 1622,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.555,
+    "mem_bytes": 63879249.92
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5318999999999999,
+    "mem_bytes": 248197939.2
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.0538,
+    "mem_bytes": 2126008811.52
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2773,
+    "mem_bytes": 3946001203.2
+   }
+  }
+ },
+ {
+  "t": 1790646234.2367148,
+  "lag": 1321,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6405,
+    "mem_bytes": 61006151.68
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.655,
+    "mem_bytes": 259103129.6
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 1.2111,
+    "mem_bytes": 2116345135.104
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2141,
+    "mem_bytes": 3947074945.024
+   }
+  }
+ },
+ {
+  "t": 1790646239.2370086,
+  "lag": 971,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5954999999999999,
+    "mem_bytes": 61037608.96
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.6476999999999999,
+    "mem_bytes": 270427750.4
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.9016,
+    "mem_bytes": 2432025231.36
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2509,
+    "mem_bytes": 3947074945.024
+   }
+  }
+ },
+ {
+  "t": 1790646244.2371879,
+  "lag": 1276,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5974,
+    "mem_bytes": 62484643.84
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.46140000000000003,
+    "mem_bytes": 392377139.2
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 1.0849,
+    "mem_bytes": 2130303778.816
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.38380000000000003,
+    "mem_bytes": 3948148686.848
+   }
+  }
+ },
+ {
+  "t": 1790646249.2385888,
+  "lag": 1921,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5640999999999999,
+    "mem_bytes": 59370373.12
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.6462,
+    "mem_bytes": 337012326.4
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.0784,
+    "mem_bytes": 1978906181.632
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2618,
+    "mem_bytes": 3948148686.848
+   }
+  }
+ },
+ {
+  "t": 1790646254.2387033,
+  "lag": 1532,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5778,
+    "mem_bytes": 59653488.64
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5215,
+    "mem_bytes": 249770803.2
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.7628,
+    "mem_bytes": 2022929596.416
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.26899999999999996,
+    "mem_bytes": 3949222428.672
+   }
+  }
+ },
+ {
+  "t": 1790646259.238815,
+  "lag": 1401,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6093,
+    "mem_bytes": 57199820.8
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5771999999999999,
+    "mem_bytes": 251658240.0
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.7263,
+    "mem_bytes": 2199023255.552
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.1928,
+    "mem_bytes": 3949222428.672
+   }
+  }
+ },
+ {
+  "t": 1790646264.2389302,
+  "lag": 1048,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5857,
+    "mem_bytes": 62075699.2
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5134000000000001,
+    "mem_bytes": 336383180.8
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.9570000000000001,
+    "mem_bytes": 2295660019.712
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.22,
+    "mem_bytes": 3950296170.496
+   }
+  }
+ },
+ {
+  "t": 1790646269.2390478,
+  "lag": 2389,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5965,
+    "mem_bytes": 58479083.52
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.10490000000000001,
+    "mem_bytes": 329672294.4
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.2683,
+    "mem_bytes": 1987496116.224
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2552,
+    "mem_bytes": 3950296170.496
+   }
+  }
+ },
+ {
+  "t": 1790646274.2391691,
+  "lag": 1288,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5909,
+    "mem_bytes": 67056435.2
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.6424,
+    "mem_bytes": 384093388.8
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 1.1832,
+    "mem_bytes": 2318208598.016
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2821,
+    "mem_bytes": 3951369912.32
+   }
+  }
+ },
+ {
+  "t": 1790646279.2392337,
+  "lag": 690,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5733,
+    "mem_bytes": 57524879.36
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.4804,
+    "mem_bytes": 382415667.2
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 1.2556,
+    "mem_bytes": 2004675985.408
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2637,
+    "mem_bytes": 3951369912.32
+   }
+  }
+ },
+ {
+  "t": 1790646284.2393515,
+  "lag": 504,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5719,
+    "mem_bytes": 63050874.88
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5667,
+    "mem_bytes": 331664588.8
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.5611999999999999,
+    "mem_bytes": 2685428301.824
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.3102,
+    "mem_bytes": 3952443654.144
+   }
+  }
+ },
+ {
+  "t": 1790646289.2394621,
+  "lag": 514,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5874,
+    "mem_bytes": 61048094.72
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5155,
+    "mem_bytes": 342779494.4
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.7764,
+    "mem_bytes": 2021855854.592
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2832,
+    "mem_bytes": 3952443654.144
+   }
+  }
+ },
+ {
+  "t": 1790646294.2395625,
+  "lag": 795,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6067,
+    "mem_bytes": 60744007.68
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.57,
+    "mem_bytes": 315411660.8
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 1.0626,
+    "mem_bytes": 2047625658.368
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.3317,
+    "mem_bytes": 3953517395.968
+   }
+  }
+ },
+ {
+  "t": 1790646299.2400315,
+  "lag": 1198,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6064,
+    "mem_bytes": 58720256.0
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5606,
+    "mem_bytes": 250399948.8
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.3969,
+    "mem_bytes": 2188285837.312
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2267,
+    "mem_bytes": 3954591137.792
+   }
+  }
+ },
+ {
+  "t": 1790646304.2405856,
+  "lag": 770,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6144,
+    "mem_bytes": 70443335.68
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5453,
+    "mem_bytes": 321178828.8
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.19640000000000002,
+    "mem_bytes": 2079837913.088
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2492,
+    "mem_bytes": 3954591137.792
+   }
+  }
+ },
+ {
+  "t": 1790646309.2406766,
+  "lag": 851,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6217,
+    "mem_bytes": 57671680.0
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5952000000000001,
+    "mem_bytes": 311531929.6
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.5898,
+    "mem_bytes": 1948841410.56
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.26839999999999997,
+    "mem_bytes": 3955664879.616
+   }
+  }
+ },
+ {
+  "t": 1790646314.2407944,
+  "lag": 667,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6035,
+    "mem_bytes": 56539217.92
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5977,
+    "mem_bytes": 295593574.4
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.9198000000000001,
+    "mem_bytes": 2259152797.696
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.34759999999999996,
+    "mem_bytes": 3955664879.616
+   }
+  }
+ },
+ {
+  "t": 1790646319.2408996,
+  "lag": 1122,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6396000000000001,
+    "mem_bytes": 59905146.88
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.42700000000000005,
+    "mem_bytes": 338270617.6
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.6774,
+    "mem_bytes": 2075542945.792
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2529,
+    "mem_bytes": 3956738621.44
+   }
+  }
+ },
+ {
+  "t": 1790646324.241009,
+  "lag": 1787,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5916,
+    "mem_bytes": 63774392.32
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.49939999999999996,
+    "mem_bytes": 356830412.8
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.4107,
+    "mem_bytes": 1947767668.736
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.34590000000000004,
+    "mem_bytes": 3956738621.44
+   }
+  }
+ },
+ {
+  "t": 1790646329.241095,
+  "lag": 1862,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6198,
+    "mem_bytes": 57451479.04
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.527,
+    "mem_bytes": 266862592.0
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.5958,
+    "mem_bytes": 2282775117.824
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.20579999999999998,
+    "mem_bytes": 3958886105.088
+   }
+  }
+ },
+ {
+  "t": 1790646334.2412963,
+  "lag": 1440,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5740999999999999,
+    "mem_bytes": 64728596.48
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.645,
+    "mem_bytes": 245366784.0
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.4882,
+    "mem_bytes": 2264521506.816
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.26539999999999997,
+    "mem_bytes": 3958886105.088
+   }
+  }
+ },
+ {
+  "t": 1790646339.2413735,
+  "lag": 934,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5954999999999999,
+    "mem_bytes": 58625884.16
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.6351,
+    "mem_bytes": 329882009.6
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.8693000000000001,
+    "mem_bytes": 2020782112.768
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2621,
+    "mem_bytes": 3958886105.088
+   }
+  }
+ },
+ {
+  "t": 1790646344.241482,
+  "lag": 833,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6443000000000001,
+    "mem_bytes": 56413388.8
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.618,
+    "mem_bytes": 298844160.0
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.5193,
+    "mem_bytes": 2035814498.304
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2743,
+    "mem_bytes": 3963181072.384
+   }
+  }
+ },
+ {
+  "t": 1790646349.2416267,
+  "lag": 1063,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6032,
+    "mem_bytes": 61803069.44
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5516,
+    "mem_bytes": 253545676.8
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 1.3278,
+    "mem_bytes": 2194728288.256
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2347,
+    "mem_bytes": 3959959846.912
+   }
+  }
+ },
+ {
+  "t": 1790646354.2417247,
+  "lag": 935,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.6029,
+    "mem_bytes": 60691578.88
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5899,
+    "mem_bytes": 306079334.4
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.2818,
+    "mem_bytes": 2084132880.384
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.3081,
+    "mem_bytes": 3961033588.736
+   }
+  }
+ },
+ {
+  "t": 1790646359.2418222,
+  "lag": 1069,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5785,
+    "mem_bytes": 60135833.6
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5437,
+    "mem_bytes": 288882688.0
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 1.0423,
+    "mem_bytes": 2129230036.992
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.23929999999999998,
+    "mem_bytes": 3961033588.736
+   }
+  }
+ },
+ {
+  "t": 1790646364.2419314,
+  "lag": 1486,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5834,
+    "mem_bytes": 61457039.36
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.4853,
+    "mem_bytes": 237083033.6
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.4849,
+    "mem_bytes": 2283848859.648
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.1839,
+    "mem_bytes": 3962107330.56
+   }
+  }
+ },
+ {
+  "t": 1790646369.2420516,
+  "lag": 1455,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.586,
+    "mem_bytes": 58867056.64
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5174,
+    "mem_bytes": 237187891.2
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.0692,
+    "mem_bytes": 2087354105.856
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.1905,
+    "mem_bytes": 3962107330.56
+   }
+  }
+ },
+ {
+  "t": 1790646374.2421608,
+  "lag": 1116,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5864,
+    "mem_bytes": 61551411.2
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5702,
+    "mem_bytes": 272839475.2
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.35600000000000004,
+    "mem_bytes": 2345052143.616
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.3214,
+    "mem_bytes": 3962107330.56
+   }
+  }
+ },
+ {
+  "t": 1790646379.2422643,
+  "lag": 1109,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.8406,
+    "mem_bytes": 68251811.84
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.6696,
+    "mem_bytes": 280074649.6
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.8656999999999999,
+    "mem_bytes": 2188285837.312
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.213,
+    "mem_bytes": 3962107330.56
+   }
+  }
+ },
+ {
+  "t": 1790646384.2423708,
+  "lag": 1275,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.578,
+    "mem_bytes": 66899148.8
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.5951,
+    "mem_bytes": 245995929.6
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.5428999999999999,
+    "mem_bytes": 2259152797.696
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2658,
+    "mem_bytes": 3962107330.56
+   }
+  }
+ },
+ {
+  "t": 1790646389.2437437,
+  "lag": 1144,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.5761,
+    "mem_bytes": 60796436.48
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.6341,
+    "mem_bytes": 239494758.4
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 1.1103,
+    "mem_bytes": 2215129382.912
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.2364,
+    "mem_bytes": 3962107330.56
+   }
+  }
+ },
+ {
+  "t": 1790646394.2441475,
+  "lag": 1510,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.15039999999999998,
+    "mem_bytes": 67612180.48
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.0,
+    "mem_bytes": 246834790.4
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 0.3575,
+    "mem_bytes": 2401960460.288
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.0694,
+    "mem_bytes": 3962107330.56
+   }
+  }
+ },
+ {
+  "t": 1790646399.2442567,
+  "lag": 0,
+  "containers": {
+   "vigil-load-receiver": {
+    "cpu_cores": 0.0,
+    "mem_bytes": 67612180.48
+   },
+   "vigil-load-writer": {
+    "cpu_cores": 0.0006,
+    "mem_bytes": 219886387.2
+   },
+   "vigil-clickhouse": {
+    "cpu_cores": 2.0155000000000003,
+    "mem_bytes": 2189359579.136
+   },
+   "vigil-redpanda": {
+    "cpu_cores": 0.010700000000000001,
+    "mem_bytes": 3962107330.56
+   }
+  }
+ }
+]

@@ -1,0 +1,35 @@
+{
+  "run_id": "sized-http-500-20260929T020206Z",
+  "database": "vigil_load",
+  "drained_in": "5.041s",
+  "reconciliation": {
+    "acked_traces": 53523,
+    "acked_spans": 360000,
+    "stored_acked_unique_spans": 360000,
+    "missing_spans": 0,
+    "duplicate_rows": 0,
+    "unacked_spans": 0,
+    "unacked_stored": 0,
+    "unexpected_traces": 0,
+    "stored_rows": 360000
+  },
+  "clean": true,
+  "trace_index_span_count": 360000,
+  "dlq_records": 0,
+  "raw_topic_bytes": 2619409710,
+  "e2e_latency_ms": {
+    "max": 5103.443115234375,
+    "p50": 2151.427978515625,
+    "p95": 3241.484619140625,
+    "p99": 3291.307861328125
+  },
+  "window_start_ns": 1790647447655830428,
+  "window_end_ns": 1790648047655830428,
+  "e2e_window_latency_ms": {
+    "max": 5103.443115234375,
+    "p50": 2152.508056640625,
+    "p95": 3245.82958984375,
+    "p99": 3299.997314453125
+  },
+  "window_spans": 299611
+}

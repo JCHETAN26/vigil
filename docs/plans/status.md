@@ -155,7 +155,7 @@ with current container limits, then a separately labeled run with limits sized f
 generator pinned to core 0, pipeline to cores 1-3, generator CPU recorded and generator-bound
 runs flagged; RetryInfo on gRPC RESOURCE_EXHAUSTED / 429 + Retry-After on HTTP, verified with a
 real OTel SDK exporter; refuse fault injection while a real eval run is in progress).
-- **Stage 1 — done (pending review):** `internal/loadgen` + `cmd/loadgen` (`export` / `run` /
+- **Stage 1 — done (pushed, `644b1ac`):** `internal/loadgen` + `cmd/loadgen` (`export` / `run` /
   `reconcile`): templates rebuilt from real `spans` rows via the read-only user and verified
   row-for-row against the production normalizer (515 traces / 3,464 spans, 0 mismatches; 88
   pre-005 rows compared after lifting `vigil.eval.trial` to its column); per-replay deterministic
@@ -167,9 +167,32 @@ real OTel SDK exporter; refuse fault injection while a real eval run is in progr
   (`up` / `export` / `pilot` / `cleanup` / `hardware`). Pilot (`bench/results/ingest/pilot/`):
   gRPC + HTTP at 1k spans/s, both clean; calibration 704 B/span ClickHouse, 684 B/span Redpanda;
   stage-2 projection peaks at ~21 GB for the 20k spans/s step (tables truncated between steps).
-- **Next:** stage 2 baseline (as-is), stage 3 fault injection, stage 4 improvements (single
-  produce per request, producer batching, in-writer retry with identical dedup token, lag-aware
-  admission control), stage 5 results + design doc.
+- **Stage 2 — done (pending review):** `bench/ingest_load.py baseline` ramps 500 → 20k spans/s
+  per protocol (120 s warm-up + 600 s steady window, every step starts on a drained pipeline with
+  truncated load tables; each protocol ramp from a fresh ClickHouse restart). Results in
+  `bench/results/ingest/baseline-{asis,sized}/`. **Sustained (zero loss, window e2e p99 < 5 s):**
+
+  | limits | gRPC | HTTP | first failure |
+  |---|---|---|---|
+  | as-is (ClickHouse 1.5 GiB) | 1,000 | 1,000 | 2,000: load writer crash-loops, never drains |
+  | sized (ClickHouse 6.4 GiB) | 2,000 | 2,000 | 5,000: e2e p99 6.7 s (gRPC) / 5.3 s (HTTP), still zero loss |
+
+  - **As-is root cause:** span INSERTs hit ClickHouse `max_server_memory_usage` (1.5 GiB) →
+    `MEMORY_LIMIT_EXCEEDED` (code 241, dozens/min in `system.query_log`); the writer exits on a
+    failed insert and Docker restarts it, which at 2k spans/s never catches up. Passing steps
+    stayed exact because redelivery re-forms the same offset range (same dedup token).
+  - **Sized:** zero loss at every step incl. 10k spans/s (7.2M spans each protocol stored exactly
+    once), but at 10k the pipeline saturates its 3 cores (receiver ~1.0, ClickHouse ~0.9, writer
+    ~0.6) and e2e p99 reaches ~180 s. Request p99 climbs from ~150 ms (2k) to 1.6–1.7 s (5k) and
+    6 s (gRPC) / 23 s (HTTP) at 10k — consistent with the receiver's per-trace synchronous produce.
+  - **Label caveat:** the 10k steps are labelled "inconclusive: generator behind schedule", but the
+    generator used only ~0.3 of its core: the lag is its 32 in-flight slots all waiting on a slow
+    receiver (pipeline backpressure), not a generator limit. Those steps fail the 5 s SLO either way.
+  - `baseline-asis-uptime11h/`: an earlier as-is attempt against a ClickHouse up ~11 h failed even
+    at 500 spans/s (e2e p99 20.8 s) — why every ramp now starts from a fresh ClickHouse.
+- **Next:** stage 3 fault injection, stage 4 improvements (single produce per request, producer
+  batching, in-writer retry with identical dedup token, lag-aware admission control), stage 5
+  results + design doc.
 - **Added 2026-09-28 (from a review of job descriptions; not started — each gets a proposal
   and owner review first):**
   - **AWS via Terraform** (`deploy/terraform/`): the cheapest reasonable design to run the
