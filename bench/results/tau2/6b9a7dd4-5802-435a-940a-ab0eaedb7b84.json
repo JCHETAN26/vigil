@@ -1,0 +1,1322 @@
+{
+  "meta": {
+    "run_id": "6b9a7dd4-5802-435a-940a-ab0eaedb7b84",
+    "mode": "development",
+    "trials_per_case": 2,
+    "suite": "tau2-retail-dev10",
+    "title": "dev10x2 v3 (Oracle ARM)"
+  },
+  "generated_at": "2026-09-30T00:28:27.544476+00:00",
+  "aggregate": {
+    "n_tasks": 10,
+    "n_units": 20,
+    "success_rate": {
+      "mean": 0.7,
+      "lo": 0.45,
+      "hi": 0.95,
+      "n": 10
+    },
+    "pass_k": {
+      "1": 0.7,
+      "2": 0.6
+    },
+    "cost": {
+      "agent_usd": 0.7427192,
+      "sim_usd": 0.120846,
+      "total_usd": 0.8635652,
+      "per_task_trial_usd": 0.04317826
+    }
+  },
+  "cache": {
+    "n_agent_calls": 190,
+    "cache_creation_tokens": 20168,
+    "cache_read_tokens": 937812,
+    "uncached_input_tokens": 456638,
+    "calls_with_write": 4,
+    "calls_with_read": 186,
+    "hit_rate": 0.9789473684210527,
+    "per_call": [
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 2468
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 5415
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 4903
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 4025
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 2690
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 4936
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 607
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 1277
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 1973
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 366
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 480
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 2419
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 5830
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 4558
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 2290
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 5867
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 548
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 4479
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 394
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 1598
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 4962
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 675
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 369
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 2190
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 843
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 607
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 484
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 497
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 5278
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 842
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 379
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 4744
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 4096
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 4521
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 2188
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 2531
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 620
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 3379
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 4009
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 1142
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 1405
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 450
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 3195
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 2908
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 591
+      },
+      {
+        "cache_write": 5042,
+        "cache_read": 0,
+        "uncached_input": 371
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 1615
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 421
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 2706
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 333
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 1988
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 2198
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 758
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 2522
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 509
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 625
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 5071
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 4903
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 3054
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 885
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 498
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 5701
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 2767
+      },
+      {
+        "cache_write": 5042,
+        "cache_read": 0,
+        "uncached_input": 369
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 4583
+      },
+      {
+        "cache_write": 5042,
+        "cache_read": 0,
+        "uncached_input": 392
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 2822
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 3440
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 639
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 3160
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 4101
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 512
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 1199
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 1204
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 641
+      },
+      {
+        "cache_write": 5042,
+        "cache_read": 0,
+        "uncached_input": 391
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 3468
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 3214
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 2784
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 4120
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 514
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 509
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 3095
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 335
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 1932
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 2122
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 1614
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 421
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 761
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 1581
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 5166
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 525
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 4585
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 5785
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 370
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 4973
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 652
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 2273
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 2722
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 1960
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 430
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 779
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 2117
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 335
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 3090
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 1622
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 518
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 593
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 5457
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 839
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 470
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 2182
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 4097
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 4677
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 4923
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 2531
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 361
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 4670
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 634
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 507
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 5597
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 4978
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 2253
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 1561
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 4404
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 370
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 4032
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 371
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 2474
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 602
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 4466
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 5285
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 840
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 2180
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 479
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 4751
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 4761
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 4000
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 5295
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 605
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 840
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 4484
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 2449
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 482
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 363
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 2181
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 2348
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 504
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 1612
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 2146
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 2568
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 1912
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 4147
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 2771
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 3174
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 416
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 332
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 757
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 2963
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 4139
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 4654
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 2288
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 5142
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 5601
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 532
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 659
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 1593
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 4923
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 400
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 386
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 884
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 2226
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 4390
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 4602
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 4757
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 649
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 526
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 3898
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 631
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 4975
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 1567
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 5187
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 387
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 5646
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 4672
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 4115
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 504
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 4648
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 5182
+      },
+      {
+        "cache_write": 0,
+        "cache_read": 5042,
+        "uncached_input": 4403
+      }
+    ]
+  },
+  "cost_agreement": {
+    "postgres_agent_usd": 0.7427192,
+    "clickhouse_agent_usd": 0.7427191999999999,
+    "agent_agree": true,
+    "postgres_sim_usd": 0.120846,
+    "clickhouse_sim_usd": 0.12084600000000002,
+    "sim_agree": true,
+    "spend_on_failures_usd": 0.0
+  },
+  "units": [
+    {
+      "case_id": "0",
+      "trial": 0,
+      "status": "ok",
+      "trace_id": "65d6207949806b1780219acf9d5da707",
+      "passed": true,
+      "reward": 1.0,
+      "db_match": true,
+      "turns": 8,
+      "cost_usd": 0.0328469,
+      "sim_cost_usd": 0.004934,
+      "input_tokens": 16265,
+      "output_tokens": 1350,
+      "sim_input_tokens": 3634,
+      "sim_output_tokens": 260
+    },
+    {
+      "case_id": "0",
+      "trial": 1,
+      "status": "ok",
+      "trace_id": "7cb7a2caddea61221217b2dd5243e0c0",
+      "passed": true,
+      "reward": 1.0,
+      "db_match": true,
+      "turns": 8,
+      "cost_usd": 0.0328879,
+      "sim_cost_usd": 0.0053,
+      "input_tokens": 16336,
+      "output_tokens": 1344,
+      "sim_input_tokens": 3840,
+      "sim_output_tokens": 292
+    },
+    {
+      "case_id": "1",
+      "trial": 0,
+      "status": "ok",
+      "trace_id": "3b02c4cf11e39489160dd8d422b29322",
+      "passed": true,
+      "reward": 1.0,
+      "db_match": true,
+      "turns": 9,
+      "cost_usd": 0.0337211,
+      "sim_cost_usd": 0.005612,
+      "input_tokens": 17450,
+      "output_tokens": 1187,
+      "sim_input_tokens": 4382,
+      "sim_output_tokens": 246
+    },
+    {
+      "case_id": "1",
+      "trial": 1,
+      "status": "ok",
+      "trace_id": "6268b2451c55565143b81e40491a40fb",
+      "passed": true,
+      "reward": 1.0,
+      "db_match": true,
+      "turns": 10,
+      "cost_usd": 0.0473413,
+      "sim_cost_usd": 0.006159,
+      "input_tokens": 28456,
+      "output_tokens": 1609,
+      "sim_input_tokens": 4819,
+      "sim_output_tokens": 268
+    },
+    {
+      "case_id": "10",
+      "trial": 0,
+      "status": "ok",
+      "trace_id": "928c79fc5b05a2d9d1440194d056402c",
+      "passed": false,
+      "reward": 0.0,
+      "db_match": false,
+      "turns": 8,
+      "cost_usd": 0.0210576,
+      "sim_cost_usd": 0.003603,
+      "input_tokens": 10789,
+      "output_tokens": 1247,
+      "sim_input_tokens": 3058,
+      "sim_output_tokens": 109
+    },
+    {
+      "case_id": "10",
+      "trial": 1,
+      "status": "ok",
+      "trace_id": "43968f2c16398be3e6d9550d6185b8f3",
+      "passed": true,
+      "reward": 1.0,
+      "db_match": true,
+      "turns": 9,
+      "cost_usd": 0.0250328,
+      "sim_cost_usd": 0.003843,
+      "input_tokens": 13050,
+      "output_tokens": 1489,
+      "sim_input_tokens": 3208,
+      "sim_output_tokens": 127
+    },
+    {
+      "case_id": "11",
+      "trial": 0,
+      "status": "ok",
+      "trace_id": "f2bb85a4a7e05fef7e72bf9b8987a254",
+      "passed": true,
+      "reward": 1.0,
+      "db_match": true,
+      "turns": 13,
+      "cost_usd": 0.0430946,
+      "sim_cost_usd": 0.012507,
+      "input_tokens": 25650,
+      "output_tokens": 2178,
+      "sim_input_tokens": 11392,
+      "sim_output_tokens": 223
+    },
+    {
+      "case_id": "11",
+      "trial": 1,
+      "status": "ok",
+      "trace_id": "aea50f7503c74487c65a3a32e32a06c4",
+      "passed": true,
+      "reward": 1.0,
+      "db_match": true,
+      "turns": 8,
+      "cost_usd": 0.0210996,
+      "sim_cost_usd": 0.003559,
+      "input_tokens": 10851,
+      "output_tokens": 1243,
+      "sim_input_tokens": 3079,
+      "sim_output_tokens": 96
+    },
+    {
+      "case_id": "2",
+      "trial": 0,
+      "status": "ok",
+      "trace_id": "c69ae30710a19b287b8ebe4903b0b34c",
+      "passed": true,
+      "reward": 1.0,
+      "db_match": true,
+      "turns": 9,
+      "cost_usd": 0.0382768,
+      "sim_cost_usd": 0.004303,
+      "input_tokens": 24974,
+      "output_tokens": 1753,
+      "sim_input_tokens": 3243,
+      "sim_output_tokens": 212
+    },
+    {
+      "case_id": "2",
+      "trial": 1,
+      "status": "ok",
+      "trace_id": "9e62c962d188c5a71c8be8a531d074d8",
+      "passed": true,
+      "reward": 1.0,
+      "db_match": true,
+      "turns": 10,
+      "cost_usd": 0.043019,
+      "sim_cost_usd": 0.00688,
+      "input_tokens": 28632,
+      "output_tokens": 1869,
+      "sim_input_tokens": 5585,
+      "sim_output_tokens": 259
+    },
+    {
+      "case_id": "3",
+      "trial": 0,
+      "status": "ok",
+      "trace_id": "f4d71615ea41321f239ee346d615b106",
+      "passed": true,
+      "reward": 1.0,
+      "db_match": true,
+      "turns": 10,
+      "cost_usd": 0.043768,
+      "sim_cost_usd": 0.007249,
+      "input_tokens": 29931,
+      "output_tokens": 1759,
+      "sim_input_tokens": 5659,
+      "sim_output_tokens": 318
+    },
+    {
+      "case_id": "3",
+      "trial": 1,
+      "status": "ok",
+      "trace_id": "fa5a53149316d3418449cf2c855c1264",
+      "passed": true,
+      "reward": 1.0,
+      "db_match": true,
+      "turns": 9,
+      "cost_usd": 0.0415218,
+      "sim_cost_usd": 0.007003,
+      "input_tokens": 27684,
+      "output_tokens": 1860,
+      "sim_input_tokens": 5833,
+      "sim_output_tokens": 234
+    },
+    {
+      "case_id": "4",
+      "trial": 0,
+      "status": "ok",
+      "trace_id": "171c6023e28c0eca3824b9872ff9f91b",
+      "passed": true,
+      "reward": 1.0,
+      "db_match": true,
+      "turns": 8,
+      "cost_usd": 0.0341416,
+      "sim_cost_usd": 0.003859,
+      "input_tokens": 20813,
+      "output_tokens": 1859,
+      "sim_input_tokens": 2624,
+      "sim_output_tokens": 247
+    },
+    {
+      "case_id": "4",
+      "trial": 1,
+      "status": "ok",
+      "trace_id": "00dbadc896e6ef069deef1e7273bebfa",
+      "passed": true,
+      "reward": 1.0,
+      "db_match": true,
+      "turns": 10,
+      "cost_usd": 0.039968,
+      "sim_cost_usd": 0.004776,
+      "input_tokens": 25136,
+      "output_tokens": 1958,
+      "sim_input_tokens": 4001,
+      "sim_output_tokens": 155
+    },
+    {
+      "case_id": "6",
+      "trial": 0,
+      "status": "ok",
+      "trace_id": "b8a39effaaa22a59fb08f2488d3fd670",
+      "passed": false,
+      "reward": 0.0,
+      "db_match": false,
+      "turns": 10,
+      "cost_usd": 0.040677,
+      "sim_cost_usd": 0.007071,
+      "input_tokens": 26130,
+      "output_tokens": 1901,
+      "sim_input_tokens": 5671,
+      "sim_output_tokens": 280
+    },
+    {
+      "case_id": "6",
+      "trial": 1,
+      "status": "ok",
+      "trace_id": "d92eb7e96971123ff1204bf993d2ca68",
+      "passed": false,
+      "reward": 0.0,
+      "db_match": false,
+      "turns": 10,
+      "cost_usd": 0.039317,
+      "sim_cost_usd": 0.006491,
+      "input_tokens": 25480,
+      "output_tokens": 1759,
+      "sim_input_tokens": 5176,
+      "sim_output_tokens": 263
+    },
+    {
+      "case_id": "7",
+      "trial": 0,
+      "status": "ok",
+      "trace_id": "2f4405d36b84e7991852cfaaa414db80",
+      "passed": false,
+      "reward": 0.0,
+      "db_match": false,
+      "turns": 10,
+      "cost_usd": 0.039463,
+      "sim_cost_usd": 0.006643,
+      "input_tokens": 25696,
+      "output_tokens": 1745,
+      "sim_input_tokens": 5318,
+      "sim_output_tokens": 265
+    },
+    {
+      "case_id": "7",
+      "trial": 1,
+      "status": "ok",
+      "trace_id": "e14254f8cea5849587e17bf788852b0f",
+      "passed": false,
+      "reward": 0.0,
+      "db_match": false,
+      "turns": 10,
+      "cost_usd": 0.039392,
+      "sim_cost_usd": 0.006533,
+      "input_tokens": 25460,
+      "output_tokens": 1778,
+      "sim_input_tokens": 5228,
+      "sim_output_tokens": 261
+    },
+    {
+      "case_id": "8",
+      "trial": 0,
+      "status": "ok",
+      "trace_id": "f6da2db175ce3a8e2376843f2c5b7fef",
+      "passed": true,
+      "reward": 1.0,
+      "db_match": true,
+      "turns": 11,
+      "cost_usd": 0.0474872,
+      "sim_cost_usd": 0.008301,
+      "input_tokens": 32636,
+      "output_tokens": 1861,
+      "sim_input_tokens": 6836,
+      "sim_output_tokens": 293
+    },
+    {
+      "case_id": "8",
+      "trial": 1,
+      "status": "ok",
+      "trace_id": "17c3cc6d0b62d62841935782f15fc70a",
+      "passed": false,
+      "reward": 0.0,
+      "db_match": false,
+      "turns": 10,
+      "cost_usd": 0.038606,
+      "sim_cost_usd": 0.00622,
+      "input_tokens": 25219,
+      "output_tokens": 1669,
+      "sim_input_tokens": 4900,
+      "sim_output_tokens": 264
+    }
+  ]
+}

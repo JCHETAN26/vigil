@@ -262,8 +262,16 @@ real OTel SDK exporter; refuse fault injection while a real eval run is in progr
 > `8d3ce29`). Week 3 **paired bootstrap regression detection done** (`engine regress` + power/MDE
 > harness; commit `2b84ea4`). All unit/offline suites green under `make test-all`.
 >
-> **Update 2026-09-30:** the API cap has lifted — `make test-all` ran every live suite green
-> (engine integration, hello/hotpotqa/τ² e2e) on the cloud machine. Steps 1–3 below are unblocked.
+> **Update 2026-09-30:** the account briefly had API access (`make test-all` ran every live suite
+> green on the cloud machine) and step 1 ran: τ² dev `6b9a7dd4` — 20/20 units completed, pass^1
+> 70.0%, pass^2 60.0%, $0.86 (agent $0.743, simulator $0.121), Postgres↔ClickHouse cost MATCH.
+> Step 2 is **partial**: A/A leg A `ddbb1332` completed (300/300, $1.94); leg B `8fd25cc4` hit the
+> usage limit again at 00:36:18 UTC (199/300 OK, $1.29) — no gated regression on the 67 paired
+> questions (`bench/results/regression/aa-20260930/`); `passed` is "watch" (interval-only signal,
+> the paired t CI's ~5% nominal / 6.7% measured false-alarm rate; gated rule 0.0%), and ungated
+> `cost_usd` false-alarmed — calibrate informational thresholds (cost first) from A/A variance once
+> the full pair exists. **Blocked again until 2026-10-01 00:00 UTC**; then re-run leg B in full
+> (approved, budget $3).
 >
 > **BLOCKED on the Anthropic account usage cap — regain access 2026-10-01 00:00 UTC.** No eval
 > run or live test (e2e/integration) can succeed until then; the live suites report

@@ -1,0 +1,11 @@
+regression: candidate 8fd25cc4-9ee vs baseline ddbb1332-0ed (alpha=0.05, two_level=False)
+  [GATE] passed             Δ=-0.0149 ↓ (1−α bound -0.0008; excl0=True; ≥thr=False; p=0.049) → watch
+  [GATE] TokenF1            Δ=-0.0085 ↓ (1−α bound +0.0054; excl0=False; ≥thr=False; p=0.152) → ok
+  [info] ExactMatch         Δ=-0.0199 ↓ (1−α bound +0.0002; excl0=False; ≥thr=True; p=0.067) → ok
+  [info] RetrievalRecall@5  Δ=+0.0075 ↓ (1−α bound +0.0266; excl0=False; ≥thr=False; p=0.778) → ok
+  [info] RetrievalRecall@10 Δ=-0.0050 ↓ (1−α bound +0.0127; excl0=False; ≥thr=True; p=0.356) → ok
+  [info] NDCG               Δ=+0.0015 ↓ (1−α bound +0.0146; excl0=False; ≥thr=False; p=0.573) → ok
+  [info] AllGoldRetrieved   Δ=-0.0149 ↓ (1−α bound +0.0070; excl0=False; ≥thr=True; p=0.132) → ok
+  [info] cost_usd           Δ=+0.0005 ↑ (1−α bound +0.0000; excl0=True; ≥thr=True; p=0.029) → REGRESSION
+  [info] latency_ms         Δ=+160.8408 ↑ (1−α bound -46.2913; excl0=False; ≥thr=True; p=0.095) → ok
+VERDICT: no gated regression
