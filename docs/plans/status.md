@@ -232,7 +232,12 @@ real OTel SDK exporter; refuse fault injection while a real eval run is in progr
      `merges_mutations_memory_usage_soft_limit` so merges cannot starve inserts. Verify with a
      repeat 6 h soak + long-uptime ramp (target: long-uptime result = fresh result).
   2. **Writer: retry the identical batch in-process** (same offset range, same dedup token) instead
-     of exiting — ends the crash loop and the `trace_index` double-count (+2,125 observed).
+     of exiting — ends the crash loop and the `trace_index` double-count (+2,125 observed). The
+     acceptance test exists: `integration/partial_insert_test.go` injects a view failure
+     (spans + one view committed, the other failed) and shows an identical same-token retry
+     leaves spans, trace_index and the rollup exact (ClickHouse 24.8 pushes a deduplicated block
+     to every view; each dedups on its own token), while a re-formed retry double-counts.
+     Residue is repaired by `cmd/rebuild` (data-model §3.7, derived from the live view SQL).
   3. **Writer: global memory budget across partitions** (bound total in-flight batch bytes, not
      per-partition rows) — with a test that drains a large backlog within the original 512 MiB.
   4. Larger inserts / async inserts to cut parts and merge load (measure against 1).

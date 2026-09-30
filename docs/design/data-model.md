@@ -420,6 +420,33 @@ differ. There, `ReplacingMergeTree` still collapses the raw-span duplicates on m
 the on-insert rollup MVs can transiently double-count until the §3.7 partition rebuild.
 This is the accepted trade-off behind the "pragmatic" batching rule (size-or-time flush)
 over a strictly deterministic size-only boundary that would stall low-traffic partitions.
+
+**Second trigger — a partially applied INSERT (found in the Week-6 soak; far more frequent).**
+One `INSERT INTO spans` is **not atomic across its materialized views**. ClickHouse writes the
+`spans` part and then pushes the block to each view independently; if one view's push fails
+(e.g. `MEMORY_LIMIT_EXCEEDED` under a small memory cap), the `spans` part and the other view's
+block are already committed, yet the INSERT returns an error. The claim above that a re-sent
+batch is dropped "before any rows or MV rows are written" assumes an insert either fully
+succeeds or fully fails; a partially applied one breaks that assumption. The current writer
+treats the error as a failed batch, exits without committing, and after restart re-forms a
+time-flushed batch over a different offset range, so the retry carries a **new** token:
+`spans` gets duplicate rows (collapsed later by `ReplacingMergeTree`), the view whose push had
+succeeded gets a second copy (an `AggregatingMergeTree` sum never self-heals), and the view
+whose push had failed gets its first. In the 6 h soak (1.5 GiB cap) this happened ~56 times:
+raw spans and the rollup ended exact, `trace_index` over-counted 319 traces by exactly 2×
+(`bench/results/ingest/soak-asis-6h/reconciliation.md`).
+
+**What a correct retry looks like (verified).** With
+`deduplicate_blocks_in_dependent_materialized_views = 1`, ClickHouse 24.8 still pushes a
+deduplicated source block to every view, and each view deduplicates it on its own derived
+token. So retrying the **identical batch with the same token** is exactly right: the `spans`
+block and any view that already has it are dropped, and a view that never received it gets it
+once. `integration/partial_insert_test.go` pins this with fault injection (a CHECK constraint
+that makes one view's insert fail), for a failing rollup push and a failing `trace_index`
+push, and shows that a re-formed retry double-counts. Hence the writer fix (Week-6 stage 4):
+on an insert error, **retry the same batch with the same token in-process** instead of
+exiting, so a re-formed range can only arise from a real crash — and repair any residue with
+the §3.7 rebuild.
 Partition revocation is handled explicitly to keep ranges contiguous: the consumer
 flushes and commits an in-flight batch before releasing a revoked partition, so ownership
 changes do not by themselves create a mismatched range.
@@ -455,55 +482,43 @@ diffable; ClickHouse only ever holds the hash + git SHA.
 
 Two distinct cases:
 
-- **Normal redelivery** (consumer crash, rebalance, at-least-once re-read):
-  covered automatically by insert dedup (§3.5). The re-sent offset-range batch
-  carries the same `insert_deduplication_token` and is dropped before any rows or
-  rollup MV rows are written. **No manual action.**
+- **Normal redelivery** (consumer crash, rebalance, at-least-once re-read): covered by
+  insert dedup (§3.5) when the re-sent batch is the identical offset range with the same
+  `insert_deduplication_token`: `spans` and every view that already has the block drop it,
+  and a view that never received it (a partially applied INSERT) gets it once. **No manual
+  action.** A re-formed range (a time-flushed batch after a crash, or a partially applied
+  INSERT retried by the current writer — §3.5) is *not* covered: rebuild.
 
-- **Deliberate replay** (reprocessing `otlp.spans.raw` after an enrichment/cost
-  fix, or a backfill older than the dedup window): the insert token may not match,
-  so the same span can be re-inserted, and the on-insert rollup MVs would
-  double-count. `ReplacingMergeTree` will eventually collapse the raw duplicates,
-  but the rollups have no such self-healing. So after any deliberate replay, the
-  affected rollup partitions must be **rebuilt from the deduplicated raw spans.**
+- **Deliberate replay** (reprocessing `otlp.spans.raw` after an enrichment/cost fix, or a
+  backfill older than the dedup window): the insert token may not match, so the same span can
+  be re-inserted and the on-insert views double-count. `ReplacingMergeTree` eventually
+  collapses the raw duplicates, but the rollups have no such self-healing, so the affected
+  partitions must be **rebuilt from the deduplicated raw spans.**
 
-Rebuild recipe (per affected day/month partition), to be scripted later in
-`bench/` or `deploy/`:
+**Rebuild tool: `ingest/cmd/rebuild`** (`make -C ingest rebuild`, logic in
+`internal/rebuild`). It does not carry a hand-written copy of the rollup SQL (an earlier sketch
+here predated migration 006: it lacked `role`, used `sumState` for `SimpleAggregateFunction`
+columns, and did not exclude cache hits from cost). Instead, for each target it:
 
-1. Let the replay finish and let `spans` merges settle (optionally
-   `OPTIMIZE TABLE spans PARTITION <p> FINAL` to force the dedup collapse).
-2. `ALTER TABLE agent_version_stats_daily DROP PARTITION <month>;`
-3. Re-derive the rollup from **deduplicated** raw spans with
-   `INSERT INTO agent_version_stats_daily SELECT ...`, reading `spans` either with
-   `FINAL` or via an explicit `argMax(..., ingested_at)` / `LIMIT 1 BY
-   (trace_id, span_id)` dedup so each span is counted once. Sketch:
+1. Reads the feeding view's live definition (`system.tables.as_select` of `trace_index_mv` /
+   `agent_version_stats_daily_mv`) and rewrites only its source, `FROM <db>.spans` →
+   `FROM <db>.spans FINAL` (merge-time dedup applied) plus, for the rollup, a partition scope
+   `WHERE toYYYYMM(start_time) = <month>`. It refuses a definition it cannot rewrite safely
+   (not exactly one read of `spans`, or an existing `WHERE`/`FINAL`).
+2. Builds the partition in a shadow table (`CREATE TABLE <target>__rebuild AS <target>`),
+   then swaps it in with `ALTER TABLE <target> REPLACE PARTITION <p> FROM <shadow>` — atomic,
+   and the target (and each view's binding to it) stays in place. `trace_index` is
+   unpartitioned and is rebuilt whole (`REPLACE PARTITION tuple()`); the rollup per month
+   (default: every month present in `spans` or in the rollup).
+3. Verifies each partition: `sum(span_count)` must equal `count()` of `spans FINAL` in scope,
+   and exits non-zero otherwise.
 
-   ```sql
-   INSERT INTO agent_version_stats_daily
-   SELECT
-       toDate(start_time) AS day,
-       agent_id, agent_version, run_kind,
-       gen_ai_operation_name, gen_ai_response_model,
-       uniqState(run_id),
-       sumState(1::UInt64),                          -- span_count
-       sumState((status_code = 'ERROR')::UInt64),    -- error_count
-       quantilesTDigestState(0.5, 0.95, 0.99)(duration_ns),
-       sumState(gen_ai_usage_input_tokens),
-       sumState(gen_ai_usage_output_tokens),
-       sumState(cost_usd)
-   FROM spans FINAL                                  -- FINAL => merge-time dedup applied
-   WHERE toYYYYMM(start_time) = {month:UInt32}
-   GROUP BY day, agent_id, agent_version, run_kind,
-            gen_ai_operation_name, gen_ai_response_model;
-   ```
-
-   (`trace_index` rebuilds the same way if a replay touched it: drop the affected
-   rows / rebuild from `spans FINAL`.) The `-State` combinators match the
-   `AggregateFunction`/`SimpleAggregateFunction` columns; do the rebuild on the
-   raw table's dedup, not the live MV, so the counts are exact.
-
-The rebuild is idempotent (drop + re-derive), so it can be re-run safely if
-interrupted.
+It runs with small-cap settings (2 threads, GROUP BY / ORDER BY spilled to disk past
+256 MiB), and **refuses while the writer's consumer group has live members**: rows a view
+inserts during the rebuild would be replaced away by the swap, so stop the writer first. The
+rebuild is idempotent (re-derive + swap) and safe to re-run.
+`integration/partial_insert_test.go` covers it end to end (a re-formed retry double-counts
+`trace_index`; two rebuild runs make all targets exact; the views keep feeding them).
 
 ---
 

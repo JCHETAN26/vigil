@@ -9,7 +9,7 @@ COMPOSE = docker compose --env-file $(ENVFILE) -f ../deploy/docker-compose.yml
 # Source ../.env (if present) into the recipe's shell.
 LOADENV = set -a; [ -f $(ENVFILE) ] && . $(ENVFILE); set +a;
 
-.PHONY: all build fmt vet test test-integration tidy topics migrate receiver writer smoke loadgen up down logs clean
+.PHONY: all build fmt vet test test-integration tidy topics migrate receiver writer smoke loadgen rebuild up down logs clean
 
 all: build
 
@@ -64,6 +64,11 @@ logs:
 # receiver`/`make writer` (host).
 smoke:
 	$(LOADENV) go run ./cmd/smoke
+
+# Rebuild trace_index + agent_version_stats_daily from spans FINAL (data-model §3.7). Stop the
+# writer first; pass e.g. ARGS="-table agent_version_stats_daily -partition 202609".
+rebuild:
+	$(LOADENV) go run ./cmd/rebuild $(ARGS)
 
 # Build the load generator (bench/ingest_load.py drives it; see cmd/loadgen).
 loadgen:
