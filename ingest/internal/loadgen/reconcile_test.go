@@ -58,6 +58,33 @@ func TestReconcile(t *testing.T) {
 	}
 }
 
+func TestPartitionOffsets(t *testing.T) {
+	tests := []struct {
+		name                               string
+		p                                  PartitionOffsets
+		deleted, pending, consumedRetained int64
+	}{
+		{"backlog, cushion intact", PartitionOffsets{0, 930, 915, 1000}, 0, 70, 15},
+		{"caught up", PartitionOffsets{0, 1000, 915, 1000}, 0, 0, 85},
+		{"retention overtook the consumer", PartitionOffsets{0, 900, 915, 1000}, 15, 85, 0},
+		{"no commit yet", PartitionOffsets{0, -1, 915, 1000}, 0, 85, 0},
+		{"empty partition", PartitionOffsets{0, 10, 10, 10}, 0, 0, 0},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := tc.p.DeletedUnconsumed(); got != tc.deleted {
+				t.Errorf("DeletedUnconsumed = %d, want %d", got, tc.deleted)
+			}
+			if got := tc.p.Pending(); got != tc.pending {
+				t.Errorf("Pending = %d, want %d", got, tc.pending)
+			}
+			if got := tc.p.ConsumedRetained(); got != tc.consumedRetained {
+				t.Errorf("ConsumedRetained = %d, want %d", got, tc.consumedRetained)
+			}
+		})
+	}
+}
+
 func TestTotalLag(t *testing.T) {
 	tests := []struct {
 		name                  string

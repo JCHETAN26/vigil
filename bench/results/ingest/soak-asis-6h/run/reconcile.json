@@ -1,0 +1,26 @@
+{
+  "run_id": "soak-20260929T105202Z",
+  "database": "vigil_load",
+  "drained_in": "3.05s",
+  "reconciliation": {
+    "acked_traces": 642274,
+    "acked_spans": 4320097,
+    "stored_acked_unique_spans": 4320097,
+    "missing_spans": 0,
+    "duplicate_rows": 0,
+    "unacked_spans": 0,
+    "unacked_stored": 0,
+    "unexpected_traces": 0,
+    "stored_rows": 4320097
+  },
+  "clean": false,
+  "trace_index_span_count": 4322222,
+  "dlq_records": 0,
+  "raw_topic_bytes": 2323248378,
+  "e2e_latency_ms": {
+    "max": 39274825.290771484,
+    "p50": 28752601.313720703,
+    "p95": 38160191.314208984,
+    "p99": 39007913.28198242
+  }
+}

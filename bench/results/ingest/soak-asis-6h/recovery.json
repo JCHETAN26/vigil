@@ -1,0 +1,2907 @@
+{
+  "degraded": {
+    "taken_at": "2026-09-29T23:04:30.335688+00:00",
+    "failed_queries": [],
+    "server": {
+      "uptime_h": 12.21,
+      "tracked_gib": 1.16,
+      "rss_gib": 1.16,
+      "memory_limit_errors": "161395",
+      "cap_bytes": "1610612736"
+    },
+    "errors": [
+      {
+        "name": "MEMORY_LIMIT_EXCEEDED",
+        "value": "161395",
+        "last": "2026-09-29 23:04:29"
+      },
+      {
+        "name": "QUERY_WAS_CANCELLED",
+        "value": "152",
+        "last": "2026-09-29 16:51:17"
+      },
+      {
+        "name": "UNKNOWN_PACKET_FROM_CLIENT",
+        "value": "10",
+        "last": "2026-09-29 12:55:35"
+      },
+      {
+        "name": "ACCESS_DENIED",
+        "value": "2",
+        "last": "2026-09-29 20:22:28"
+      },
+      {
+        "name": "SYNTAX_ERROR",
+        "value": "1",
+        "last": "2026-09-29 20:22:16"
+      },
+      {
+        "name": "NO_ELEMENTS_IN_CONFIG",
+        "value": "1",
+        "last": "2026-09-29 10:51:48"
+      }
+    ],
+    "parts": [
+      {
+        "database": "system",
+        "table": "text_log",
+        "partition": "202609",
+        "active_parts": "9",
+        "total_rows": "8125080",
+        "bytes": "242783640",
+        "max_level": 91
+      },
+      {
+        "database": "system",
+        "table": "metric_log",
+        "partition": "202609",
+        "active_parts": "6",
+        "total_rows": "43121",
+        "bytes": "11836216",
+        "max_level": 223
+      },
+      {
+        "database": "system",
+        "table": "asynchronous_metric_log",
+        "partition": "202609",
+        "active_parts": "6",
+        "total_rows": "8682645",
+        "bytes": "5853260",
+        "max_level": 2806
+      },
+      {
+        "database": "system",
+        "table": "query_log",
+        "partition": "202609",
+        "active_parts": "5",
+        "total_rows": "36047",
+        "bytes": "5980356",
+        "max_level": 327
+      },
+      {
+        "database": "system",
+        "table": "processors_profile_log",
+        "partition": "202609",
+        "active_parts": "5",
+        "total_rows": "451648",
+        "bytes": "11391755",
+        "max_level": 600
+      },
+      {
+        "database": "system",
+        "table": "part_log",
+        "partition": "202609",
+        "active_parts": "5",
+        "total_rows": "252472",
+        "bytes": "39924669",
+        "max_level": 116
+      },
+      {
+        "database": "vigil_load",
+        "table": "trace_index",
+        "partition": "tuple()",
+        "active_parts": "4",
+        "total_rows": "216361",
+        "bytes": "11554638",
+        "max_level": 1803
+      },
+      {
+        "database": "system",
+        "table": "trace_log",
+        "partition": "202609",
+        "active_parts": "3",
+        "total_rows": "379721",
+        "bytes": "8857353",
+        "max_level": 164
+      },
+      {
+        "database": "system",
+        "table": "query_views_log",
+        "partition": "202609",
+        "active_parts": "3",
+        "total_rows": "32002",
+        "bytes": "4029972",
+        "max_level": 407
+      },
+      {
+        "database": "vigil_load",
+        "table": "spans",
+        "partition": "2026-09-29",
+        "active_parts": "2",
+        "total_rows": "1455234",
+        "bytes": "1025060544",
+        "max_level": 14
+      },
+      {
+        "database": "system",
+        "table": "error_log",
+        "partition": "202609",
+        "active_parts": "1",
+        "total_rows": "23494",
+        "bytes": "19759",
+        "max_level": 910
+      },
+      {
+        "database": "vigil_load",
+        "table": "agent_version_stats_daily",
+        "partition": "202609",
+        "active_parts": "1",
+        "total_rows": "7",
+        "bytes": "16473",
+        "max_level": 3215
+      }
+    ],
+    "merges": [],
+    "mutations": [],
+    "recent_errors": [
+      {
+        "logger_name": "MergeTreeBackgroundExecutor",
+        "n": "2880",
+        "example": "Exception while executing background task {99683630-174b-4454-b489-24e2d2ef8952::202609_17430_22886_224}: Code: 241. DB::Exception: Memory limit (total) exceeded: would use 1.54 GiB (attempt to allocate chunk of 4361168 bytes), maximum: 1.5"
+      },
+      {
+        "logger_name": "void DB::SystemLog<DB::AsynchronousMetricLogElement>::flushImpl(const std::vector<LogElement> &, uint64_t) [LogElement = DB::AsynchronousMetricLogElement]",
+        "n": "1",
+        "example": "Failed to flush system log system.asynchronous_metric_log with 1400 entries up to offset 8465741: Code: 241. DB::Exception: Memory limit (total) exceeded: would use 1.59 GiB (attempt to allocate chunk of 4289636 bytes), maximum: 1.50 GiB. ("
+      },
+      {
+        "logger_name": "void DB::SystemLog<DB::ErrorLogElement>::flushImpl(const std::vector<LogElement> &, uint64_t) [LogElement = DB::ErrorLogElement]",
+        "n": "1",
+        "example": "Failed to flush system log system.error_log with 7 entries up to offset 23137: Code: 241. DB::Exception: Memory limit (total) exceeded: would use 1.57 GiB (attempt to allocate chunk of 4383381 bytes), maximum: 1.50 GiB. (MEMORY_LIMIT_EXCEED"
+      },
+      {
+        "logger_name": "executeQuery",
+        "n": "1",
+        "example": "Code: 241. DB::Exception: Memory limit (total) exceeded: would use 1.51 GiB (attempt to allocate chunk of 6424864 bytes), maximum: 1.50 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker.: While executing Merge"
+      },
+      {
+        "logger_name": "TCPHandler",
+        "n": "1",
+        "example": "Code: 241. DB::Exception: Memory limit (total) exceeded: would use 1.51 GiB (attempt to allocate chunk of 6424864 bytes), maximum: 1.50 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker.: While executing Merge"
+      }
+    ],
+    "cap_gib": 1.5,
+    "offsets": {
+      "topic": "otlp.spans.load",
+      "group": "vigil-writer-load",
+      "partitions": [
+        {
+          "partition": 0,
+          "committed": 931100,
+          "log_start": 917045,
+          "end": 1001930
+        },
+        {
+          "partition": 1,
+          "committed": 930177,
+          "log_start": 915777,
+          "end": 1000474
+        },
+        {
+          "partition": 2,
+          "committed": 929477,
+          "log_start": 915061,
+          "end": 1001160
+        },
+        {
+          "partition": 3,
+          "committed": 930763,
+          "log_start": 921021,
+          "end": 1001468
+        },
+        {
+          "partition": 4,
+          "committed": 928036,
+          "log_start": 916595,
+          "end": 999158
+        },
+        {
+          "partition": 5,
+          "committed": 929268,
+          "log_start": 914792,
+          "end": 1000544
+        }
+      ],
+      "deleted_unconsumed": 0,
+      "pending": 425913,
+      "min_consumed_retained": 9742
+    },
+    "group": {
+      "state": "PreparingRebalance",
+      "members": 2,
+      "lag": 425913,
+      "drained": false
+    },
+    "progress_probe": {
+      "seconds": 300,
+      "stored_before": 1455234,
+      "stored_delta": 0,
+      "writer_restarts_delta": 6,
+      "pending_records": 425913
+    }
+  },
+  "preflight_offsets": {
+    "topic": "otlp.spans.load",
+    "group": "vigil-writer-load",
+    "partitions": [
+      {
+        "partition": 0,
+        "committed": 931100,
+        "log_start": 917045,
+        "end": 1001930
+      },
+      {
+        "partition": 1,
+        "committed": 930177,
+        "log_start": 915777,
+        "end": 1000474
+      },
+      {
+        "partition": 2,
+        "committed": 929477,
+        "log_start": 915061,
+        "end": 1001160
+      },
+      {
+        "partition": 3,
+        "committed": 930763,
+        "log_start": 921021,
+        "end": 1001468
+      },
+      {
+        "partition": 4,
+        "committed": 928036,
+        "log_start": 916595,
+        "end": 999158
+      },
+      {
+        "partition": 5,
+        "committed": 929268,
+        "log_start": 914792,
+        "end": 1000544
+      }
+    ],
+    "deleted_unconsumed": 0,
+    "pending": 425913,
+    "min_consumed_retained": 9742
+  },
+  "preflight_risks": [],
+  "t_restart": 1790723372.4412768,
+  "clickhouse_healthy_after_s": 12.105262756347656,
+  "samples": [
+    {
+      "t": 1790723384.5681074,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 74,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723394.749572,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 75,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723404.9219866,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 75,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723415.0965264,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 75,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723425.2926962,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 75,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723435.4651282,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 76,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723445.638057,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 76,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723455.8153198,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 76,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723465.9996257,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 76,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723476.1792567,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 76,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723486.3619845,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 77,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723496.5327888,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 77,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723506.7037604,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 77,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723516.8775828,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 77,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723527.0512052,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 78,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723537.2215905,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 78,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723547.4015393,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 78,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723557.5824444,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 78,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723567.7579303,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 78,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723577.938859,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 79,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723588.1101673,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 79,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723598.2881784,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 79,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723608.4637578,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 79,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723618.6349874,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 80,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723628.8116388,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 80,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723639.0013006,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 80,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723649.17946,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 80,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723659.3601296,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "Stable",
+      "writer_restarts": 80,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723669.5536594,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 81,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723679.726189,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 81,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723689.9017293,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 81,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723700.077297,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 81,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723710.2654283,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 82,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723720.4372663,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 82,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723730.6096303,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 82,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723740.7814605,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 82,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723750.9628782,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "Stable",
+      "writer_restarts": 82,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723761.1588624,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 83,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723771.335228,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 83,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723781.5134242,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 83,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723791.687379,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 83,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723801.8659623,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 84,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723812.038857,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 84,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723822.2149563,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 84,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723832.3948333,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 84,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723842.5744917,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "Stable",
+      "writer_restarts": 84,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723852.7708056,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 85,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723862.945784,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 85,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723873.1203816,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 85,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723883.2986014,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 85,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723893.484178,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 86,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723903.656168,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 86,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723913.8380556,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 86,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723924.018579,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 86,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723934.2075355,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "Stable",
+      "writer_restarts": 87,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723944.4271657,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 87,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723954.59958,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 87,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723964.7716215,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 87,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723974.951339,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 87,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723985.1246436,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 88,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790723995.2961867,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 88,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724005.4787483,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 88,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724015.6493669,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 88,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724025.8228219,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 89,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724036.0130954,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 89,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724046.1897655,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 89,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724056.3627362,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 89,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724066.5403678,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 89,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724076.715541,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 90,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724086.8928409,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 90,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724097.066119,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 90,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724107.2405176,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 90,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724117.4138637,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 91,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724127.5858793,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 91,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724137.757108,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 91,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724147.944501,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 91,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724158.1177065,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 91,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724168.2986307,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 92,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724178.4736323,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 92,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724188.6613605,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 92,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724198.8508513,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 92,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724209.0235865,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 93,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724219.1951568,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 93,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724229.3711243,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 93,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724239.5443108,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 93,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724249.7201,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 93,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724259.8955102,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 94,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724270.0743427,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 94,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724280.2516482,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 94,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724290.4468086,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 94,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724300.6313484,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 95,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724310.810228,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 95,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724320.9868946,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 95,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724331.1612415,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 95,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724341.3316731,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 95,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724351.5116293,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 96,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724361.685888,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 96,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724371.86112,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 96,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724382.0344217,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 96,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724392.2088034,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 97,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724402.3817132,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 97,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724412.554446,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 97,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724422.732775,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 97,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724432.9050705,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "Stable",
+      "writer_restarts": 97,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724443.0871983,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 98,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724453.259231,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 98,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724463.4370887,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 98,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724473.6212246,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 98,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724483.8205948,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 99,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724494.0169227,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 99,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724504.1958277,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 99,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724514.3718808,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 99,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724524.5608845,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "Stable",
+      "writer_restarts": 99,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724534.816165,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 100,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724545.0027902,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 100,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724555.179175,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 100,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724565.355559,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 100,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724575.5293274,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 101,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724585.7053773,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 101,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724595.8886387,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 101,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724606.0747194,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 101,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724616.2563531,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "Stable",
+      "writer_restarts": 101,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724626.4470124,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 102,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724636.6196263,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 102,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724646.7943418,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 102,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724656.976831,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 102,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724667.1542866,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 103,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724677.3324628,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 103,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724687.5362215,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 103,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724697.7437916,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 103,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724707.9245374,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 104,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724718.1113381,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 104,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724728.2993715,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 104,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724738.4772415,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 104,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724748.65509,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 104,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724758.8330567,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 105,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724769.0064626,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 105,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724779.1901336,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 105,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724789.3631005,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 105,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724799.5397494,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 106,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724809.7195687,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 106,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724819.9005694,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 106,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724830.0727391,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 106,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724840.245454,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 106,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724850.4210255,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 107,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724860.5924485,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 107,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724870.7772446,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 107,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724880.965181,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 107,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724891.144435,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 108,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724901.3207393,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 108,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724911.522007,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 108,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724921.7052674,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 108,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724931.8903844,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 108,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724942.0634878,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 109,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724952.2425275,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 109,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724962.4291513,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 109,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724972.606767,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 109,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724982.7813952,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 110,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790724992.9595008,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 110,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725003.1348739,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 110,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725013.3141599,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 110,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725023.4964359,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 110,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725033.6743066,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 111,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725043.8469937,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 111,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725054.020127,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 111,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725064.2061963,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 111,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725074.3800642,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 112,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725084.5545685,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 112,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725094.7307796,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 112,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725104.906004,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 112,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725115.0804791,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 112,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725125.2742262,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 113,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725135.4518845,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 113,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725145.6219175,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 113,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725155.7937484,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 113,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725165.969475,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 114,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725176.1412165,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 114,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725186.3203182,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 114,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725196.4936812,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 114,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725206.6689942,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "Stable",
+      "writer_restarts": 114,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725216.95212,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 115,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725227.1337645,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 115,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725237.3076878,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 115,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725247.48687,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 115,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725257.673472,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 116,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725267.8644335,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 116,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725278.051602,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 116,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725288.2404828,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 116,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725298.4227858,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "Stable",
+      "writer_restarts": 116,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725308.6288474,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 117,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725318.803685,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 117,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725328.9853017,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 117,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725339.164448,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 117,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725349.3419747,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 118,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725359.5159688,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 118,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725369.691876,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 118,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725379.8651657,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 118,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725390.0733368,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "Stable",
+      "writer_restarts": 119,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725400.37412,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 119,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725410.5452664,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 119,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725420.723496,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 119,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725430.8952076,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 119,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725441.0718815,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 120,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725451.2533438,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 120,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725461.4260519,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 120,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725471.598399,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 120,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725481.7865312,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 121,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725491.972062,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 121,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725502.1481812,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 121,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725512.3227582,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 121,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725522.5066288,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 121,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725532.6974158,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 122,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725542.878618,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 122,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725553.0549815,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 122,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725563.2330892,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 122,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725573.4103358,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 123,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725583.5936413,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 123,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725593.765326,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 123,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725603.9410048,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 123,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725614.1185567,
+      "stored": 1455234,
+      "drained": false,
+      "lag": 425913,
+      "state": "PreparingRebalance",
+      "writer_restarts": 123,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725624.3126493,
+      "stored": 1526382,
+      "drained": false,
+      "lag": 416450,
+      "state": "Stable",
+      "writer_restarts": 124,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725634.5065293,
+      "stored": 1633347,
+      "drained": false,
+      "lag": 399483,
+      "state": "Stable",
+      "writer_restarts": 125,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725644.7246315,
+      "stored": 1713623,
+      "drained": false,
+      "lag": 387589,
+      "state": "Stable",
+      "writer_restarts": 126,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725655.0365152,
+      "stored": 1794009,
+      "drained": false,
+      "lag": 375442,
+      "state": "Stable",
+      "writer_restarts": 128,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725665.2354555,
+      "stored": 1919224,
+      "drained": false,
+      "lag": 357849,
+      "state": "Stable",
+      "writer_restarts": 128,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725675.4377146,
+      "stored": 1995588,
+      "drained": false,
+      "lag": 345637,
+      "state": "Stable",
+      "writer_restarts": 129,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725685.7612803,
+      "stored": 2053925,
+      "drained": false,
+      "lag": 336890,
+      "state": "Stable",
+      "writer_restarts": 131,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725696.0536473,
+      "stored": 2138307,
+      "drained": false,
+      "lag": 325569,
+      "state": "Stable",
+      "writer_restarts": 133,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725706.59144,
+      "stored": 2220584,
+      "drained": false,
+      "lag": 312137,
+      "state": "Empty",
+      "writer_restarts": 134,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725717.2805693,
+      "stored": 2251212,
+      "drained": false,
+      "lag": 307599,
+      "state": "Empty",
+      "writer_restarts": 135,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725727.4848654,
+      "stored": 2330633,
+      "drained": false,
+      "lag": 295733,
+      "state": "Stable",
+      "writer_restarts": 135,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725737.757559,
+      "stored": 2422029,
+      "drained": false,
+      "lag": 282153,
+      "state": "Empty",
+      "writer_restarts": 137,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725748.8470545,
+      "stored": 2518126,
+      "drained": false,
+      "lag": 267844,
+      "state": "Stable",
+      "writer_restarts": 137,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725759.1537616,
+      "stored": 2586907,
+      "drained": false,
+      "lag": 257680,
+      "state": "Stable",
+      "writer_restarts": 138,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725769.5078313,
+      "stored": 2671031,
+      "drained": false,
+      "lag": 245247,
+      "state": "Stable",
+      "writer_restarts": 140,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725779.8332896,
+      "stored": 2732554,
+      "drained": false,
+      "lag": 236080,
+      "state": "Stable",
+      "writer_restarts": 141,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725790.1688812,
+      "stored": 2826590,
+      "drained": false,
+      "lag": 222125,
+      "state": "Stable",
+      "writer_restarts": 141,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725800.7121758,
+      "stored": 2904335,
+      "drained": false,
+      "lag": 210399,
+      "state": "Stable",
+      "writer_restarts": 142,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725811.7798653,
+      "stored": 2982409,
+      "drained": false,
+      "lag": 198924,
+      "state": "Stable",
+      "writer_restarts": 143,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725822.1862712,
+      "stored": 3017365,
+      "drained": false,
+      "lag": 193561,
+      "state": "Stable",
+      "writer_restarts": 144,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725832.721573,
+      "stored": 3081546,
+      "drained": false,
+      "lag": 184094,
+      "state": "Stable",
+      "writer_restarts": 145,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725842.9908693,
+      "stored": 3139455,
+      "drained": false,
+      "lag": 175435,
+      "state": "Stable",
+      "writer_restarts": 146,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725853.2635,
+      "stored": 3219083,
+      "drained": false,
+      "lag": 163751,
+      "state": "Empty",
+      "writer_restarts": 147,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725868.6060221,
+      "stored": 3280094,
+      "drained": false,
+      "lag": 154613,
+      "state": "Stable",
+      "writer_restarts": 148,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725878.9809377,
+      "stored": 3316552,
+      "drained": false,
+      "lag": 149163,
+      "state": "Stable",
+      "writer_restarts": 150,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725889.5448072,
+      "stored": 3336455,
+      "drained": false,
+      "lag": 147301,
+      "state": "Empty",
+      "writer_restarts": 152,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725908.4016519,
+      "error": " stop by OvercommitTracker.: While executing AggregatingTransform. (MEMORY_LIMIT_EXCEEDED)\n(query: SELECT count() FROM vigil_load.spans WHERE run_id = 'soak-20260929T105202Z' SETTINGS max_threads = 1)",
+      "stored": 0,
+      "drained": false,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725918.425819,
+      "stored": 3452833,
+      "drained": false,
+      "lag": 129041,
+      "state": "Stable",
+      "writer_restarts": 154,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725928.737137,
+      "stored": 3536617,
+      "drained": false,
+      "lag": 116493,
+      "state": "Empty",
+      "writer_restarts": 155,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725941.7565007,
+      "stored": 3605701,
+      "drained": false,
+      "lag": 106340,
+      "state": "Empty",
+      "writer_restarts": 156,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725959.7486901,
+      "stored": 3651504,
+      "drained": false,
+      "lag": 99455,
+      "state": "Stable",
+      "writer_restarts": 157,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725970.232766,
+      "stored": 3651504,
+      "drained": false,
+      "lag": 99455,
+      "state": "Empty",
+      "writer_restarts": 158,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725982.8032897,
+      "stored": 3742816,
+      "drained": false,
+      "lag": 85808,
+      "state": "Empty",
+      "writer_restarts": 159,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790725994.284102,
+      "stored": 3811415,
+      "drained": false,
+      "lag": 76767,
+      "state": "Stable",
+      "writer_restarts": 160,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790726004.7257423,
+      "stored": 3841763,
+      "drained": false,
+      "lag": 71142,
+      "state": "Stable",
+      "writer_restarts": 162,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790726015.0202184,
+      "stored": 3904713,
+      "drained": false,
+      "lag": 61717,
+      "state": "Stable",
+      "writer_restarts": 163,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790726025.4660482,
+      "stored": 3927708,
+      "drained": false,
+      "lag": 58302,
+      "state": "Empty",
+      "writer_restarts": 164,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790726038.7181845,
+      "stored": 3965998,
+      "drained": false,
+      "lag": 52643,
+      "state": "Empty",
+      "writer_restarts": 165,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790726051.7756026,
+      "stored": 3988885,
+      "drained": false,
+      "lag": 49345,
+      "state": "Empty",
+      "writer_restarts": 166,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790726062.160893,
+      "stored": 3988885,
+      "drained": false,
+      "lag": 49345,
+      "state": "Stable",
+      "writer_restarts": 166,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790726072.5629323,
+      "stored": 3994980,
+      "drained": false,
+      "lag": 48433,
+      "state": "Empty",
+      "writer_restarts": 167,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790726082.9242184,
+      "stored": 3994980,
+      "drained": false,
+      "lag": 48433,
+      "state": "Empty",
+      "writer_restarts": 167,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790726093.2125385,
+      "stored": 4001238,
+      "drained": false,
+      "lag": 47543,
+      "state": "Stable",
+      "writer_restarts": 167,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790726103.6017761,
+      "stored": 4007335,
+      "drained": false,
+      "lag": 46591,
+      "state": "Empty",
+      "writer_restarts": 168,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790726113.8590636,
+      "stored": 4007335,
+      "drained": false,
+      "lag": 46591,
+      "state": "Empty",
+      "writer_restarts": 168,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790726124.1523695,
+      "stored": 4007335,
+      "drained": false,
+      "lag": 46591,
+      "state": "Empty",
+      "writer_restarts": 168,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790726134.4687865,
+      "stored": 4007335,
+      "drained": false,
+      "lag": 46591,
+      "state": "Empty",
+      "writer_restarts": 168,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790726144.9108007,
+      "error": " stop by OvercommitTracker.: While executing AggregatingTransform. (MEMORY_LIMIT_EXCEEDED)\n(query: SELECT count() FROM vigil_load.spans WHERE run_id = 'soak-20260929T105202Z' SETTINGS max_threads = 1)",
+      "stored": 0,
+      "drained": false,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790726155.0577657,
+      "error": " stop by OvercommitTracker.: While executing AggregatingTransform. (MEMORY_LIMIT_EXCEEDED)\n(query: SELECT count() FROM vigil_load.spans WHERE run_id = 'soak-20260929T105202Z' SETTINGS max_threads = 1)",
+      "stored": 0,
+      "drained": false,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790726165.0786178,
+      "stored": 4013455,
+      "drained": false,
+      "lag": 45671,
+      "state": "Empty",
+      "writer_restarts": 169,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790726175.3429873,
+      "stored": 4013455,
+      "drained": false,
+      "lag": 45671,
+      "state": "Empty",
+      "writer_restarts": 169,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790726185.6174343,
+      "stored": 4013455,
+      "drained": false,
+      "lag": 45671,
+      "state": "Empty",
+      "writer_restarts": 169,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790726195.8989067,
+      "stored": 4013455,
+      "drained": false,
+      "lag": 45671,
+      "state": "Empty",
+      "writer_restarts": 169,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790726206.3704638,
+      "stored": 4013455,
+      "drained": false,
+      "lag": 45671,
+      "state": "Empty",
+      "writer_restarts": 169,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790726216.8853123,
+      "stored": 4019580,
+      "drained": false,
+      "lag": 44791,
+      "state": "Stable",
+      "writer_restarts": 169,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790726227.163083,
+      "stored": 4025762,
+      "drained": false,
+      "lag": 43892,
+      "state": "Empty",
+      "writer_restarts": 170,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790726237.4122415,
+      "stored": 4025762,
+      "drained": false,
+      "lag": 43892,
+      "state": "Empty",
+      "writer_restarts": 170,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790726247.6883528,
+      "stored": 4025762,
+      "drained": false,
+      "lag": 43892,
+      "state": "Empty",
+      "writer_restarts": 170,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790726257.9548447,
+      "stored": 4025762,
+      "drained": false,
+      "lag": 43892,
+      "state": "Empty",
+      "writer_restarts": 170,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790726268.2486885,
+      "stored": 4025762,
+      "drained": false,
+      "lag": 43892,
+      "state": "Empty",
+      "writer_restarts": 170,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790726278.5107298,
+      "stored": 4025762,
+      "drained": false,
+      "lag": 43892,
+      "state": "Empty",
+      "writer_restarts": 170,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790726295.4334052,
+      "stored": 4119647,
+      "drained": false,
+      "lag": 30554,
+      "state": "Stable",
+      "writer_restarts": 170,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790726305.8461874,
+      "stored": 4190394,
+      "drained": false,
+      "lag": 19978,
+      "state": "Stable",
+      "writer_restarts": 171,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790726316.156038,
+      "stored": 4219434,
+      "drained": false,
+      "lag": 14979,
+      "state": "Empty",
+      "writer_restarts": 174,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790726326.5024872,
+      "stored": 4234996,
+      "drained": false,
+      "lag": 12641,
+      "state": "Empty",
+      "writer_restarts": 176,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790726336.7707574,
+      "stored": 4258656,
+      "drained": false,
+      "lag": 9131,
+      "state": "Empty",
+      "writer_restarts": 177,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790726347.0317955,
+      "stored": 4314092,
+      "drained": false,
+      "lag": 912,
+      "state": "Stable",
+      "writer_restarts": 177,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790726357.3007553,
+      "stored": 4320097,
+      "drained": true,
+      "lag": 0,
+      "state": "Stable",
+      "writer_restarts": 177,
+      "deleted_unconsumed": 0
+    },
+    {
+      "t": 1790726367.8368456,
+      "stored": 4320097,
+      "drained": true,
+      "lag": 0,
+      "state": "Stable",
+      "writer_restarts": 177,
+      "deleted_unconsumed": 0
+    }
+  ],
+  "milestones": {
+    "writer_recovered_after_s": 2251.871372461319,
+    "drained_after_s": 2995.3955688476562,
+    "max_deleted_unconsumed": 0
+  },
+  "interventions": [
+    {
+      "at": "2026-09-29T23:46:43Z",
+      "at_s": 2230.5587232112885,
+      "action": "raised the load writer's memory limit 512 MiB -> 2 GiB (docker update; restored to 512 MiB afterwards)",
+      "reason": "the writer was OOM-killed (exit 137) about every 45 s while draining the backlog at 512 MiB",
+      "peak_writer_mib": 1012.0,
+      "milestones": {
+        "writer_recovered_after_s": 21.312649250030518,
+        "drained_after_s": 764.8368456363678,
+        "max_deleted_unconsumed": 0
+      }
+    }
+  ]
+}

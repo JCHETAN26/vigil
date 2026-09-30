@@ -17,11 +17,16 @@ investigation reproducible:
         # hold a realistic load for hours, reconcile it, and rebuild ClickHouse's memory /
         # merge / error history over the soak from its system logs (--finish-only: report an
         # existing soak run)
+    python bench/ch_uptime.py recover --out bench/results/ingest/soak-asis-6h
+        # a soak left undrained on a degraded ClickHouse: snapshot it and measure throughput
+        # with no load, check retention headroom (stop if unconsumed records are at risk),
+        # restart only ClickHouse, time the writer's recovery and drain, reconcile the soak
 """
 
 from __future__ import annotations
 
 import argparse
+import itertools
 import json
 import subprocess
 import sys
@@ -196,6 +201,111 @@ def render_soak(r: dict) -> str:
     ]
     body = render_diagnosis(r["history"]).split("\n", 2)[2]  # drop the diagnosis title
     return "\n".join(lines) + body
+
+
+def retention_risks(
+    offsets: dict, oldest_pending_ms: list[int], retention_ms: int, now_ms: int,
+    min_time_headroom_h: float = 6.0,
+) -> list[str]:  # fmt: skip
+    """Reasons the load topic's unconsumed records are at risk from retention (empty = safe
+    to proceed, provided nothing new is written to the topic)."""
+    risks = []
+    if offsets["deleted_unconsumed"] > 0:
+        risks.append(
+            f"retention already deleted {offsets['deleted_unconsumed']} unconsumed records"
+        )
+    if oldest_pending_ms:
+        headroom_h = (min(oldest_pending_ms) + retention_ms - now_ms) / 3.6e6
+        if headroom_h < min_time_headroom_h:
+            risks.append(
+                f"oldest pending record expires by time in {headroom_h:.1f} h "
+                f"(< {min_time_headroom_h} h)"
+            )
+    return risks
+
+
+def recovery_milestones(samples: list[dict], t_restart: float) -> dict:
+    """From recovery samples ({t, stored, drained, deleted_unconsumed}), the seconds from the
+    ClickHouse restart to the first stored-row increase (writer recovered) and to the drain
+    (group drained and stored count unchanged since the previous sample)."""
+    first_progress = drained = None
+    for prev, cur in itertools.pairwise(samples):
+        if first_progress is None and cur["stored"] > prev["stored"]:
+            first_progress = cur["t"] - t_restart
+        if cur["drained"] and cur["stored"] == prev["stored"] and cur["stored"] > 0:
+            drained = cur["t"] - t_restart
+            break
+    return {
+        "writer_recovered_after_s": first_progress,
+        "drained_after_s": drained,
+        "max_deleted_unconsumed": max(
+            (s["deleted_unconsumed"] for s in samples), default=0
+        ),
+    }
+
+
+def render_recovery(r: dict) -> str:
+    snap, m = r["degraded"], r["milestones"]
+    fmt_s = lambda s: f"{s / 60:.1f} min" if s is not None else "not reached"
+    probe = snap["progress_probe"]
+    return "\n".join([
+        "# Long-uptime result and recovery",
+        "",
+        "## The degraded instance (not restarted since the soak's clean start)",
+        "",
+        (f"- ClickHouse uptime {snap['server'].get('uptime_h', '?')} h, tracked memory "
+        f"{snap['server'].get('tracked_gib', '?')} GiB against the {snap['cap_gib']:.1f} GiB cap, "
+        f"{snap['server'].get('memory_limit_errors', '?')} memory-limit errors since start."),
+        (f"- **Throughput with zero offered load: {probe['stored_delta']} spans stored in "
+        f"{probe['seconds'] / 60:.0f} min**, while the load writer restarted "
+        f"{probe['writer_restarts_delta']} times; backlog {probe['pending_records']:,} records."),
+        (f"- Snapshot queries that themselves failed on memory: {len(snap['failed_queries'])} "
+        f"({', '.join(snap['failed_queries']) or 'none'})."),
+        ("- The long-uptime ramp was not run: this instance cannot drain even with no load, so "
+        "every rate fails, and the ramp would have discarded the soak backlog."),
+        "",
+        "## Recovery: restart ClickHouse only (Redpanda backlog kept)",
+        "",
+        (f"- Retention check before restart: {'; '.join(r['preflight_risks']) or 'no risk'} "
+        f"(smallest consumed-but-retained cushion {r['preflight_offsets']['min_consumed_retained']:,} "
+        "records; the load receiver was stopped so nothing could write to the topic)."),
+        *recovery_lines(r, fmt_s),
+        (f"- Records deleted by retention before being consumed, at any point: "
+        f"**{m['max_deleted_unconsumed']}**."),
+        "",
+    ])  # fmt: skip
+
+
+def recovery_lines(r: dict, fmt_s) -> list[str]:
+    """What restored the drain. Without interventions, the restart did; with one, the
+    restart's own effect is the time before it, and recovery is timed from the intervention."""
+    m, ivs = r["milestones"], r.get("interventions", [])
+    if not ivs:
+        return [
+            (
+                f"- Writer recovered (first stored rows) **{fmt_s(m['writer_recovered_after_s'])}** "
+                f"after the restart; backlog drained **{fmt_s(m['drained_after_s'])}** after it."
+            )
+        ]
+    first = ivs[0]["at_s"]
+    progressed = (
+        m["writer_recovered_after_s"] is not None
+        and m["writer_recovered_after_s"] < first
+    )
+    lines = [
+        "- Restarting ClickHouse alone: "
+        + ("the writer resumed before any intervention."
+           if progressed else f"**no progress** in the {first / 60:.1f} min before the intervention below.")
+    ]  # fmt: skip
+    for iv in ivs:
+        im = iv["milestones"]
+        lines.append(
+            f"- **Intervention at +{iv['at_s'] / 60:.1f} min:** {iv['action']} ({iv['reason']}). "
+            f"After it: first stored rows in **{fmt_s(im['writer_recovered_after_s'])}**, backlog "
+            f"drained in **{fmt_s(im['drained_after_s'])}**"
+            + (f"; peak writer memory **{iv['peak_writer_mib']:.0f} MiB**." if iv.get("peak_writer_mib") else ".")
+        )  # fmt: skip
+    return lines
 
 
 # ---------------------------------------------------------------- I/O
@@ -407,6 +517,126 @@ def finish_soak(env: dict, out: Path) -> int:
     return 0 if rec and rec.get("clean") else 1
 
 
+def loadgen_json(env: dict, sub: str) -> dict:
+    out = subprocess.run([str(il.LOADGEN), sub], cwd=il.INGEST, env=il.loadgen_env(env),
+                         check=True, capture_output=True, text=True).stdout  # fmt: skip
+    return json.loads(out)
+
+
+def stored_rows(env: dict, run_id: str) -> int:
+    return int(
+        il.ch_query(
+            env,
+            f"SELECT count() FROM {il.assert_load_db(il.LOAD_DB)}.spans "
+            f"WHERE run_id = '{run_id}' SETTINGS max_threads = 1",
+        )
+    )
+
+
+def oldest_pending_ms(offsets: dict) -> list[int]:
+    """Timestamp (ms) of the first unconsumed record in each partition with a backlog."""
+    out = []
+    topic = il.assert_load_topic(offsets["topic"])
+    for p in offsets["partitions"]:
+        if p["end"] > max(p["committed"], p["log_start"]):
+            at = max(p["committed"], p["log_start"])
+            ts = il.sh(["docker", "exec", "vigil-redpanda", "rpk", "topic", "consume", topic,
+                        "-p", str(p["partition"]), "-o", str(at), "-n", "1", "-f", "%d\\n"])  # fmt: skip
+            out.append(int(ts))
+    return out
+
+
+def snapshot(env: dict, run_id: str, probe_s: int) -> dict:
+    """Best-effort diagnostic state of a (possibly memory-starved) ClickHouse: every query
+    runs single-threaded, and a query that fails is recorded, not fatal. Ends with a progress
+    probe: stored rows, writer restarts and backlog now and after probe_s seconds."""
+    snap: dict = {
+        "taken_at": datetime.now(timezone.utc).isoformat(),
+        "failed_queries": [],
+    }
+    queries = {
+        "server": f"""SELECT round(uptime() / 3600, 2) uptime_h,
+  round((SELECT value FROM system.metrics WHERE metric = 'MemoryTracking') / {GIB}, 2) tracked_gib,
+  round((SELECT value FROM system.asynchronous_metrics WHERE metric = 'MemoryResident') / {GIB}, 2) rss_gib,
+  (SELECT sum(value) FROM system.errors WHERE name = 'MEMORY_LIMIT_EXCEEDED') memory_limit_errors,
+  (SELECT value FROM system.server_settings WHERE name = 'max_server_memory_usage') cap_bytes""",
+        "errors": "SELECT name, value, toString(last_error_time) last FROM system.errors "
+                  "ORDER BY value DESC LIMIT 15",
+        "parts": """SELECT database, table, partition, count() active_parts, sum(rows) AS total_rows,
+  sum(bytes_on_disk) AS bytes, max(level) max_level FROM system.parts WHERE active
+  AND database IN ('system', 'vigil_load') GROUP BY database, table, partition
+  ORDER BY active_parts DESC LIMIT 30""",
+        "merges": "SELECT database, table, elapsed, progress, num_parts, memory_usage, "
+                  "merge_algorithm FROM system.merges",
+        "mutations": "SELECT database, table, mutation_id, command, latest_fail_reason "
+                     "FROM system.mutations WHERE NOT is_done",
+        "recent_errors": """SELECT logger_name, count() n, any(substring(message, 1, 240)) example
+  FROM system.text_log WHERE event_time > now() - INTERVAL 30 MINUTE AND level = 'Error'
+  GROUP BY logger_name ORDER BY n DESC LIMIT 15""",
+    }  # fmt: skip
+    for name, sql in queries.items():
+        try:
+            rows = q_json(env, sql + " SETTINGS max_threads = 1")
+            snap[name] = rows[0] if name == "server" and rows else rows
+        except RuntimeError as e:
+            snap[name] = {"error": str(e)[-300:]}
+            snap["failed_queries"].append(name)
+    snap["cap_gib"] = float(snap["server"].get("cap_bytes", 0) or 0) / GIB
+    snap["offsets"] = loadgen_json(env, "offsets")
+    snap["group"] = loadgen_json(env, "lag")
+    t0, s0, r0 = time.time(), stored_rows(env, run_id), writer_restarts()
+    time.sleep(probe_s)
+    s1, r1 = stored_rows(env, run_id), writer_restarts()
+    snap["progress_probe"] = {
+        "seconds": round(time.time() - t0),
+        "stored_before": s0, "stored_delta": s1 - s0, "writer_restarts_delta": r1 - r0,
+        "pending_records": loadgen_json(env, "offsets")["pending"],
+    }  # fmt: skip
+    return snap
+
+
+def recover(env: dict, run_id: str, timeout_s: int = 5400) -> dict:
+    """Restart only ClickHouse (the Redpanda backlog stays) and sample every 10 s until the
+    load writer has drained it: stored rows, group state, and retention (records deleted
+    before being consumed). The load receiver stays stopped so nothing writes to the topic."""
+    t_restart = time.time()
+    il.sh(["docker", "restart", "vigil-clickhouse"])
+    for _ in range(120):
+        if (
+            il.sh(
+                [
+                    "docker",
+                    "inspect",
+                    "-f",
+                    "{{.State.Health.Status}}",
+                    "vigil-clickhouse",
+                ]
+            )
+            == "healthy"
+        ):
+            break
+        time.sleep(2)
+    t_healthy = time.time()
+    samples = []
+    while time.time() - t_restart < timeout_s:
+        try:
+            off, grp = loadgen_json(env, "offsets"), loadgen_json(env, "lag")
+            samples.append({"t": time.time(), "stored": stored_rows(env, run_id),
+                            "drained": bool(grp["drained"]), "lag": grp["lag"],
+                            "state": grp["state"], "writer_restarts": writer_restarts(),
+                            "deleted_unconsumed": off["deleted_unconsumed"]})  # fmt: skip
+        except (RuntimeError, subprocess.CalledProcessError, ValueError) as e:
+            samples.append({"t": time.time(), "error": str(e)[-200:], "stored": 0,
+                            "drained": False, "deleted_unconsumed": 0})  # fmt: skip
+        good = [s for s in samples if "error" not in s]
+        if recovery_milestones(good, t_restart)["drained_after_s"] is not None:
+            break
+        time.sleep(10)
+    good = [s for s in samples if "error" not in s]
+    return {"t_restart": t_restart, "clickhouse_healthy_after_s": t_healthy - t_restart,
+            "samples": samples, "milestones": recovery_milestones(good, t_restart)}  # fmt: skip
+
+
 # ---------------------------------------------------------------- commands
 
 
@@ -478,6 +708,77 @@ def cmd_soak(args) -> int:
     return finish_soak(env, out)
 
 
+def cmd_recover(args) -> int:
+    """For a soak left undrained on a degraded ClickHouse: snapshot the degraded state and
+    measure its throughput with no load, check retention headroom (stop if unconsumed records
+    are at risk), then restart only ClickHouse, time the writer's recovery and drain, and
+    reconcile the soak."""
+    env = il.base_env()
+    out = Path(args.out).resolve()
+    run_id = json.loads((out / "run" / "summary.json").read_text())["config"]["run_id"]
+    il.eval_guard(il.active_eval_runs(env), il.engine_run_processes(), set())
+    il.pin_pipeline()
+    degraded = snapshot(env, run_id, args.probe_s)
+    (out / "degraded-snapshot.json").write_text(json.dumps(degraded, indent=2) + "\n")
+    print(
+        json.dumps(
+            {k: degraded[k] for k in ("server", "failed_queries", "progress_probe")},
+            indent=2,
+        )
+    )
+
+    retention_ms = int(il.sh(["docker", "exec", "vigil-redpanda", "rpk", "topic", "describe",
+                              il.LOAD_TOPICS[0], "-c"]).split("retention.ms", 1)[1].split()[0])  # fmt: skip
+    offsets = loadgen_json(env, "offsets")
+    risks = retention_risks(
+        offsets, oldest_pending_ms(offsets), retention_ms, int(time.time() * 1000)
+    )
+    if risks:
+        print(
+            "STOP: unconsumed soak records are at risk; not restarting ClickHouse:",
+            *risks,
+            sep="\n  ",
+        )
+        return 2
+    il.sh(
+        ["docker", "stop", "vigil-load-receiver"]
+    )  # the only producer to the load topic
+    report = {
+        "degraded": degraded,
+        "preflight_offsets": offsets,
+        "preflight_risks": risks,
+    }
+    report.update(recover(env, run_id))
+    il.sh(
+        ["docker", "start", "vigil-load-receiver"]
+    )  # reconciliation expects the pipeline up
+    (out / "recovery.json").write_text(json.dumps(report, indent=2) + "\n")
+    (out / "recovery.md").write_text(render_recovery(report))
+    print((out / "recovery.md").read_text())
+    if report["milestones"]["drained_after_s"] is None:
+        print("backlog not drained within the timeout; soak not reconciled")
+        return 1
+    return finish_soak(env, out)
+
+
+def cmd_annotate_recovery(args) -> int:
+    """Record a manual intervention made during a recovery (e.g. raising a container's memory
+    limit) in recovery.json, time the drain from it using the stored samples, and re-render
+    recovery.md — so the report attributes the recovery to what actually caused it."""
+    out = Path(args.out).resolve()
+    rep = json.loads((out / "recovery.json").read_text())
+    at = datetime.fromisoformat(args.at.replace("Z", "+00:00")).timestamp()
+    after = [s for s in rep["samples"] if "error" not in s and s["t"] >= at - 10]
+    rep.setdefault("interventions", []).append({
+        "at": args.at, "at_s": at - rep["t_restart"], "action": args.action, "reason": args.reason,
+        "peak_writer_mib": args.peak_writer_mib, "milestones": recovery_milestones(after, at),
+    })  # fmt: skip
+    (out / "recovery.json").write_text(json.dumps(rep, indent=2) + "\n")
+    (out / "recovery.md").write_text(render_recovery(rep))
+    print((out / "recovery.md").read_text())
+    return 0
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser("ch_uptime")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -507,6 +808,21 @@ def main(argv=None) -> int:
         "--finish-only", action="store_true", help="reconcile + report an existing soak"
     )
     s.set_defaults(func=cmd_soak)
+    rc = sub.add_parser("recover")
+    rc.add_argument("--out", required=True, help="the soak's output directory")
+    rc.add_argument(
+        "--probe-s", type=int, default=300, help="no-load progress probe length"
+    )
+    rc.set_defaults(func=cmd_recover)
+    an = sub.add_parser("annotate-recovery")
+    an.add_argument("--out", required=True)
+    an.add_argument(
+        "--at", required=True, help="UTC time of the intervention (ISO 8601)"
+    )
+    an.add_argument("--action", required=True)
+    an.add_argument("--reason", required=True)
+    an.add_argument("--peak-writer-mib", type=float)
+    an.set_defaults(func=cmd_annotate_recovery)
     args = ap.parse_args(argv)
     return args.func(args)
 

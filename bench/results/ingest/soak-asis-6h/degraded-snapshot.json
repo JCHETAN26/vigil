@@ -1,0 +1,241 @@
+{
+  "taken_at": "2026-09-29T23:04:30.335688+00:00",
+  "failed_queries": [],
+  "server": {
+    "uptime_h": 12.21,
+    "tracked_gib": 1.16,
+    "rss_gib": 1.16,
+    "memory_limit_errors": "161395",
+    "cap_bytes": "1610612736"
+  },
+  "errors": [
+    {
+      "name": "MEMORY_LIMIT_EXCEEDED",
+      "value": "161395",
+      "last": "2026-09-29 23:04:29"
+    },
+    {
+      "name": "QUERY_WAS_CANCELLED",
+      "value": "152",
+      "last": "2026-09-29 16:51:17"
+    },
+    {
+      "name": "UNKNOWN_PACKET_FROM_CLIENT",
+      "value": "10",
+      "last": "2026-09-29 12:55:35"
+    },
+    {
+      "name": "ACCESS_DENIED",
+      "value": "2",
+      "last": "2026-09-29 20:22:28"
+    },
+    {
+      "name": "SYNTAX_ERROR",
+      "value": "1",
+      "last": "2026-09-29 20:22:16"
+    },
+    {
+      "name": "NO_ELEMENTS_IN_CONFIG",
+      "value": "1",
+      "last": "2026-09-29 10:51:48"
+    }
+  ],
+  "parts": [
+    {
+      "database": "system",
+      "table": "text_log",
+      "partition": "202609",
+      "active_parts": "9",
+      "total_rows": "8125080",
+      "bytes": "242783640",
+      "max_level": 91
+    },
+    {
+      "database": "system",
+      "table": "metric_log",
+      "partition": "202609",
+      "active_parts": "6",
+      "total_rows": "43121",
+      "bytes": "11836216",
+      "max_level": 223
+    },
+    {
+      "database": "system",
+      "table": "asynchronous_metric_log",
+      "partition": "202609",
+      "active_parts": "6",
+      "total_rows": "8682645",
+      "bytes": "5853260",
+      "max_level": 2806
+    },
+    {
+      "database": "system",
+      "table": "query_log",
+      "partition": "202609",
+      "active_parts": "5",
+      "total_rows": "36047",
+      "bytes": "5980356",
+      "max_level": 327
+    },
+    {
+      "database": "system",
+      "table": "processors_profile_log",
+      "partition": "202609",
+      "active_parts": "5",
+      "total_rows": "451648",
+      "bytes": "11391755",
+      "max_level": 600
+    },
+    {
+      "database": "system",
+      "table": "part_log",
+      "partition": "202609",
+      "active_parts": "5",
+      "total_rows": "252472",
+      "bytes": "39924669",
+      "max_level": 116
+    },
+    {
+      "database": "vigil_load",
+      "table": "trace_index",
+      "partition": "tuple()",
+      "active_parts": "4",
+      "total_rows": "216361",
+      "bytes": "11554638",
+      "max_level": 1803
+    },
+    {
+      "database": "system",
+      "table": "trace_log",
+      "partition": "202609",
+      "active_parts": "3",
+      "total_rows": "379721",
+      "bytes": "8857353",
+      "max_level": 164
+    },
+    {
+      "database": "system",
+      "table": "query_views_log",
+      "partition": "202609",
+      "active_parts": "3",
+      "total_rows": "32002",
+      "bytes": "4029972",
+      "max_level": 407
+    },
+    {
+      "database": "vigil_load",
+      "table": "spans",
+      "partition": "2026-09-29",
+      "active_parts": "2",
+      "total_rows": "1455234",
+      "bytes": "1025060544",
+      "max_level": 14
+    },
+    {
+      "database": "system",
+      "table": "error_log",
+      "partition": "202609",
+      "active_parts": "1",
+      "total_rows": "23494",
+      "bytes": "19759",
+      "max_level": 910
+    },
+    {
+      "database": "vigil_load",
+      "table": "agent_version_stats_daily",
+      "partition": "202609",
+      "active_parts": "1",
+      "total_rows": "7",
+      "bytes": "16473",
+      "max_level": 3215
+    }
+  ],
+  "merges": [],
+  "mutations": [],
+  "recent_errors": [
+    {
+      "logger_name": "MergeTreeBackgroundExecutor",
+      "n": "2880",
+      "example": "Exception while executing background task {99683630-174b-4454-b489-24e2d2ef8952::202609_17430_22886_224}: Code: 241. DB::Exception: Memory limit (total) exceeded: would use 1.54 GiB (attempt to allocate chunk of 4361168 bytes), maximum: 1.5"
+    },
+    {
+      "logger_name": "void DB::SystemLog<DB::AsynchronousMetricLogElement>::flushImpl(const std::vector<LogElement> &, uint64_t) [LogElement = DB::AsynchronousMetricLogElement]",
+      "n": "1",
+      "example": "Failed to flush system log system.asynchronous_metric_log with 1400 entries up to offset 8465741: Code: 241. DB::Exception: Memory limit (total) exceeded: would use 1.59 GiB (attempt to allocate chunk of 4289636 bytes), maximum: 1.50 GiB. ("
+    },
+    {
+      "logger_name": "void DB::SystemLog<DB::ErrorLogElement>::flushImpl(const std::vector<LogElement> &, uint64_t) [LogElement = DB::ErrorLogElement]",
+      "n": "1",
+      "example": "Failed to flush system log system.error_log with 7 entries up to offset 23137: Code: 241. DB::Exception: Memory limit (total) exceeded: would use 1.57 GiB (attempt to allocate chunk of 4383381 bytes), maximum: 1.50 GiB. (MEMORY_LIMIT_EXCEED"
+    },
+    {
+      "logger_name": "executeQuery",
+      "n": "1",
+      "example": "Code: 241. DB::Exception: Memory limit (total) exceeded: would use 1.51 GiB (attempt to allocate chunk of 6424864 bytes), maximum: 1.50 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker.: While executing Merge"
+    },
+    {
+      "logger_name": "TCPHandler",
+      "n": "1",
+      "example": "Code: 241. DB::Exception: Memory limit (total) exceeded: would use 1.51 GiB (attempt to allocate chunk of 6424864 bytes), maximum: 1.50 GiB. OvercommitTracker decision: Query was selected to stop by OvercommitTracker.: While executing Merge"
+    }
+  ],
+  "cap_gib": 1.5,
+  "offsets": {
+    "topic": "otlp.spans.load",
+    "group": "vigil-writer-load",
+    "partitions": [
+      {
+        "partition": 0,
+        "committed": 931100,
+        "log_start": 917045,
+        "end": 1001930
+      },
+      {
+        "partition": 1,
+        "committed": 930177,
+        "log_start": 915777,
+        "end": 1000474
+      },
+      {
+        "partition": 2,
+        "committed": 929477,
+        "log_start": 915061,
+        "end": 1001160
+      },
+      {
+        "partition": 3,
+        "committed": 930763,
+        "log_start": 921021,
+        "end": 1001468
+      },
+      {
+        "partition": 4,
+        "committed": 928036,
+        "log_start": 916595,
+        "end": 999158
+      },
+      {
+        "partition": 5,
+        "committed": 929268,
+        "log_start": 914792,
+        "end": 1000544
+      }
+    ],
+    "deleted_unconsumed": 0,
+    "pending": 425913,
+    "min_consumed_retained": 9742
+  },
+  "group": {
+    "state": "PreparingRebalance",
+    "members": 2,
+    "lag": 425913,
+    "drained": false
+  },
+  "progress_probe": {
+    "seconds": 300,
+    "stored_before": 1455234,
+    "stored_delta": 0,
+    "writer_restarts_delta": 6,
+    "pending_records": 425913
+  }
+}

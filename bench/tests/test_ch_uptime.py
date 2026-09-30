@@ -138,6 +138,107 @@ def test_render_soak_reports_delivery_reconciliation_and_restarts():
     assert "312 since the container was created" in cu.render_soak(report)
 
 
+H = 3_600_000  # ms
+
+
+@pytest.mark.parametrize(
+    ("deleted", "oldest_age_h", "n_risks"),
+    [(0, 10, 0), (5, 10, 1), (0, 44, 1), (3, 45, 2)],
+)
+def test_retention_risks(deleted, oldest_age_h, n_risks):
+    now = 1_000 * H
+    offsets = {"deleted_unconsumed": deleted}
+    risks = cu.retention_risks(offsets, [now - oldest_age_h * H, now - H], 48 * H, now)
+    assert len(risks) == n_risks
+    assert cu.retention_risks({"deleted_unconsumed": 0}, [], 48 * H, now) == []
+
+
+def _sample(t, stored, drained=False, deleted=0):
+    return {"t": t, "stored": stored, "drained": drained, "deleted_unconsumed": deleted}
+
+
+def test_recovery_milestones():
+    samples = [
+        _sample(110, 1000), _sample(120, 1000), _sample(130, 5000),
+        _sample(140, 9000, drained=True), _sample(150, 9000, drained=True, deleted=0),
+    ]  # fmt: skip
+    m = cu.recovery_milestones(samples, t_restart=100)
+    assert m == {
+        "writer_recovered_after_s": 30,
+        "drained_after_s": 50,
+        "max_deleted_unconsumed": 0,
+    }
+    stuck = [_sample(110, 1000), _sample(120, 1000, deleted=7)]
+    assert cu.recovery_milestones(stuck, 100) == {
+        "writer_recovered_after_s": None,
+        "drained_after_s": None,
+        "max_deleted_unconsumed": 7,
+    }
+
+
+def test_render_recovery():
+    report = {
+        "degraded": {
+            "server": {
+                "uptime_h": 11.4,
+                "tracked_gib": 1.17,
+                "memory_limit_errors": 156197,
+            },
+            "cap_gib": 1.5,
+            "failed_queries": ["recent_errors"],
+            "progress_probe": {
+                "seconds": 300,
+                "stored_delta": 0,
+                "writer_restarts_delta": 6,
+                "pending_records": 425913,
+            },
+        },
+        "preflight_risks": [],
+        "preflight_offsets": {"min_consumed_retained": 9742},
+        "milestones": {
+            "writer_recovered_after_s": 45,
+            "drained_after_s": 1260,
+            "max_deleted_unconsumed": 0,
+        },
+    }
+    md = cu.render_recovery(report)
+    assert "0 spans stored in 5 min" in md and "restarted 6 times" in md
+    assert "425,913 records" in md and "(recent_errors)" in md
+    assert "no risk" in md and "9,742" in md
+    assert "**0.8 min**" in md and "**21.0 min**" in md
+    assert "at any point: **0**" in md
+
+
+def test_render_recovery_attributes_recovery_to_the_intervention():
+    base = {
+        "degraded": {
+            "server": {"uptime_h": 12.2, "tracked_gib": 1.16, "memory_limit_errors": 161395},
+            "cap_gib": 1.5,
+            "failed_queries": [],
+            "progress_probe": {"seconds": 300, "stored_delta": 0, "writer_restarts_delta": 6,
+                               "pending_records": 425913},
+        },
+        "preflight_risks": [],
+        "preflight_offsets": {"min_consumed_retained": 9742},
+        "milestones": {"writer_recovered_after_s": 2250, "drained_after_s": 2994,
+                       "max_deleted_unconsumed": 0},
+        "interventions": [{
+            "at_s": 2225, "action": "raised the load writer's memory to 2 GiB",
+            "reason": "OOM-killed at 512 MiB while draining", "peak_writer_mib": 1012,
+            "milestones": {"writer_recovered_after_s": 25, "drained_after_s": 769,
+                           "max_deleted_unconsumed": 0},
+        }],
+    }  # fmt: skip
+    md = cu.render_recovery(base)
+    assert "Restarting ClickHouse alone: **no progress** in the 37.1 min" in md
+    assert (
+        "**Intervention at +37.1 min:** raised the load writer's memory to 2 GiB" in md
+    )
+    assert "first stored rows in **0.4 min**" in md and "drained in **12.8 min**" in md
+    assert "peak writer memory **1012 MiB**" in md
+    assert "after the restart; backlog drained" not in md
+
+
 def test_probe_only_touches_the_load_database():
     assert all(not t.startswith("system") for t in cu.PROBE_TABLES)
     with pytest.raises(ValueError):

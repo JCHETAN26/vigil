@@ -1,0 +1,466 @@
+{
+  "start": {},
+  "summary": {
+    "config": {
+      "protocol": "grpc",
+      "endpoint": "127.0.0.1:14317",
+      "run_id": "soak-20260929T105202Z",
+      "rate_spans_per_sec": 200,
+      "duration_ns": 21600000000000,
+      "max_spans_per_request": 512,
+      "max_bytes_per_request": 3145728,
+      "concurrency": 32,
+      "attempt_timeout_ns": 10000000000,
+      "max_retry_elapsed_ns": 300000000000,
+      "seed": 1
+    },
+    "spans_acked": 4320097,
+    "spans_unacked": 0,
+    "requests_failed": 0,
+    "retries": 0,
+    "request_latency_ms": {
+      "n": 8522,
+      "mean": 90.58149971110063,
+      "p50": 86.442234,
+      "p95": 119.277721,
+      "p99": 147.876299,
+      "max": 947.533338
+    },
+    "cpu_fraction": {
+      "n": 21598,
+      "mean": 0.003340827189594104,
+      "p50": 6.099839842605093e-05,
+      "p95": 0.008599682458274091,
+      "p99": 0.015285614846065434,
+      "max": 0.06072951728206062
+    },
+    "schedule_lag_ms": {
+      "n": 8522,
+      "mean": 0.8848171859892073,
+      "p50": 0.735218,
+      "p95": 1.608244,
+      "p99": 2.482163,
+      "max": 16.609046
+    }
+  },
+  "reconcile": {
+    "run_id": "soak-20260929T105202Z",
+    "database": "vigil_load",
+    "drained_in": "3.05s",
+    "reconciliation": {
+      "acked_traces": 642274,
+      "acked_spans": 4320097,
+      "stored_acked_unique_spans": 4320097,
+      "missing_spans": 0,
+      "duplicate_rows": 0,
+      "unacked_spans": 0,
+      "unacked_stored": 0,
+      "unexpected_traces": 0,
+      "stored_rows": 4320097
+    },
+    "clean": false,
+    "trace_index_span_count": 4322222,
+    "dlq_records": 0,
+    "raw_topic_bytes": 2323248378,
+    "e2e_latency_ms": {
+      "max": 39274825.290771484,
+      "p50": 28752601.313720703,
+      "p95": 38160191.314208984,
+      "p99": 39007913.28198242
+    }
+  },
+  "clickhouse_at_end": {
+    "uptime_s": 3052,
+    "memory_tracking_bytes": 1518811918
+  },
+  "writer_restarts_at_end": 177,
+  "history": {
+    "generated_at": "2026-09-30T00:00:30.731237+00:00",
+    "window": {
+      "from": "2026-09-29 10:52:03",
+      "to": "2026-09-29 16:52:01",
+      "cap_gib": 1.5
+    },
+    "hourly": [
+      {
+        "h": "2026-09-29 10:00:00",
+        "tracked_max": 1.2956657409667969,
+        "tracked_avg": 0.9156820150638932,
+        "inserts": "1122",
+        "merges": "1356",
+        "rss": 1.3478507995605469,
+        "mark_mib": 0,
+        "parts": 61
+      },
+      {
+        "h": "2026-09-29 11:00:00",
+        "tracked_max": 1.5362683460116386,
+        "tracked_avg": 1.1021844725240952,
+        "inserts": "8516",
+        "merges": "10319",
+        "rss": 1.6937637329101562,
+        "mark_mib": 0.00667572021484375,
+        "parts": 92
+      },
+      {
+        "h": "2026-09-29 12:00:00",
+        "tracked_max": 2.5019196709617972,
+        "tracked_avg": 1.3625192034881723,
+        "inserts": "6704",
+        "merges": "29138",
+        "rss": 1.9505882263183594,
+        "mark_mib": 0.0113983154296875,
+        "parts": 105
+      },
+      {
+        "h": "2026-09-29 13:00:00",
+        "tracked_max": 2.597289426252246,
+        "tracked_avg": 1.384696434999305,
+        "inserts": "36",
+        "merges": "26091",
+        "rss": 1.8981857299804688,
+        "mark_mib": 0.01721954345703125,
+        "parts": 95
+      },
+      {
+        "h": "2026-09-29 14:00:00",
+        "tracked_max": 2.5778282480314374,
+        "tracked_avg": 1.3835621033227432,
+        "inserts": "37",
+        "merges": "29653",
+        "rss": 1.9284095764160156,
+        "mark_mib": 0.01721954345703125,
+        "parts": 96
+      },
+      {
+        "h": "2026-09-29 15:00:00",
+        "tracked_max": 2.6586128044873476,
+        "tracked_avg": 1.3718864323662239,
+        "inserts": "34",
+        "merges": "28256",
+        "rss": 1.9254188537597656,
+        "mark_mib": 0.01721954345703125,
+        "parts": 92
+      },
+      {
+        "h": "2026-09-29 16:00:00",
+        "tracked_max": 2.555496860295534,
+        "tracked_avg": 1.3681492116030356,
+        "inserts": "36",
+        "merges": "21840",
+        "rss": 1.8794212341308594,
+        "mark_mib": 0.01721954345703125,
+        "parts": 93
+      }
+    ],
+    "memory_errors_hourly": [
+      {
+        "h": "2026-09-29 11:00:00",
+        "merge_failures": "143",
+        "other_failures": "23"
+      },
+      {
+        "h": "2026-09-29 12:00:00",
+        "merge_failures": "18910",
+        "other_failures": "854"
+      },
+      {
+        "h": "2026-09-29 13:00:00",
+        "merge_failures": "24556",
+        "other_failures": "78"
+      },
+      {
+        "h": "2026-09-29 14:00:00",
+        "merge_failures": "26915",
+        "other_failures": "102"
+      },
+      {
+        "h": "2026-09-29 15:00:00",
+        "merge_failures": "26204",
+        "other_failures": "93"
+      },
+      {
+        "h": "2026-09-29 16:00:00",
+        "merge_failures": "21279",
+        "other_failures": "70"
+      }
+    ],
+    "memory_errors_by_source": [
+      {
+        "source": "background merge",
+        "n": "111097",
+        "first": "2026-09-29 11:55:10",
+        "last": "2026-09-29 16:51:59",
+        "table": "vigil_load.spans"
+      },
+      {
+        "source": "background merge",
+        "n": "4439",
+        "first": "2026-09-29 11:58:08",
+        "last": "2026-09-29 16:51:39",
+        "table": "system.metric_log"
+      },
+      {
+        "source": "background merge",
+        "n": "1290",
+        "first": "2026-09-29 11:30:58",
+        "last": "2026-09-29 16:49:20",
+        "table": "system.query_log"
+      },
+      {
+        "source": "background merge",
+        "n": "761",
+        "first": "2026-09-29 12:01:43",
+        "last": "2026-09-29 16:48:58",
+        "table": "system.part_log"
+      },
+      {
+        "source": "TCPHandler",
+        "n": "414",
+        "first": "2026-09-29 11:55:55",
+        "last": "2026-09-29 16:50:34",
+        "table": ""
+      },
+      {
+        "source": "executeQuery",
+        "n": "414",
+        "first": "2026-09-29 11:55:55",
+        "last": "2026-09-29 16:50:34",
+        "table": ""
+      },
+      {
+        "source": "system log flush",
+        "n": "392",
+        "first": "2026-09-29 11:58:08",
+        "last": "2026-09-29 16:49:19",
+        "table": ""
+      },
+      {
+        "source": "background merge",
+        "n": "226",
+        "first": "2026-09-29 12:08:38",
+        "last": "2026-09-29 16:49:53",
+        "table": "system.text_log"
+      },
+      {
+        "source": "background merge",
+        "n": "117",
+        "first": "2026-09-29 12:08:23",
+        "last": "2026-09-29 16:42:04",
+        "table": "system.asynchronous_metric_log"
+      },
+      {
+        "source": "background merge",
+        "n": "42",
+        "first": "2026-09-29 11:57:35",
+        "last": "2026-09-29 16:04:10",
+        "table": "system.processors_profile_log"
+      },
+      {
+        "source": "background merge",
+        "n": "16",
+        "first": "2026-09-29 11:57:35",
+        "last": "2026-09-29 12:51:38",
+        "table": "system.query_views_log"
+      },
+      {
+        "source": "background merge",
+        "n": "14",
+        "first": "2026-09-29 12:31:55",
+        "last": "2026-09-29 12:51:31",
+        "table": "vigil_load.trace_index"
+      },
+      {
+        "source": "background merge",
+        "n": "3",
+        "first": "2026-09-29 12:12:43",
+        "last": "2026-09-29 12:13:51",
+        "table": "system.trace_log"
+      },
+      {
+        "source": "background merge",
+        "n": "2",
+        "first": "2026-09-29 16:00:39",
+        "last": "2026-09-29 16:28:48",
+        "table": "system.error_log"
+      },
+      {
+        "source": "span INSERT (writer)",
+        "table": "",
+        "n": "409",
+        "first": "2026-09-29 11:55:55",
+        "last": "2026-09-29 12:54:32"
+      }
+    ],
+    "trend": {
+      "tracked_avg_gib_per_h": 0.06849458604058055,
+      "rss_gib_per_h": 0.07270867483956474,
+      "first_hour_over_cap": "2026-09-29 11:00:00"
+    },
+    "parts": [
+      {
+        "database": "vigil_load",
+        "table": "spans",
+        "partition": "2026-09-29",
+        "active_parts": "15",
+        "total_rows": "4320097",
+        "max_level": 14
+      },
+      {
+        "database": "system",
+        "table": "part_log",
+        "partition": "202609",
+        "active_parts": "9",
+        "total_rows": "256806",
+        "max_level": 116
+      },
+      {
+        "database": "system",
+        "table": "text_log",
+        "partition": "202609",
+        "active_parts": "9",
+        "total_rows": "8337320",
+        "max_level": 92
+      },
+      {
+        "database": "system",
+        "table": "query_log",
+        "partition": "202609",
+        "active_parts": "7",
+        "total_rows": "37913",
+        "max_level": 457
+      },
+      {
+        "database": "system",
+        "table": "metric_log",
+        "partition": "202609",
+        "active_parts": "6",
+        "total_rows": "46453",
+        "max_level": 223
+      },
+      {
+        "database": "system",
+        "table": "asynchronous_metric_log",
+        "partition": "202609",
+        "active_parts": "6",
+        "total_rows": "9353563",
+        "max_level": 2806
+      },
+      {
+        "database": "system",
+        "table": "query_views_log",
+        "partition": "202609",
+        "active_parts": "6",
+        "total_rows": "32928",
+        "max_level": 407
+      },
+      {
+        "database": "system",
+        "table": "processors_profile_log",
+        "partition": "202609",
+        "active_parts": "5",
+        "total_rows": "469396",
+        "max_level": 735
+      },
+      {
+        "database": "system",
+        "table": "trace_log",
+        "partition": "202609",
+        "active_parts": "4",
+        "total_rows": "583437",
+        "max_level": 165
+      },
+      {
+        "database": "vigil_load",
+        "table": "agent_version_stats_daily",
+        "partition": "202609",
+        "active_parts": "3",
+        "total_rows": "20",
+        "max_level": 3307
+      },
+      {
+        "database": "vigil_load",
+        "table": "trace_index",
+        "partition": "tuple()",
+        "active_parts": "3",
+        "total_rows": "642274",
+        "max_level": 1804
+      },
+      {
+        "database": "system",
+        "table": "error_log",
+        "partition": "202609",
+        "active_parts": "2",
+        "total_rows": "26337",
+        "max_level": 999
+      },
+      {
+        "database": "vigil",
+        "table": "trace_index",
+        "partition": "tuple()",
+        "active_parts": "2",
+        "total_rows": "564",
+        "max_level": 8
+      },
+      {
+        "database": "vigil",
+        "table": "agent_version_stats_daily",
+        "partition": "202609",
+        "active_parts": "2",
+        "total_rows": "18",
+        "max_level": 7
+      },
+      {
+        "database": "vigil",
+        "table": "spans",
+        "partition": "2026-09-27",
+        "active_parts": "2",
+        "total_rows": "447",
+        "max_level": 5
+      },
+      {
+        "database": "vigil",
+        "table": "spans",
+        "partition": "2026-09-29",
+        "active_parts": "1",
+        "total_rows": "28",
+        "max_level": 3
+      },
+      {
+        "database": "vigil",
+        "table": "spans",
+        "partition": "2026-09-25",
+        "active_parts": "1",
+        "total_rows": "57",
+        "max_level": 0
+      },
+      {
+        "database": "vigil",
+        "table": "spans",
+        "partition": "2026-09-26",
+        "active_parts": "1",
+        "total_rows": "3144",
+        "max_level": 0
+      }
+    ],
+    "merges": [],
+    "unfinished_mutations": 0,
+    "caches": {
+      "IndexMarkCacheBytes": 0.0,
+      "UncompressedCacheBytes": 0.0,
+      "MarkCacheBytes": 252624.0,
+      "MMapCacheCells": 0.0
+    },
+    "metric_log_columns": 991,
+    "settings": {
+      "max_server_memory_usage": 1610612736.0,
+      "merges_mutations_memory_usage_soft_limit": 0.0,
+      "merges_mutations_memory_usage_to_ram_ratio": 0.5,
+      "uncompressed_cache_size": 0.0,
+      "mark_cache_size": 536870912.0,
+      "background_pool_size": 16.0,
+      "vertical_merge_algorithm_min_rows_to_activate": 131072.0,
+      "vertical_merge_algorithm_min_columns_to_activate": 11.0
+    }
+  }
+}

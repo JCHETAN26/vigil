@@ -45,7 +45,7 @@ import (
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Fprintln(os.Stderr, "usage: loadgen export|run|reconcile|lag [flags]")
+		fmt.Fprintln(os.Stderr, "usage: loadgen export|run|reconcile|lag|offsets [flags]")
 		os.Exit(2)
 	}
 	var err error
@@ -58,6 +58,8 @@ func main() {
 		err = cmdReconcile(os.Args[2:])
 	case "lag":
 		err = cmdLag(os.Args[2:])
+	case "offsets":
+		err = cmdOffsets(os.Args[2:])
 	default:
 		err = fmt.Errorf("unknown subcommand %q", os.Args[1])
 	}
@@ -349,6 +351,14 @@ func cmdReconcile(args []string) error {
 	ch := config.ClickHouseFromEnv()
 	ctx, cancel := context.WithTimeout(context.Background(), *drainTimeout+2*time.Minute)
 	defer cancel()
+	// Reconciliation aggregates every span of a run (GROUP BY trace_id, uniqExact) — millions
+	// of rows after a soak. Keep it within a small ClickHouse memory cap (1.5 GiB as-is):
+	// few threads, and spill GROUP BY / ORDER BY state to disk past 256 MiB.
+	ctx = clickhouse.Context(ctx, clickhouse.WithSettings(clickhouse.Settings{
+		"max_threads":                        2,
+		"max_bytes_before_external_group_by": 256 << 20,
+		"max_bytes_before_external_sort":     256 << 20,
+	}))
 	conn, err := openCH(ctx, ch.Database, ch.Username, ch.Password)
 	if err != nil {
 		return err
@@ -477,6 +487,60 @@ func groupLag(ctx context.Context, adm *kadm.Client) (loadgen.GroupLag, error) {
 	})
 	g.Lag = loadgen.TotalLag(start, end, committed)
 	return g, nil
+}
+
+// cmdOffsets prints, per partition of the raw topic, the load writer group's committed
+// offset against the retained log (JSON), with totals: records retention deleted before
+// they were consumed, records still pending, and the consumed-but-retained cushion that
+// retention removes before it reaches pending data.
+func cmdOffsets(_ []string) error {
+	adm, closeAdm, err := newAdmin()
+	if err != nil {
+		return err
+	}
+	defer closeAdm()
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	wcfg := config.WriterFromEnv()
+	starts, err := adm.ListStartOffsets(ctx, wcfg.RawTopic)
+	if err != nil {
+		return err
+	}
+	ends, err := adm.ListEndOffsets(ctx, wcfg.RawTopic)
+	if err != nil {
+		return err
+	}
+	commits, err := adm.FetchOffsets(ctx, wcfg.Group)
+	if err != nil {
+		return err
+	}
+	out := struct {
+		Topic             string                     `json:"topic"`
+		Group             string                     `json:"group"`
+		Partitions        []loadgen.PartitionOffsets `json:"partitions"`
+		DeletedUnconsumed int64                      `json:"deleted_unconsumed"`
+		Pending           int64                      `json:"pending"`
+		MinCushion        int64                      `json:"min_consumed_retained"`
+	}{Topic: wcfg.RawTopic, Group: wcfg.Group, MinCushion: -1}
+	ends.Each(func(e kadm.ListedOffset) {
+		p := loadgen.PartitionOffsets{Partition: e.Partition, Committed: -1, End: e.Offset}
+		if s, ok := starts.Lookup(e.Topic, e.Partition); ok {
+			p.LogStart = s.Offset
+		}
+		if c, ok := commits.Lookup(e.Topic, e.Partition); ok && c.Err == nil {
+			p.Committed = c.At
+		}
+		out.Partitions = append(out.Partitions, p)
+		out.DeletedUnconsumed += p.DeletedUnconsumed()
+		out.Pending += p.Pending()
+		if out.MinCushion < 0 || p.ConsumedRetained() < out.MinCushion {
+			out.MinCushion = p.ConsumedRetained()
+		}
+	})
+	sort.Slice(out.Partitions, func(i, j int) bool { return out.Partitions[i].Partition < out.Partitions[j].Partition })
+	b, _ := json.Marshal(out)
+	fmt.Println(string(b))
+	return nil
 }
 
 func newAdmin() (*kadm.Client, func(), error) {

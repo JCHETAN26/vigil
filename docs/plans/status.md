@@ -190,9 +190,56 @@ real OTel SDK exporter; refuse fault injection while a real eval run is in progr
     receiver (pipeline backpressure), not a generator limit. Those steps fail the 5 s SLO either way.
   - `baseline-asis-uptime11h/`: an earlier as-is attempt against a ClickHouse up ~11 h failed even
     at 500 spans/s (e2e p99 20.8 s) — why every ramp now starts from a fresh ClickHouse.
-- **Next:** stage 3 fault injection, stage 4 improvements (single produce per request, producer
-  batching, in-writer retry with identical dedup token, lag-aware admission control), stage 5
-  results + design doc.
+- **Long-uptime investigation — done (pending review), before stage 3.** `bench/ch_uptime.py`
+  (`diagnose` / `merge-probe` / `reset-system-logs` / `soak` / `recover` / `annotate-recovery`);
+  results in `bench/results/ingest/{uptime-diagnosis,baseline-asis-fresh,soak-asis-6h}/`. All with
+  the original limits (ClickHouse 1.5 GiB cap, load writer 512 MiB), gRPC.
+
+  | ClickHouse state | sustained | what happens |
+  |---|---|---|
+  | fresh (restart + empty system logs) | 1,000 spans/s | 2,000 fails: span inserts alone exceed 1.5 GiB |
+  | long-uptime (6 h soak at 200 spans/s → 12.2 h up) | **0** | stores 0 spans in 5 min with **no** load; writer restarts every ~45 s |
+
+  - **Root cause 1: `system.metric_log` merges.** ClickHouse logs 991 metric columns once per second;
+    merges use the Horizontal algorithm (all columns at once) until 131,072 rows (~36 h). Measured on
+    the same 129k rows: **4.10 GiB horizontal vs 0.02 GiB vertical**. On the idle 11 h instance the
+    merge failed 20,271 times from ~3.4 h of uptime, each retry holding memory at the cap; span
+    inserts landing meanwhile failed and the writer crash-looped. Parts, mutations and caches were
+    not factors (≤ 8 parts/partition, no mutations, mark cache ~1 MiB). A restart does not clear it
+    (the unmergeable parts stay on disk).
+  - **Root cause 2 (under load): the spans table's own merges** join in: during the soak the errors
+    came first from `vigil_load.spans` merges (79 by 1.1 h), then snowballed (57k errors by 3.4 h).
+  - **Root cause 3: load writer OOM while draining a backlog.** Once ClickHouse errors let the writer
+    fall behind, every batch fills to 10,000 rows / 32 MiB raw on all 6 partitions at once; with
+    ~4 KB attribute maps per span that exceeds 512 MiB → OOM kill (exit 137) every ~45 s. So after
+    the soak **restarting ClickHouse alone recovered nothing in 37 min**; raising the writer to 2 GiB
+    drained the 2.86M-span backlog in 12.7 min at a **peak of 1,012 MiB** (then restored to 512 MiB).
+    Memory scales with batch size × partitions, so draining a backlog after an outage is exactly
+    when the writer dies.
+  - **Soak reconciliation (after 177 writer crash-restarts):** all **4,320,097** acked spans stored,
+    **0 missing, 0 duplicate rows** — but `trace_index` sums to **4,322,222 (+2,125)**: redeliveries
+    that re-formed a different offset range got a new dedup token, were inserted twice (the
+    ReplacingMergeTree later merged the spans duplicates away), and the MVs double-counted. Redpanda
+    retention deleted **0** unconsumed records, but the cushion was only ~9.7k records per
+    partition: a little more traffic during the stall would have deleted acknowledged spans.
+  - Two measurement-tool fixes on the way: reconcile's GROUP BY now spills to disk (it failed under
+    the 1.5 GiB cap on 4.3M rows), and soak/recover rebuild ClickHouse's history from its own logs.
+- **Next:** stage 3 fault injection, then stage 4 improvements, each measured on its own:
+  1. **ClickHouse system-log hygiene** (config.d): force Vertical merges for `metric_log`
+     (`vertical_merge_algorithm_min_rows_to_activate = 1` via its `<engine>`), TTLs on all system
+     logs, `text_log` at warning (it held millions of Trace/Debug rows), disable unused logs
+     (`trace_log`, `processors_profile_log`, `query_views_log`), and a
+     `merges_mutations_memory_usage_soft_limit` so merges cannot starve inserts. Verify with a
+     repeat 6 h soak + long-uptime ramp (target: long-uptime result = fresh result).
+  2. **Writer: retry the identical batch in-process** (same offset range, same dedup token) instead
+     of exiting — ends the crash loop and the `trace_index` double-count (+2,125 observed).
+  3. **Writer: global memory budget across partitions** (bound total in-flight batch bytes, not
+     per-partition rows) — with a test that drains a large backlog within the original 512 MiB.
+  4. Larger inserts / async inserts to cut parts and merge load (measure against 1).
+  5. Receiver: single produce per request; producer batching; **lag-aware admission control**
+     (RESOURCE_EXHAUSTED + RetryInfo / 429 + Retry-After) — the soak shows the retention cushion
+     can shrink to ~10k records per partition during a stall.
+  Then stage 5: results + design doc.
 - **Added 2026-09-28 (from a review of job descriptions; not started — each gets a proposal
   and owner review first):**
   - **AWS via Terraform** (`deploy/terraform/`): the cheapest reasonable design to run the
@@ -214,6 +261,9 @@ real OTel SDK exporter; refuse fault injection while a real eval run is in progr
 > pass^k, τ² isolated in its own venv behind a subprocess domain server; commits `b96e9e5`,
 > `8d3ce29`). Week 3 **paired bootstrap regression detection done** (`engine regress` + power/MDE
 > harness; commit `2b84ea4`). All unit/offline suites green under `make test-all`.
+>
+> **Update 2026-09-30:** the API cap has lifted — `make test-all` ran every live suite green
+> (engine integration, hello/hotpotqa/τ² e2e) on the cloud machine. Steps 1–3 below are unblocked.
 >
 > **BLOCKED on the Anthropic account usage cap — regain access 2026-10-01 00:00 UTC.** No eval
 > run or live test (e2e/integration) can succeed until then; the live suites report

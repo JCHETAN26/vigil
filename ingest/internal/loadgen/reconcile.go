@@ -74,6 +74,40 @@ type GroupLag struct {
 // consumed everything.
 func (g GroupLag) Drained() bool { return g.State == "Stable" && g.Members > 0 && g.Lag == 0 }
 
+// PartitionOffsets is one partition's consumer position against its retained log. It shows
+// whether retention has deleted records the consumer never read (a real loss even though
+// every one was acknowledged to the client) and how much is still waiting.
+type PartitionOffsets struct {
+	Partition int32 `json:"partition"`
+	Committed int64 `json:"committed"` // -1: the group has no commit for this partition
+	LogStart  int64 `json:"log_start"`
+	End       int64 `json:"end"`
+}
+
+// DeletedUnconsumed is the number of records retention removed before the group consumed
+// them: log start above the committed offset. Without a commit it cannot be known (0).
+func (p PartitionOffsets) DeletedUnconsumed() int64 {
+	if p.Committed < 0 || p.LogStart <= p.Committed {
+		return 0
+	}
+	return p.LogStart - p.Committed
+}
+
+// Pending is the number of retained records the group has yet to consume.
+func (p PartitionOffsets) Pending() int64 {
+	from := max(p.Committed, p.LogStart)
+	return max(p.End-from, 0)
+}
+
+// ConsumedRetained is the number of already-consumed records still ahead of the pending
+// ones in the log: the cushion retention deletes before it reaches unconsumed data.
+func (p PartitionOffsets) ConsumedRetained() int64 {
+	if p.Committed < 0 {
+		return 0
+	}
+	return max(min(p.Committed, p.End)-p.LogStart, 0)
+}
+
 // TotalLag sums end - committed over every partition in end. A partition without a commit
 // is lagging from its log start (the writer resets to the earliest offset).
 func TotalLag(start, end, committed map[int32]int64) int64 {
