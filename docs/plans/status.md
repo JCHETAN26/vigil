@@ -275,8 +275,9 @@ real OTel SDK exporter; refuse fault injection while a real eval run is in progr
 > questions (`bench/results/regression/aa-20260930/`); `passed` is "watch" (interval-only signal,
 > the paired t CI's ~5% nominal / 6.7% measured false-alarm rate; gated rule 0.0%), and ungated
 > `cost_usd` false-alarmed — calibrate informational thresholds (cost first) from A/A variance once
-> the full pair exists. **Blocked again until 2026-10-01 00:00 UTC**; then re-run leg B in full
-> (approved, budget $3).
+> the full pair exists. **2026-10-01:** leg B re-run in full `29fea4d6` (300/300, $1.98): the
+> complete A/A (`bench/results/regression/aa-20261001/`) has **no gated regression and every
+> metric ok** (passed Δ −0.010 p 0.22, TokenF1 Δ −0.002 p 0.41, cost Δ +$0.0001 p 0.33).
 >
 > **BLOCKED on the Anthropic account usage cap — regain access 2026-10-01 00:00 UTC.** No eval
 > run or live test (e2e/integration) can succeed until then; the live suites report
