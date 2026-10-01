@@ -1,0 +1,51 @@
+<clickhouse>
+    <!-- ClickHouse's own system logs, sized for a small memory cap (Week-6 stage-4 fix 1).
+
+         Diagnosis (bench/results/ingest/uptime-diagnosis/): with the stock settings, a 1.5 GiB
+         ClickHouse degrades within hours even when idle. system.metric_log has ~991 columns and
+         gains a row per second; MergeTree merges it with the Horizontal algorithm (all columns at
+         once) until a merge has 131,072 rows, so one merge needed 4.10 GiB vs 0.02 GiB Vertical.
+         The failing merge was retried endlessly, holding memory at the cap, and span inserts
+         landing meanwhile failed (writer crash loop, trace_index double counts). -->
+
+    <!-- Merge metric_log column by column (Vertical) at any size. -->
+    <metric_log>
+        <partition_by>toYYYYMM(event_date)</partition_by>
+        <ttl>event_date + INTERVAL 7 DAY DELETE</ttl>
+        <settings>vertical_merge_algorithm_min_rows_to_activate = 1, vertical_merge_algorithm_min_columns_to_activate = 1</settings>
+    </metric_log>
+
+    <!-- Bounded retention for every log Vigil keeps (none had a TTL). -->
+    <asynchronous_metric_log>
+        <ttl>event_date + INTERVAL 7 DAY DELETE</ttl>
+    </asynchronous_metric_log>
+    <query_log>
+        <ttl>event_date + INTERVAL 14 DAY DELETE</ttl>
+    </query_log>
+    <!-- Kept: it showed which materialized-view pushes failed in the soak reconciliation. -->
+    <query_views_log>
+        <ttl>event_date + INTERVAL 14 DAY DELETE</ttl>
+    </query_views_log>
+    <part_log>
+        <ttl>event_date + INTERVAL 14 DAY DELETE</ttl>
+    </part_log>
+    <error_log>
+        <ttl>event_date + INTERVAL 30 DAY DELETE</ttl>
+    </error_log>
+
+    <!-- text_log held millions of Trace/Debug rows (the server logs at trace); keep warnings and
+         errors only, for 7 days. The stderr/file logger level is unchanged. -->
+    <text_log>
+        <level>warning</level>
+        <ttl>event_date + INTERVAL 7 DAY DELETE</ttl>
+    </text_log>
+
+    <!-- Not used by Vigil: sampling-profiler stacks and per-processor query profiles. -->
+    <trace_log remove="1" />
+    <processors_profile_log remove="1" />
+
+    <!-- Background merges and mutations may not take more than 2 GiB together (sized variant of config.d), so they cannot
+         starve inserts and queries of the 6.4 GiB server budget (no new merge is scheduled while
+         over the limit; a running merge is not interrupted). -->
+    <merges_mutations_memory_usage_soft_limit>2147483648</merges_mutations_memory_usage_soft_limit> <!-- 2 GiB of the sized 6.4 GiB -->
+</clickhouse>

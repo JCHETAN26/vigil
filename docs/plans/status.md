@@ -225,7 +225,14 @@ real OTel SDK exporter; refuse fault injection while a real eval run is in progr
   - Two measurement-tool fixes on the way: reconcile's GROUP BY now spills to disk (it failed under
     the 1.5 GiB cap on 4.3M rows), and soak/recover rebuild ClickHouse's history from its own logs.
 - **Next:** stage 3 fault injection, then stage 4 improvements, each measured on its own:
-  1. **ClickHouse system-log hygiene** (config.d): force Vertical merges for `metric_log`
+  1. **Applied 2026-10-01, ahead of stage 3** (`deploy/clickhouse/config.d/system-logs.xml`, same
+     file in `config.sized.d` with a 2 GiB merge limit): before = 5,500 memory-limit errors/hour
+     on an instance up 45 h (and 0 spans/s sustained after a 6 h soak); after a restart with the
+     new settings, **0 new memory-limit errors in the first hour** (tracked memory 0.48 → 0.66
+     GiB, `metric_log` merging at level 48, real writer 0 restarts, `make test-all` green). Kept
+     `query_views_log` (it proved the partial-insert mechanism). The verification soak + long-
+     uptime ramp is still to run. Original plan text:
+     **ClickHouse system-log hygiene** (config.d): force Vertical merges for `metric_log`
      (`vertical_merge_algorithm_min_rows_to_activate = 1` via its `<engine>`), TTLs on all system
      logs, `text_log` at warning (it held millions of Trace/Debug rows), disable unused logs
      (`trace_log`, `processors_profile_log`, `query_views_log`), and a
