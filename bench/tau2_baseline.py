@@ -230,6 +230,9 @@ def render_markdown(meta, agg, cache, agree) -> str:
              f"cache-read tokens: {cache['cache_read_tokens']:,} · "
              f"uncached input: {cache['uncached_input_tokens']:,}")
     L.append(f"- **cache hit rate** (read / (read+write)): {_fmt(cache['hit_rate'], pct=True)}")
+    L.append("- This is Anthropic **prompt caching** (a cached prompt prefix, billed at the "
+             "cache-read rate; responses are still generated), not Vigil's Redis response "
+             "cache, which measurement mode refuses.")
     # Caching failed only if NEITHER writes nor reads happened. cache-creation can legitimately
     # be 0 when the prefix was already warm (written by a run within the 5-minute TTL) and every
     # call is a read — that is caching working, not failing.
