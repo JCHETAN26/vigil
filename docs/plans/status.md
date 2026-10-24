@@ -55,10 +55,15 @@ What the branch adds (walkthrough and commands: `docs/REGRESSION_TRIAGE.md`):
 **Validation, 2026-10-23: synthetic check. Not an AI-quality or performance result.** This
 synthetic check exercised the real orchestrator → OTLP → **Kafka 4.1** (not the pinned
 Redpanda) → writer → ClickHouse path once, with 160 results (40 cases × 2 versions × 2 trials).
-It is not a general correctness proof. The CLI and API regression verdicts matched the offline
-reproduction. All 160 trace links contained spans. Real Chrome comparison and trace navigation
-passed, and a tampered bundle was rejected. No artifacts are committed. These ran before the
-final review fixes. No new eval runs or paid calls were made afterwards.
+It is not a general correctness proof. That original evaluation ran before the final review
+fixes. After the fixes, the API, CLI and real Chrome checks were repeated successfully on the
+stored results of that run (re-query and re-export only; no new eval runs and no model or
+provider calls): CLI and API agreed in both the regression and the improvement direction,
+version paging returned 160 stable, unique version rows, all 160 trace links resolved to real
+traces with spans, invalid selections were refused, and Chrome comparison, version diff and
+trace navigation passed. A format-2 bundle was exported from clean committed code `15a5f5c9`
+and reproduced offline, and a tampered copy was rejected. An earlier version-1 interim export is
+not final evidence. No artifacts are committed.
 
 Final local checks after the review fixes (details: `docs/REGRESSION_TRIAGE.md` §7):
 `make test-all REQUIRE_DB=1` passed: SDK 34, engine 236, hello 5, hotpot 8, tau2 2, bench 83,
@@ -73,11 +78,14 @@ bootstrap runs in a thread pool. `npm audit` on production dependencies reports 
 vulnerabilities (Next 15.5.28, Playwright 1.58.2, direct `postcss` 8.5.31, `source-map-js`
 1.2.2, `next.postcss` override 8.5.31).
 
-**Open before closing the milestone:** GitHub CI has not run yet; the manager opens the PR.
+**Open before closing the milestone:** review of draft
+[PR #1](https://github.com/JCHETAN26/vigil/pull/1). Hosted CI results: see the
+[PR checks](https://github.com/JCHETAN26/vigil/pull/1/checks) and
+[workflow run](https://github.com/JCHETAN26/vigil/actions/runs/40064325583) for current status.
 
 **Known limitations:** the full `npm audit` still reports 3 moderate, dev-only advisories in the
-Tailwind 3 chain. Fixing them needs a Tailwind 4 migration, which is not planned for this
-milestone. The synthetic check used Kafka 4.1, not the pinned Redpanda. Paid suites were not
+Tailwind 3 chain. npm's suggested fix is a Tailwind 4 migration, which is deferred and not
+planned for this milestone. The synthetic check used Kafka 4.1, not the pinned Redpanda. Paid suites were not
 run on the final code. Ingest dedup across restarts is limited as described above.
 
 ## Environment (migrated 2026-09-27)

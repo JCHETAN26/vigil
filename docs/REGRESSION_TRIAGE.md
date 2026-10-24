@@ -162,18 +162,28 @@ in general. **It is not an AI-quality or performance result.** It uses synthetic
 no paid model calls, and it does not measure latency or throughput. No artifacts from it are committed under
 `bench/results/`.
 
+**Original synthetic evaluation (one run, before the final review fixes):**
+
 - Path: the real orchestrator → OTLP receiver → Kafka → writer → ClickHouse. The queue was
   **Apache Kafka 4.1, not the Redpanda image pinned in `deploy/docker-compose.yml`**.
 - Data: 160 results, which is 40 cases × 2 agent versions × 2 trials.
-- The CLI regression, the API regression, and the offline `reproduce` of the saved bundle all
-  gave consistent verdicts.
-- All 160 trace links resolved to traces with spans.
-- In real Chrome, the comparison page loaded and navigation from it to the traces worked.
-- A tampered bundle was rejected by `reproduce`.
 
-These synthetic checks ran on the code before the final review fixes. The checks repeated on
-the final code are the ones listed below. No new eval runs and no paid model calls were made for
-them.
+**Re-query and re-export validation (after the final review fixes):** the API, CLI and real
+Chrome checks were repeated on the stored results of that same run, on the final code. No new
+eval runs and no model or provider calls were made for them.
+
+- The CLI regression and the API regression agreed in both directions (regression and
+  improvement).
+- Version paging returned 160 stable, unique version rows.
+- All 160 trace links resolved to real traces with spans.
+- Invalid version selections were refused with an error.
+- In real Chrome, the comparison page, the version diff and navigation to the traces worked.
+- A format-2 bundle was exported from clean committed code
+  (`15a5f5c97de7fd8f6316035acbd0c8ec0bc73dbc`) and reproduced offline with `reproduce`.
+- A tampered copy of that bundle was rejected by `reproduce`.
+
+An earlier version-1 bundle exported before the review fixes was interim and is not part of the
+final evidence.
 
 Final local checks after the review fixes, run with `make test-all REQUIRE_DB=1`: passed.
 
@@ -201,7 +211,11 @@ Other final checks:
 | route-mocked Playwright suite (`e2e:mocked`, Chrome) | 18 passed |
 | `npm audit`, production dependencies only | 0 vulnerabilities |
 | `npm audit` (including dev) | 3 moderate, dev-only (see below) |
-| GitHub CI | **not run yet** |
+| GitHub CI (hosted) | see the [PR checks](https://github.com/JCHETAN26/vigil/pull/1/checks) and [workflow run](https://github.com/JCHETAN26/vigil/actions/runs/40064325583) for current results |
+
+Hosted CI runs on draft [PR #1](https://github.com/JCHETAN26/vigil/pull/1). The links above
+show its current status; this document does not record a final CI result. The remaining review
+step is the review of that PR.
 
 The mocked browser suite includes regression tests for three bugs fixed in review. A stale
 response must not overwrite a retried request. Paging across several versions must stay
@@ -212,7 +226,7 @@ The dependency audit was run after these upgrades: Next 15.5.28, Playwright 1.58
 `postcss` 8.5.31 dependency, `source-map-js` 1.2.2, and an `overrides` entry that pins Next's
 own `postcss` to 8.5.31. The 3 remaining moderate advisories come from the Tailwind 3 build
 chain. They are in dev dependencies only, which is why the production-only audit is clean.
-Fixing them needs a Tailwind 4 migration, which is out of scope here.
+The fix npm suggests is a Tailwind 4 migration, which is deferred and out of scope here.
 
 Earlier real-model measurements (HotpotQA base100 A/A, τ² retail baselines) stay as they were
 under `bench/results/`. This check does not replace or re-validate them.
