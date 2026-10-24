@@ -2,6 +2,7 @@ package receiver
 
 import (
 	"context"
+	"errors"
 	"io"
 	"log/slog"
 	"testing"
@@ -10,10 +11,14 @@ import (
 	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 )
 
-// fakeSink records what the handler routes, for assertions.
+// fakeSink records what the handler routes, for assertions. rawFailAt (1-based) makes that
+// Raw call and every later one fail; dlqErr makes every DLQ call fail.
 type fakeSink struct {
-	raw []string // trace ids sent to the raw topic
-	dlq []dlqCall
+	raw       []string // trace ids sent to the raw topic
+	dlq       []dlqCall
+	rawCalls  int
+	rawFailAt int
+	dlqErr    error
 }
 
 type dlqCall struct {
@@ -23,12 +28,21 @@ type dlqCall struct {
 	payload int // payload length
 }
 
+var errBroker = errors.New("broker unavailable")
+
 func (f *fakeSink) Raw(_ context.Context, traceID string, _ []byte) error {
+	f.rawCalls++
+	if f.rawFailAt > 0 && f.rawCalls >= f.rawFailAt {
+		return errBroker
+	}
 	f.raw = append(f.raw, traceID)
 	return nil
 }
 
 func (f *fakeSink) DLQ(_ context.Context, traceID string, payload []byte, stage, reason string) error {
+	if f.dlqErr != nil {
+		return f.dlqErr
+	}
 	f.dlq = append(f.dlq, dlqCall{traceID: traceID, stage: stage, reason: reason, payload: len(payload)})
 	return nil
 }

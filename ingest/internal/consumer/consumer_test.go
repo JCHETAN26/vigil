@@ -20,28 +20,89 @@ import (
 
 // --- fakes ---
 
+var errTransient = errors.New("transient clickhouse error")
+
+// fakeSink records every insert attempt. Successful inserts are also kept in inserts.
 type fakeSink struct {
-	inserts []insertCall
-	err     error
+	inserts  []insertCall // successful inserts
+	attempts []insertCall // every attempt, including failed ones
+	err      error        // when set, every attempt fails with it
+	failN    int          // the first failN attempts fail with errTransient
+	block    bool         // attempts block until their context is done
+	// onAttempt (optional) runs at the start of attempt n (1-based).
+	onAttempt func(n int)
+	// failToken (optional) fails every attempt whose dedup token it matches.
+	failToken func(token string) bool
 }
 
 type insertCall struct {
-	token string
-	rows  int
+	token   string
+	rows    int
+	spanIDs []string
 }
 
-func (f *fakeSink) Insert(_ context.Context, rows []chsink.Row, token string) error {
+func (f *fakeSink) Insert(ctx context.Context, rows []chsink.Row, token string) error {
+	call := insertCall{token: token, rows: len(rows)}
+	for _, r := range rows {
+		call.spanIDs = append(call.spanIDs, r.SpanID)
+	}
+	f.attempts = append(f.attempts, call)
+	if f.onAttempt != nil {
+		f.onAttempt(len(f.attempts))
+	}
+	if f.block {
+		<-ctx.Done()
+		return ctx.Err()
+	}
 	if f.err != nil {
 		return f.err
 	}
-	f.inserts = append(f.inserts, insertCall{token: token, rows: len(rows)})
+	if f.failToken != nil && f.failToken(token) {
+		return errTransient
+	}
+	if len(f.attempts) <= f.failN {
+		return errTransient
+	}
+	f.inserts = append(f.inserts, call)
 	return nil
 }
 func (f *fakeSink) Ping(context.Context) error { return nil }
 
-type fakeDLQ struct{ count int }
+// fakeCommitter counts commit attempts; the first failN fail, or all of them if always.
+type fakeCommitter struct {
+	attempts  int
+	failN     int
+	always    bool
+	committed []int64
+}
 
-func (f *fakeDLQ) ProduceSync(_ context.Context, recs ...producer.Record) error {
+func (f *fakeCommitter) commit(_ context.Context, r *kgo.Record) error {
+	f.attempts++
+	if f.always || f.attempts <= f.failN {
+		return errors.New("commit failed")
+	}
+	f.committed = append(f.committed, r.Offset)
+	return nil
+}
+
+// fakeDLQ counts successful publishes. When err is set every publish fails with it; when
+// block is set publishes block until their context is done.
+type fakeDLQ struct {
+	count    int
+	attempts int
+	err      error
+	block    bool
+}
+
+func (f *fakeDLQ) ProduceSync(ctx context.Context, recs ...producer.Record) error {
+	f.attempts++
+	if f.block {
+		<-ctx.Done()
+		return ctx.Err()
+	}
+	if f.err != nil {
+		return f.err
+	}
 	f.count += len(recs)
 	return nil
 }
@@ -59,7 +120,10 @@ func newTestConsumer(sink spanSink, dlq dlqPublisher, commit func(context.Contex
 		maxRows:  10000,
 		maxBytes: 32 << 20,
 		interval: time.Second,
+		retry:    retryPolicy{initial: time.Millisecond, max: 4 * time.Millisecond, window: time.Second},
 		batches:  map[int32]*batch{},
+		stalled:  map[int32]int64{},
+		failures: map[int32]error{},
 	}
 }
 
@@ -141,6 +205,7 @@ func TestCommitOnlyAfterSuccessfulInsert(t *testing.T) {
 	commits := 0
 	commit := func(context.Context, *kgo.Record) error { commits++; return nil }
 	c := newTestConsumer(sink, dlq, commit)
+	c.retry.window = 50 * time.Millisecond
 	ctx := context.Background()
 
 	c.mu.Lock()
