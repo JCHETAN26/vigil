@@ -8,7 +8,9 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit
+
+DEFAULT_DASHBOARD_ORIGINS = ("http://127.0.0.1:3000", "http://localhost:3000")
 
 
 def _env_int(key: str, default: int) -> int:
@@ -95,6 +97,57 @@ def redis_url() -> str | None:
     host = os.getenv("REDIS_HOST", "127.0.0.1")
     port = os.getenv("REDIS_PORT", "6379")
     return f"redis://:{quote(password)}@{host}:{port}/0"
+
+
+def dashboard_origins() -> list[str]:
+    """Browser origins allowed to call the read-only dashboard API (CORS). Unset or blank:
+    :data:`DEFAULT_DASHBOARD_ORIGINS`. Otherwise ``VIGIL_DASHBOARD_ORIGINS`` is a comma-separated
+    list of exact origins (``scheme://host[:port]``, http/https only). Anything else, including
+    ``*``, a path, a query, or credentials in the URL, raises ``ValueError`` so the API refuses to
+    start instead of silently widening or dropping access."""
+    raw = os.getenv("VIGIL_DASHBOARD_ORIGINS")
+    if raw is None or raw.strip() == "":
+        return list(DEFAULT_DASHBOARD_ORIGINS)
+    origins: list[str] = []
+    for item in raw.split(","):
+        origin = item.strip()
+        if not origin:
+            raise ValueError(f"VIGIL_DASHBOARD_ORIGINS has an empty entry: {raw!r}")
+        if origin not in origins:
+            origins.append(_check_origin(origin))
+    return origins
+
+
+def _check_origin(origin: str) -> str:
+    def bad(why: str) -> ValueError:
+        return ValueError(
+            f"VIGIL_DASHBOARD_ORIGINS entry {origin!r} is not an exact origin ({why}); "
+            "expected scheme://host[:port], e.g. http://127.0.0.1:3000"
+        )
+
+    if "*" in origin:
+        raise bad("wildcards are not allowed")
+    try:
+        parts = urlsplit(origin)
+        port = parts.port
+    except ValueError as exc:
+        raise bad(str(exc)) from exc
+    if parts.scheme not in ("http", "https"):
+        raise bad("scheme must be http or https")
+    if not parts.hostname:
+        raise bad("missing host")
+    if parts.username is not None or parts.password is not None:
+        raise bad("credentials are not allowed")
+    if parts.path or parts.query or parts.fragment or origin.endswith(("?", "#")):
+        raise bad("no path, query, fragment, or trailing slash")
+    if port == 0:
+        raise bad("port must be 1-65535")
+    # The browser sends the Origin header lowercased and without a default port, and CORS
+    # matching is exact, so require that canonical form rather than a value that never matches.
+    default_port = {"http": 80, "https": 443}[parts.scheme]
+    if origin != origin.lower() or port == default_port:
+        raise bad("must be lowercase, without the scheme's default port")
+    return origin
 
 
 @dataclass

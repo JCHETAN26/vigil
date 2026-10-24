@@ -16,22 +16,25 @@ from __future__ import annotations
 import json
 import uuid
 from contextlib import asynccontextmanager
+from dataclasses import dataclass
 from typing import Annotated
 
-from fastapi import FastAPI, HTTPException, Path, Query
+from fastapi import Depends, FastAPI, HTTPException, Path, Query
+from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from psycopg.rows import dict_row
 from psycopg_pool import AsyncConnectionPool
 
-from engine.config import pg_ro_dsn
-from engine.regression import HIGHER_IS_BETTER, METRIC_DIRECTION, paired_bootstrap_diff
+from engine import gate
+from engine.config import dashboard_origins, pg_ro_dsn
+from engine.db.triage import PgTriageStore
+from engine.manifests import REDACTION_NOTE, diff_manifests, sanitize_manifest
 
 from .clickhouse import ClickHouseClient, ClickHouseError
 
 TraceId = Annotated[str, Path(pattern=r"^[0-9a-f]{32}$")]
 _MAX_TRACE_SPANS = 5000
-_GATE = {"passed", "TokenF1"}
-_THRESHOLDS = {"passed": 0.05, "TokenF1": 0.05}
+_VERSION_PATTERN = r"^[0-9a-f]{8,64}$"
 
 
 @asynccontextmanager
@@ -42,19 +45,27 @@ async def lifespan(app: FastAPI):
     await pool.open()
     app.state.pool = pool
     app.state.ch = ClickHouseClient()
+    app.state.triage = PgTriageStore(_fetchall)
     try:
         yield
     finally:
         await pool.close()
 
 
+def add_cors(target: FastAPI, origins: list[str]) -> None:
+    """Exact-origin, read-only CORS: GET only, no credentials, never a wildcard origin."""
+    target.add_middleware(
+        CORSMiddleware,
+        allow_origins=origins,
+        allow_credentials=False,
+        allow_methods=["GET"],
+        allow_headers=["*"],
+    )
+
+
 app = FastAPI(title="Vigil dashboard API", lifespan=lifespan)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://127.0.0.1:3000", "http://localhost:3000"],
-    allow_methods=["GET"],
-    allow_headers=["*"],
-)
+# VIGIL_DASHBOARD_ORIGINS (default: localhost/127.0.0.1 :3000); malformed values fail startup.
+add_cors(app, dashboard_origins())
 
 
 async def _fetchall(sql: str, params: tuple = ()):
@@ -114,7 +125,8 @@ async def get_run(run_id: uuid.UUID):
         "SELECT count(*) AS n, count(*) FILTER (WHERE status='ok') AS n_ok, "
         "avg((passed)::int) FILTER (WHERE status='ok') AS pass_rate, "
         "avg(cost_usd) FILTER (WHERE status='ok') AS mean_cost, "
-        "avg(latency_ms) FILTER (WHERE status='ok') AS mean_latency "
+        "avg(latency_ms) FILTER (WHERE status='ok') AS mean_latency, "
+        "count(DISTINCT agent_version) AS n_versions "
         "FROM eval_case_results WHERE run_id = %s",
         (run_id,),
     )
@@ -125,6 +137,8 @@ async def get_run(run_id: uuid.UUID):
         "pass_rate": float(agg["pass_rate"]) if agg["pass_rate"] is not None else None,
         "mean_cost_usd": float(agg["mean_cost"]) if agg["mean_cost"] is not None else None,
         "mean_latency_ms": float(agg["mean_latency"]) if agg["mean_latency"] is not None else None,
+        # The aggregates above pool every version's results; >1 means they are not per-version.
+        "n_versions": agg["n_versions"],
     }
 
 
@@ -137,11 +151,13 @@ async def get_cases(
     if await _fetchone("SELECT 1 FROM eval_runs WHERE id = %s", (run_id,)) is None:
         raise HTTPException(404, "run not found")
     rows = await _fetchall(
-        "SELECT r.case_id, r.trial, r.status, r.passed, r.score, r.scores, r.cost_usd, "
-        "r.input_tokens, r.output_tokens, r.latency_ms, r.trace_id, ec.tags "
+        "SELECT r.agent_version, r.case_id, r.trial, r.status, r.passed, r.score, r.scores, "
+        "r.cost_usd, r.input_tokens, r.output_tokens, r.latency_ms, r.trace_id, ec.tags "
         "FROM eval_case_results r JOIN eval_runs run ON run.id = r.run_id "
         "JOIN eval_cases ec ON ec.suite_id = run.suite_id AND ec.case_id = r.case_id "
-        "WHERE r.run_id = %s ORDER BY r.case_id, r.trial LIMIT %s OFFSET %s",
+        # A multi-version run holds each (case_id, trial) once per version. Ordering by the whole
+        # UNIQUE (run_id, agent_version, case_id, trial) key keeps LIMIT/OFFSET pages stable.
+        "WHERE r.run_id = %s ORDER BY r.case_id, r.agent_version, r.trial LIMIT %s OFFSET %s",
         (run_id, limit, offset),
     )
     return {
@@ -150,6 +166,7 @@ async def get_cases(
         "offset": offset,
         "cases": [
             {
+                "agent_version": r["agent_version"],
                 "case_id": r["case_id"],
                 "trial": r["trial"],
                 "status": r["status"],
@@ -256,81 +273,170 @@ async def get_trace(trace_id: TraceId):
     }
 
 
-async def _load_series(run_id: uuid.UUID) -> dict[str, dict[str, list[float]]]:
-    rows = await _fetchall(
-        "SELECT case_id, passed, scores, cost_usd, latency_ms FROM eval_case_results "
-        "WHERE run_id = %s AND status = 'ok'",
-        (run_id,),
-    )
-    series: dict[str, dict[str, list[float]]] = {}
+# --- regression triage (engine.gate; contract in engine/TRIAGE_API.md) ---------------
 
-    def add(metric, case_id, value):
-        series.setdefault(metric, {}).setdefault(case_id, []).append(float(value))
 
-    for r in rows:
-        add("passed", r["case_id"], 1.0 if r["passed"] else 0.0)
-        for name, entry in (r["scores"] or {}).items():
-            if isinstance(entry, dict) and isinstance(entry.get("score"), (int, float)):
-                add(name, r["case_id"], entry["score"])
-        if r["cost_usd"] is not None:
-            add("cost_usd", r["case_id"], r["cost_usd"])
-        if r["latency_ms"] is not None:
-            add("latency_ms", r["case_id"], r["latency_ms"])
-    return series
+@dataclass
+class _Pair:
+    baseline: uuid.UUID
+    candidate: uuid.UUID
+    baseline_version: str | None
+    candidate_version: str | None
+
+
+def _pair(
+    baseline: uuid.UUID,
+    candidate: uuid.UUID,
+    baseline_version: str | None = Query(None, pattern=_VERSION_PATTERN),
+    candidate_version: str | None = Query(None, pattern=_VERSION_PATTERN),
+) -> _Pair:
+    return _Pair(baseline, candidate, baseline_version, candidate_version)
+
+
+def _policy(
+    alpha: float = Query(gate.DEFAULT_POLICY.alpha, gt=0, lt=0.5),
+    method: str = Query(gate.DEFAULT_POLICY.method, pattern="^(t|percentile|bca)$"),
+    threshold_pass: float | None = Query(None, ge=0, le=1),
+    threshold_f1: float | None = Query(None, ge=0, le=1),
+    n_boot: int = Query(gate.DEFAULT_POLICY.n_boot, ge=1000, le=20000),
+    seed: int = Query(gate.DEFAULT_POLICY.seed, ge=0, le=2**32 - 1),
+    two_level: bool = Query(False),
+) -> gate.Policy:
+    try:
+        return gate.DEFAULT_POLICY.with_overrides(
+            alpha=alpha, method=method, threshold_pass=threshold_pass,
+            threshold_f1=threshold_f1, n_boot=n_boot, seed=seed, two_level=two_level,
+        )
+    except gate.ComparisonError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+def _http(exc: gate.ComparisonError) -> HTTPException:
+    return HTTPException(404 if exc.kind == "not_found" else 400, str(exc))
+
+
+async def _inputs(p: _Pair) -> gate.ComparisonInputs:
+    try:
+        return await gate.load_inputs(
+            app.state.triage, str(p.baseline), str(p.candidate),
+            p.baseline_version, p.candidate_version,
+        )
+    except gate.ComparisonError as exc:
+        raise _http(exc) from exc
+
+
+def _summary_fields(cmp: gate.Comparison) -> dict:
+    d = cmp.to_dict()
+    return {
+        "baseline_version": cmp.baseline.agent_version,
+        "candidate_version": cmp.candidate.agent_version,
+        "verdict": d["verdict"],
+        "complete": d["complete"],
+        "incomplete_reasons": d["incomplete_reasons"],
+        "context": {"baseline": d["baseline"], "candidate": d["candidate"]},
+        "policy": d["policy"],
+        "coverage": d["coverage"],
+    }
 
 
 @app.get("/compare")
 async def compare(
-    baseline: uuid.UUID,
-    candidate: uuid.UUID,
-    alpha: float = Query(0.05, gt=0, lt=0.5),
-    method: str = Query("t", pattern="^(t|percentile|bca)$"),
+    pair: Annotated[_Pair, Depends(_pair)], policy: Annotated[gate.Policy, Depends(_policy)]
 ):
-    b_meta = await _fetchone("SELECT suite_id FROM eval_runs WHERE id = %s", (baseline,))
-    c_meta = await _fetchone("SELECT suite_id FROM eval_runs WHERE id = %s", (candidate,))
-    if b_meta is None or c_meta is None:
-        raise HTTPException(404, "run not found")
-    if b_meta["suite_id"] != c_meta["suite_id"]:
-        raise HTTPException(
-            400,
-            "runs are from different suites; a paired comparison requires the same suite",
+    # The bootstrap is CPU-bound (n_boot × metrics); keep it off the event loop.
+    cmp = await run_in_threadpool(gate.compare, await _inputs(pair), policy)
+    d = cmp.to_dict()
+    return gate.json_safe({
+        # Pre-triage response fields, unchanged in shape.
+        "baseline": str(pair.baseline),
+        "candidate": str(pair.candidate),
+        "method": policy.method,
+        "alpha": policy.alpha,
+        "paired_cases": cmp.paired_cases,
+        "gated_regression": cmp.gated_regression,
+        "metrics": d["metrics"],
+        # Resolved context, effective policy, coverage audit, metrics that could not be compared.
+        **_summary_fields(cmp),
+        "skipped_metrics": d["skipped_metrics"],
+    })
+
+
+_CASE_FILTERS = "^(all|adverse|unpaired|failed)$"
+
+
+@app.get("/compare/cases")
+async def compare_cases(
+    pair: Annotated[_Pair, Depends(_pair)],
+    policy: Annotated[gate.Policy, Depends(_policy)],
+    metric: str | None = Query(None, pattern=r"^[A-Za-z0-9_@.\-]{1,64}$"),
+    only: str = Query("all", alias="filter", pattern=_CASE_FILTERS),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+):
+    inputs = await _inputs(pair)
+    available = gate.available_metrics(inputs)
+    # No results on either side → `passed` with an empty case list (200, verdict incomplete).
+    sort_metric = metric or next((m for m in policy.gated if m in available), available[0]
+                                 if available else "passed")
+    try:
+        rows = gate.case_deltas(inputs, sort_metric)
+    except gate.ComparisonError as exc:
+        raise _http(exc) from exc
+    if only == "adverse":
+        rows = [r for r in rows if (r["adverse_delta"] or 0.0) > 0]
+    elif only == "unpaired":
+        rows = [r for r in rows if not r["paired"]]
+    elif only == "failed":
+        rows = [r for r in rows if r["baseline"]["n_failed"] or r["candidate"]["n_failed"]]
+    cmp = await run_in_threadpool(gate.compare, inputs, policy)  # CPU-bound bootstrap
+    return gate.json_safe({
+        "baseline": str(pair.baseline),
+        "candidate": str(pair.candidate),
+        **_summary_fields(cmp),
+        "sort_metric": sort_metric,
+        "sort_direction": gate.direction_of(sort_metric),
+        "metrics_available": available,
+        "filter": only,
+        "total": len(rows),
+        "limit": limit,
+        "offset": offset,
+        "cases": rows[offset: offset + limit],
+    })
+
+
+@app.get("/versions/diff")
+async def versions_diff(pair: Annotated[_Pair, Depends(_pair)]):
+    try:
+        b, c = await gate.resolve_pair(
+            app.state.triage, str(pair.baseline), str(pair.candidate),
+            pair.baseline_version, pair.candidate_version,
+            require_same_suite=False, allow_identical=True,
         )
-    b = await _load_series(baseline)
-    c = await _load_series(candidate)
-    shared_metrics = [m for m in b if m in c]
-    # Paired case count: cases present (ok) in both runs, per metric they share overall.
-    if shared_metrics:
-        b_cases = set().union(*[set(b[m]) for m in shared_metrics])
-        c_cases = set().union(*[set(c[m]) for m in shared_metrics])
-        paired_cases = len(b_cases & c_cases)
-    else:
-        paired_cases = 0
-    results = []
-    for m in shared_metrics:
-        v = paired_bootstrap_diff(
-            b[m], c[m], metric=m, direction=METRIC_DIRECTION.get(m, HIGHER_IS_BETTER),
-            threshold=_THRESHOLDS.get(m, 0.0), alpha=alpha, method=method,
-        )
-        results.append(
-            {
-                "metric": m,
-                "gated": m in _GATE,
-                "point_estimate": v.point_estimate,
-                "ci_bound": v.ci_bound,
-                "ci_excludes_zero": v.ci_excludes_zero,
-                "beyond_threshold": v.beyond_threshold,
-                "regressed": v.regressed,
-                "direction": v.direction,
-                "tail_prob": v.tail_prob,
-                "n_questions": v.n_questions,
-            }
-        )
+    except gate.ComparisonError as exc:
+        raise _http(exc) from exc
+    raw_b = await app.state.triage.get_manifest(b.agent_id, b.agent_version)
+    raw_c = await app.state.triage.get_manifest(c.agent_id, c.agent_version)
+    man_b, red_b, trunc_b = sanitize_manifest(raw_b)
+    man_c, red_c, trunc_c = sanitize_manifest(raw_c)
+    fields = diff_manifests(raw_b, raw_c)
+    missing = [s for s, m in (("baseline", raw_b), ("candidate", raw_c)) if m is None]
     return {
-        "baseline": str(baseline),
-        "candidate": str(candidate),
-        "method": method,
-        "alpha": alpha,
-        "paired_cases": paired_cases,
-        "gated_regression": any(r["regressed"] for r in results if r["gated"]),
-        "metrics": results,
+        "baseline": {"run_id": b.run_id, "agent_id": b.agent_id,
+                     "agent_version": b.agent_version, "run_git_sha": b.git_sha,
+                     "version_selection": b.version_selection, "suite_id": b.suite_id},
+        "candidate": {"run_id": c.run_id, "agent_id": c.agent_id,
+                      "agent_version": c.agent_version, "run_git_sha": c.git_sha,
+                      "version_selection": c.version_selection, "suite_id": c.suite_id},
+        "same_suite": b.suite_id == c.suite_id,
+        "same_version": b.agent_version == c.agent_version,
+        "identical": None if missing else not any(f["changed"] for f in fields.values()),
+        "missing_manifests": missing,
+        "fields": fields,
+        "baseline_manifest": man_b,
+        "candidate_manifest": man_c,
+        "redaction": {
+            "redacted_paths": {"baseline": red_b, "candidate": red_c},
+            "truncated_paths": {"baseline": trunc_b, "candidate": trunc_c},
+            "note": REDACTION_NOTE,
+        },
     }

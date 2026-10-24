@@ -4,6 +4,8 @@ python -m engine migrate
 python -m engine suite create --name calc --adapter local --path suites/calc.json
 python -m engine run --suite calc --agent hello_agent.agent --mode development --trials 2
 python -m engine show --run <uuid>
+python -m engine regress --baseline <uuid> --candidate <uuid> [--candidate-version <hash>]
+    [--save DIR]   # verdict via engine.gate (shared with the dashboard API)
 """
 
 from __future__ import annotations
@@ -13,6 +15,8 @@ import asyncio
 import os
 import shutil
 import sys
+import uuid
+from contextlib import asynccontextmanager
 
 import psycopg
 
@@ -139,70 +143,106 @@ def cmd_show(args) -> int:
     return 0
 
 
-_REGRESS_ORDER = [
-    "passed", "TokenF1", "ExactMatch", "RetrievalRecall@5", "RetrievalRecall@10",
-    "NDCG", "AllGoldRetrieved", "cost_usd", "latency_ms",
-]
-_REGRESS_GATE = {"passed", "TokenF1"}  # these decide the verdict; others are informational
+@asynccontextmanager
+async def _triage_store():
+    """The Postgres-backed gate store (tests substitute an in-memory fake)."""
+    from engine.db.triage import PgTriageStore, connection_fetchall
+
+    async with await psycopg.AsyncConnection.connect(pg_dsn()) as conn:
+        yield PgTriageStore(connection_fetchall(conn))
 
 
-def _load_run_series(conn, run_id: str) -> dict[str, dict[str, list[float]]]:
-    """Per-(case, trial) metric series for a run's OK units: {metric: {case_id: [trial values]}}.
-    'passed' is 0/1; scorer metrics come from the scores jsonb; plus cost_usd and latency_ms."""
-    rows = conn.execute(
-        "SELECT case_id, passed, scores, cost_usd, latency_ms FROM eval_case_results "
-        "WHERE run_id = %s AND status = 'ok'",
-        (run_id,),
-    ).fetchall()
-    series: dict[str, dict[str, list[float]]] = {}
+async def _gather_regress(args):
+    """Resolve + load the comparison inputs, plus provenance for --save, in one store session."""
+    from engine import gate
+    from engine.manifests import REDACTION_NOTE, sanitize_manifest
 
-    def add(metric, case_id, value):
-        series.setdefault(metric, {}).setdefault(case_id, []).append(float(value))
+    async with _triage_store() as store:
+        inputs = await gate.load_inputs(
+            store, args.baseline, args.candidate, args.baseline_version, args.candidate_version
+        )
+        meta: dict = {"suites": {}, "manifests": {}, "manifest_redaction_note": REDACTION_NOTE}
+        for label, side in (("baseline", inputs.baseline), ("candidate", inputs.candidate)):
+            run = await store.get_run(side.run_id) or {}
+            meta["suites"][label] = {
+                "suite_id": side.suite_id, "name": run.get("suite"),
+                "adapter": run.get("suite_adapter"), "config": run.get("suite_config"),
+            }
+            manifest, redacted, truncated = sanitize_manifest(
+                await store.get_manifest(side.agent_id, side.agent_version)
+            )
+            meta["manifests"][label] = {
+                "manifest": manifest, "redacted_paths": redacted, "truncated_paths": truncated,
+            }
+    return inputs, meta
 
-    for case_id, passed, scores, cost, lat in rows:
-        add("passed", case_id, 1.0 if passed else 0.0)
-        for name, entry in (scores or {}).items():
-            if isinstance(entry, dict) and isinstance(entry.get("score"), (int, float)):
-                add(name, case_id, entry["score"])
-        if cost is not None:
-            add("cost_usd", case_id, cost)
-        if lat is not None:
-            add("latency_ms", case_id, lat)
-    return series
+
+def _print_comparison(cmp) -> None:
+    b, c, pol = cmp.baseline, cmp.candidate, cmp.policy
+    print(
+        f"regression: candidate {c.run_id[:12]}@{c.agent_version[:12]} vs baseline "
+        f"{b.run_id[:12]}@{b.agent_version[:12]} (alpha={pol.alpha}, method={pol.method}, "
+        f"two_level={pol.two_level}, thresholds={pol.thresholds})"
+    )
+    cov = cmp.coverage
+    print(
+        f"  paired cases {cmp.paired_cases}/{cov['suite_cases']}; failed trials "
+        f"baseline {cov['baseline']['failed_trials']}/{cov['baseline']['trials']}, candidate "
+        f"{cov['candidate']['failed_trials']}/{cov['candidate']['trials']} (scored as failures)"
+    )
+    for m in cmp.metrics:
+        tag = "GATE" if m["gated"] else "info"
+        arrow = "↓" if m["direction"] == "higher_is_better" else "↑"
+        print(
+            f"  [{tag}] {m['metric']:18s} Δ={m['point_estimate']:+.4f} {arrow} "
+            f"(1−α bound {m['ci_bound']:+.4f}; excl0={m['ci_excludes_zero']}; "
+            f"≥thr={m['beyond_threshold']}; p={m['tail_prob']:.3f}) → "
+            + ("REGRESSION" if m["regressed"] else m["status"])
+        )
+    for s in cmp.skipped_metrics:
+        print(f"  [{'GATE' if s['gated'] else 'info'}] {s['metric']:18s} not compared: "
+              f"{s['reason']}")
+    for r in cmp.incomplete_reasons:
+        print(f"  incomplete: {r}")
+    if cmp.verdict == "regression":
+        print("VERDICT: REGRESSION on a gated metric")
+    elif cmp.verdict == "incomplete":
+        print("VERDICT: INCOMPLETE comparison — not a pass (see reasons above)")
+    else:
+        print("VERDICT: no gated regression")
+
+
+_EXIT_CODES = {"no_regression": 0, "regression": 2, "incomplete": 3}
 
 
 def cmd_regress(args) -> int:
-    from engine.regression import HIGHER_IS_BETTER, METRIC_DIRECTION, paired_bootstrap_diff
+    import vigil
 
-    with _connect() as conn:
-        base = _load_run_series(conn, args.baseline)
-        cand = _load_run_series(conn, args.candidate)
-    if not base or not cand:
-        print("error: one of the runs has no OK results to compare", file=sys.stderr)
+    from engine import bundle, gate
+
+    # Canonical spelling (ValueError → clean CLI error, before any query): Postgres accepts
+    # upper-case/braced/hyphenless forms of one id, which must not pass as two different runs.
+    args.baseline = str(uuid.UUID(args.baseline))
+    args.candidate = str(uuid.UUID(args.candidate))
+    if args.save and os.path.lexists(args.save):
+        print(f"error: --save target {args.save} already exists; refusing to overwrite",
+              file=sys.stderr)
         return 1
-
-    thresholds = {"passed": args.threshold_pass, "TokenF1": args.threshold_f1}
-    print(
-        f"regression: candidate {args.candidate[:12]} vs baseline {args.baseline[:12]} "
-        f"(alpha={args.alpha}, two_level={args.two_level})"
+    policy = gate.DEFAULT_POLICY.with_overrides(
+        alpha=args.alpha, method=args.method, n_boot=args.n_boot, seed=args.seed,
+        two_level=args.two_level, threshold_pass=args.threshold_pass,
+        threshold_f1=args.threshold_f1,
     )
-    gated_regression = False
-    for m in _REGRESS_ORDER:
-        if m not in base or m not in cand:
-            continue
-        v = paired_bootstrap_diff(
-            base[m], cand[m], metric=m,
-            direction=METRIC_DIRECTION.get(m, HIGHER_IS_BETTER),
-            threshold=thresholds.get(m, 0.0),
-            alpha=args.alpha, n_boot=args.n_boot, seed=args.seed, two_level=args.two_level,
-            method=args.method,
-        )
-        tag = "GATE" if m in _REGRESS_GATE else "info"
-        print(f"  [{tag}] {v.summary()}")
-        if m in _REGRESS_GATE and v.regressed:
-            gated_regression = True
-    print("VERDICT:", "REGRESSION on a gated metric" if gated_regression else "no gated regression")
-    return 0
+    inputs, meta = asyncio.run(_gather_regress(args))
+    cmp = gate.compare(inputs, policy)
+    _print_comparison(cmp)
+    if args.save:
+        meta["engine_source"] = {"git_sha": vigil.git_sha(), "dirty_tree": "not recorded"}
+        meta["argv"] = list(sys.argv)
+        out = bundle.write_bundle(args.save, inputs, policy, cmp, meta)
+        print(f"saved evidence bundle -> {out} "
+              f"(verify: python bench/regression_verdict.py reproduce {out})")
+    return _EXIT_CODES[cmp.verdict] if args.exit_code else 0
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -250,6 +290,12 @@ def build_parser() -> argparse.ArgumentParser:
     reg = sub.add_parser("regress", help="paired bootstrap regression detection between two runs")
     reg.add_argument("--baseline", required=True, help="baseline run id")
     reg.add_argument("--candidate", required=True, help="candidate run id (same suite)")
+    reg.add_argument(
+        "--baseline-version", default=None,
+        help="agent version (hash or >=8-char prefix) in the baseline run; required when the "
+        "run holds several versions",
+    )
+    reg.add_argument("--candidate-version", default=None, help="agent version in the candidate run")
     reg.add_argument("--alpha", type=float, default=0.05, help="one-sided significance level")
     reg.add_argument("--threshold-pass", type=float, default=0.05, help="practical threshold pass")
     reg.add_argument("--threshold-f1", type=float, default=0.03, help="practical threshold (F1)")
@@ -257,6 +303,14 @@ def build_parser() -> argparse.ArgumentParser:
     reg.add_argument("--method", default="t", choices=["t", "percentile", "bca"], help="CI method")
     reg.add_argument("--n-boot", type=int, default=10000)
     reg.add_argument("--seed", type=int, default=1234)
+    reg.add_argument(
+        "--save", default=None, metavar="DIR",
+        help="export raw series, policy, identities and verdict to a NEW directory",
+    )
+    reg.add_argument(
+        "--exit-code", action="store_true",
+        help="exit 2 on a gated regression, 3 on an incomplete comparison (default: always 0)",
+    )
     reg.set_defaults(func=cmd_regress)
     return p
 
@@ -265,7 +319,7 @@ def main(argv=None) -> int:
     args = build_parser().parse_args(argv if argv is not None else sys.argv[1:])
     try:
         return args.func(args)
-    except (CacheRefusedError, WorkerCrashed, KeyError, ValueError) as exc:
+    except (CacheRefusedError, WorkerCrashed, KeyError, ValueError, FileExistsError) as exc:
         # Expected, actionable failures: a clear one-line message, not a traceback.
         print(f"error: {exc}", file=sys.stderr)
         return 1
