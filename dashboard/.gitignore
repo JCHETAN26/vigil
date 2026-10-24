@@ -3,3 +3,12 @@
 /out
 next-env.d.ts
 *.tsbuildinfo
+# Isolated build dirs (NEXT_DIST_DIR) of the route-mocked Playwright server and of verification
+# builds, and Playwright output.
+/.next-mocked
+/.next-build
+# Local build dir of a dev server run with NEXT_DIST_DIR=.next-live (e.g. a second instance on
+# non-default ports); never tracked or typechecked.
+/.next-live
+/test-results
+/playwright-report

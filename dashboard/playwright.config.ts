@@ -6,8 +6,10 @@ import { defineConfig, devices } from "@playwright/test";
 //   cd dashboard && npm ci && npx playwright install chromium
 //   PLAYWRIGHT_BASE_URL=http://127.0.0.1:3000 npm run e2e
 // There is intentionally no `webServer` block, and no browsers are downloaded on the Linux box.
+// Route-mocked correctness tests live in e2e/mocked and run via playwright.mocked.config.ts.
 export default defineConfig({
   testDir: "./e2e",
+  testIgnore: "mocked/**",
   timeout: 30_000,
   expect: { timeout: 10_000 },
   retries: 0,

@@ -1,13 +1,16 @@
 "use client";
 
+import { useParams } from "next/navigation";
 import { useCallback } from "react";
 
 import { EmptyState, ErrorBox, Loading, useAsync } from "@/components/States";
 import { TraceWaterfall } from "@/components/TraceWaterfall";
 import { api } from "@/lib/api";
 
-export default function TracePage({ params }: { params: { traceId: string } }) {
-  const id = params.traceId;
+// Next 15 passes route `params` as a Promise; a client page reads them via useParams() instead
+// (React 18 has no stable `use`).
+export default function TracePage() {
+  const id = useParams<{ traceId: string }>().traceId;
   const load = useCallback(() => api.getTrace(id), [id]);
   const { data, loading, error, reload } = useAsync(load, [id]);
 
