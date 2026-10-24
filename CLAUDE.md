@@ -1,23 +1,28 @@
 # Vigil
 
 Agent reliability and evaluation platform. Traces, tests, and scores AI agents
-and RAG pipelines, detects quality regressions with statistical confidence, and
-includes an investigation agent that diagnoses regressions and proposes fixes.
+and RAG pipelines and detects quality regressions with statistical confidence.
+An investigation agent that diagnoses regressions is planned, not built.
 This is a portfolio project: code quality, tests, and measured results matter
 more than feature count.
 
 ## Architecture
+Implemented:
 - ingest/      Go service: receives OpenTelemetry traces (gRPC + HTTP), validates,
-               batches, publishes to Redpanda; consumer writes to ClickHouse
+               batches, publishes to Redpanda (Kafka API); consumer writes to ClickHouse
 - sdk-python/  Python tracing SDK built on OpenTelemetry
-- sdk-ts/      TypeScript tracing SDK
-- engine/      Python (FastAPI): eval engine, LLM-as-judge, bootstrap regression
-               detection, investigation agent, MCP server
-- dashboard/   Next.js + TypeScript + React: trace viewer, run comparison, regressions
-- agents/      Agents under test: tau-bench, HotpotQA RAG, tool-calling
-- bench/       Load tests and scripts that generate results tables
-- deploy/      Docker Compose, Helm charts, Terraform
-- docs/        Design doc, dev log, results
+- engine/      Python eval engine: orchestrator + workers, deterministic, retrieval and
+               τ² reward scorers, paired bootstrap regression gate (`engine/gate.py`, shared by the
+               CLI and API), evidence bundles; read-only FastAPI service (`engine/api/`)
+- dashboard/   Next.js + TypeScript + React: runs, trace viewer, run comparison with
+               regression triage (affected cases, trace links, version diff)
+- agents/      Agents under test: hello_agent (tool-calling), HotpotQA RAG, τ²-bench retail
+- bench/       Load tests, measurement scripts, offline verdict reproduction
+- deploy/      Docker Compose
+- docs/        Design docs, status, results (see docs/REGRESSION_TRIAGE.md)
+
+Planned, not implemented yet: sdk-ts/ (TypeScript SDK; the directory is a placeholder),
+LLM-as-judge scorers, investigation agent, MCP server, Helm charts / Terraform.
 
 ## Infrastructure
 - Redpanda (Kafka-compatible queue), ClickHouse (traces), Postgres (metadata,

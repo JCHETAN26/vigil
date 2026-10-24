@@ -1,19 +1,84 @@
 # Vigil — project status (resume guide)
 
-_Last updated: 2026-09-27. Purpose: let a fresh session resume without the prior chat._
+_Last updated: 2026-10-23. Purpose: let a fresh session resume without the prior chat._
 
 Vigil is an agent reliability + evaluation platform: it traces agents (OpenTelemetry →
-ClickHouse), runs them over datasets, scores them, and (later) detects regressions and
-diagnoses them. Portfolio project — code quality, tests, and measured results matter more than
-feature count (see `CLAUDE.md`).
+ClickHouse), runs them over datasets, scores them, and detects regressions between agent
+versions (CLI, API, dashboard). Diagnosing them (investigation agent) is still planned.
+Portfolio project — code quality, tests, and measured results matter more than feature count
+(see `CLAUDE.md`).
 
 ## Snapshot
 
-- Branch: `main`. Everything below is committed.
-- Components: `ingest/` (Go), `sdk-python/`, `engine/` (Python eval engine), `agents/`
-  (`hello_agent`, `hotpotqa_agent`), `bench/`, `deploy/`, `docs/`.
+- Branch `improve/reliable-regression-triage`: the reliable regression triage milestone below,
+  **uncommitted** in the working tree. Everything else below is committed on `main`.
+- Components: `ingest/` (Go), `sdk-python/`, `engine/` (Python eval engine + read-only
+  FastAPI), `dashboard/` (Next.js), `agents/` (`hello_agent`, `hotpotqa_agent`,
+  `tau2_retail_agent`), `bench/`, `deploy/` (Compose only), `docs/`.
+- **Not implemented** (planned): `sdk-ts/` (placeholder `.gitkeep`), LLM-as-judge scorers,
+  investigation agent, MCP server, Helm/Terraform.
 - Design docs: `docs/design/data-model.md` (ingest/ClickHouse), `docs/design/eval-engine.md`
-  (the eval engine). This file is the living status/plan.
+  (the eval engine), `docs/REGRESSION_TRIAGE.md` (triage journey), `engine/TRIAGE_API.md`
+  (API contract), `docs/TESTING.md` (test gates). This file is the living status/plan.
+
+## Reliable regression triage (in progress, 2026-10-23)
+
+What the branch adds (walkthrough and commands: `docs/REGRESSION_TRIAGE.md`):
+- **One gate** (`engine/engine/gate.py`) used by `engine regress` and the API's `/compare`,
+  `/compare/cases`, `/versions/diff`. Sides are run + one explicit agent version (same run
+  allowed with two versions; never averaged across versions). Shared defaults: gated `passed`
+  (threshold 0.05) and `TokenF1` (0.03). Failed trials score 0 on quality metrics. Verdict is
+  `regression` / `no_regression` / `incomplete`, and incomplete is never shown as a pass.
+- **Evidence bundles:** `engine regress --save DIR` (never overwrites) and offline
+  `bench/regression_verdict.py reproduce DIR` (checksums + full recompute). The checksums are
+  unsigned, so they detect edits but do not authenticate where the data came from.
+- **Dashboard compare page:** verdict banner, affected cases (filters, paging) with
+  baseline and candidate trace links per trial, version config diff with redaction note.
+- **Ingest writer reliability:** in-process same-token retry and a global in-flight byte budget
+  (`ingest/internal/consumer/retry.go`, `VIGIL_WRITER_*` in `.env.example`). Readiness tracks
+  owned work, per partition: a partition's failure counts until that partition flushes or is
+  revoked/lost, and is never cleared by another partition (the failed handoff is logged). A
+  record whose DLQ publish failed stalls its partition, so the offset never advances past it.
+  The writer's compose `stop_grace_period` is 75 s (shutdown flush ≤ 15 s + DLQ drain ≤ 10 s +
+  revoke retry window, default 25 s and < 30 s). Retries are bounded by that window, permanent
+  insert errors included (they are retried like transient ones, because error classification
+  is deferred). A failed handoff or crash replays from the last commit. Dedup across a restart
+  holds only if the replay reforms the identical offset range and ClickHouse's dedup window
+  still covers it; otherwise the range gets a new token and the MVs double-count until the
+  data-model §3.7 rebuild. This is not exactly-once. The receiver maps a non-enqueue error
+  to gRPC Internal even when the client has cancelled.
+- CORS allow-list (`VIGIL_DASHBOARD_ORIGINS`), and test gates split into `test-infra` and
+  `test-paid` (`docs/TESTING.md`). Default ports agree: UI 127.0.0.1:3000, API 8080, and the
+  default CORS origins are the :3000 UI (`make dev`). Isolated runs override all of them
+  together (example: API 8087, UI 3308, `docs/REGRESSION_TRIAGE.md` §6).
+
+**Validation, 2026-10-23: synthetic check. Not an AI-quality or performance result.** This
+synthetic check exercised the real orchestrator → OTLP → **Kafka 4.1** (not the pinned
+Redpanda) → writer → ClickHouse path once, with 160 results (40 cases × 2 versions × 2 trials).
+It is not a general correctness proof. The CLI and API regression verdicts matched the offline
+reproduction. All 160 trace links contained spans. Real Chrome comparison and trace navigation
+passed, and a tampered bundle was rejected. No artifacts are committed. These ran before the
+final review fixes. No new eval runs or paid calls were made afterwards.
+
+Final local checks after the review fixes (details: `docs/REGRESSION_TRIAGE.md` §7):
+`make test-all REQUIRE_DB=1` passed: SDK 34, engine 236, hello 5, hotpot 8, tau2 2, bench 83,
+Go all, dashboard typecheck. Integration: 8 passed, 1 skipped (no HotpotQA run). Paid
+model-call suites were **not run** (no API key). `ruff check`, `go vet -tags=integration ./...`
+and `go test -race ./...` passed. Dashboard `build:isolated` passed. All 18 route-mocked Chrome
+tests passed, including mutation-checked regressions for the stale-retry, multi-version paging
+and incomplete-guard fixes. Review fixes in the gate: a missing gated metric is reported apart
+from a failed metric that scores zero, an all-failed side makes the comparison incomplete,
+`/compare/cases` with no results returns 200 with an empty case list and an incomplete verdict, UUIDs are canonicalized, and the
+bootstrap runs in a thread pool. `npm audit` on production dependencies reports 0
+vulnerabilities (Next 15.5.28, Playwright 1.58.2, direct `postcss` 8.5.31, `source-map-js`
+1.2.2, `next.postcss` override 8.5.31).
+
+**Open before closing the milestone:** GitHub CI has not run yet; the manager opens the PR.
+
+**Known limitations:** the full `npm audit` still reports 3 moderate, dev-only advisories in the
+Tailwind 3 chain. Fixing them needs a Tailwind 4 migration, which is not planned for this
+milestone. The synthetic check used Kafka 4.1, not the pinned Redpanda. Paid suites were not
+run on the final code. Ingest dedup across restarts is limited as described above.
 
 ## Environment (migrated 2026-09-27)
 

@@ -24,7 +24,8 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 .eggs/
-.venv/
+# No trailing slash: also matches the per-package .venv symlinks to the shared engine/.venv.
+.venv
 venv/
 env/
 .pytest_cache/
