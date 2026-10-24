@@ -40,24 +40,30 @@ TOP_K = 5  # documents returned per search call (first hop → recall@5; two hop
 _MAX_TURNS = 8
 _SNIPPET_CHARS = 600  # per-doc text shown to the model
 
-SEARCH_SCHEMA = {
-    "name": "search",
-    "description": (
-        "Search the Wikipedia paragraph corpus for text relevant to a query. Returns the top "
-        f"{TOP_K} matching paragraphs (title + text). Call it multiple times, refining the "
-        "query, to gather the evidence a multi-hop question needs."
-    ),
-    "input_schema": {
-        "type": "object",
-        "properties": {
-            "query": {
-                "type": "string",
-                "description": "A focused search query (keywords or a phrase).",
-            }
+def search_schema(top_k: int) -> dict[str, Any]:
+    """The ``search`` tool schema for a retriever returning ``top_k`` documents. The model is
+    told ``top_k``, so it is part of the tool definition (and the version hash)."""
+    return {
+        "name": "search",
+        "description": (
+            "Search the Wikipedia paragraph corpus for text relevant to a query. Returns the top "
+            f"{top_k} matching paragraphs (title + text). Call it multiple times, refining the "
+            "query, to gather the evidence a multi-hop question needs."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "A focused search query (keywords or a phrase).",
+                }
+            },
+            "required": ["query"],
         },
-        "required": ["query"],
-    },
-}
+    }
+
+
+SEARCH_SCHEMA = search_schema(TOP_K)
 TOOLS = [SEARCH_SCHEMA]
 
 # Manifest inputs the engine reads (contract §4) + the version hash.
@@ -128,10 +134,10 @@ def _format_results(docs) -> str:
     )
 
 
-def _run_search(retriever: Retriever, query: str) -> tuple[list[str], str]:
+def _run_search(retriever: Retriever, query: str, top_k: int = TOP_K) -> tuple[list[str], str]:
     """Execute one search, recording a retrieval span, and return (doc_ids, formatted results)."""
     with vigil.retrieval(name="search", query=query, system="bm25") as span:
-        docs = retriever.search(query, TOP_K)
+        docs = retriever.search(query, top_k)
         doc_ids = [d.doc_id for d in docs]
         span.set_attribute("vigil.retrieval.doc_ids", json.dumps(doc_ids))
         span.set_attribute("vigil.retrieval.k", len(doc_ids))
@@ -146,8 +152,39 @@ async def run(
     eval_case_id: str,
     trial: int = 0,
 ) -> RunResult:
+    return await run_loop(
+        client,
+        case_input,
+        eval_run_id=eval_run_id,
+        eval_case_id=eval_case_id,
+        trial=trial,
+        model=MODEL,
+        system=SYSTEM_PROMPT,
+        tools=TOOLS,
+        request_params=PARAMS,
+        top_k=TOP_K,
+    )
+
+
+async def run_loop(
+    client,
+    case_input: Any,
+    *,
+    eval_run_id: str,
+    eval_case_id: str,
+    trial: int = 0,
+    model: str,
+    system: str,
+    tools: list[dict[str, Any]],
+    request_params: dict[str, Any],
+    top_k: int,
+    retriever: Retriever | None = None,
+) -> RunResult:
+    """The agent loop with its configuration passed in, not read from module globals, so a
+    variant (``hotpotqa_agent.validation``) runs the same code with its own settings.
+    ``request_params`` go to the model verbatim; ``top_k`` is the documents per search."""
     question = case_input.get("question", "") if isinstance(case_input, dict) else str(case_input)
-    retriever = _get_retriever()
+    retriever = retriever if retriever is not None else _get_retriever()
 
     with vigil.agent_run(
         run_kind="eval",
@@ -169,9 +206,9 @@ async def run(
             # searching again — this bounds cost and guarantees a non-empty final answer even
             # when retrieval never surfaces enough evidence.
             offer_tools = turn < _MAX_TURNS - 1
-            request = dict(model=MODEL, system=SYSTEM_PROMPT, messages=messages, **PARAMS)
+            request = dict(model=model, system=system, messages=messages, **request_params)
             if offer_tools:
-                request["tools"] = TOOLS
+                request["tools"] = tools
             resp = await client.messages.create(**request)
             usage = getattr(resp, "usage", None)
             if usage is not None:
@@ -188,7 +225,7 @@ async def run(
                     tool_calls.append(ToolCall(name=block.name, arguments=args))
                     if block.name == "search":
                         query = str(args.get("query", ""))
-                        doc_ids, result_text = _run_search(retriever, query)
+                        doc_ids, result_text = _run_search(retriever, query, top_k)
                         retrievals.append(vigil.Retrieval(query=query, doc_ids=doc_ids))
                     else:
                         result_text = f"error: unknown tool {block.name!r}"
