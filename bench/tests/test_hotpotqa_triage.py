@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import copy
 import json
+import math
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -20,6 +21,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import hotpotqa_triage as ht
+import span_accounting as sa
 
 GIB = 1 << 30
 SECRET_ANSWER = "Zanzibar-Gold-Answer-7731"
@@ -333,16 +335,110 @@ def test_unit_checks_detect_wrong_k_zero_cost_and_missing_units():
     assert bad == {"candidate_units_complete"}
 
 
+def _span(trace, span, *, parent="", name="gen_ai.chat m", model="m", tokens=(100, 10),
+          cost=0.001, **over):
+    return {"trace_id": trace, "span_id": span, "parent_span_id": parent, "span_name": name,
+            "role": "", "cache_hit": 0, "model": model, "input_tokens": tokens[0],
+            "output_tokens": tokens[1], "cache_creation_input_tokens": 0,
+            "cache_read_input_tokens": 0, "cost_usd": cost,
+            "ingested_at": "2026-10-25 07:30:00.000", **over}
+
+
+def _ch(spans, **over):
+    """What Backend.clickhouse returns for these stored LLM span rows."""
+    acct = sa.reconcile(spans)
+    c = acct["canonical"]
+    return {"trace_ids": sorted({s["trace_id"] for s in spans}), "max_k": 5, "k_spans": 2,
+            "models": acct["models"], "input_tokens": c["input_tokens"],
+            "output_tokens": c["output_tokens"], "cost_usd": c["cost_usd"], "accounting": acct,
+            **over}
+
+
 def test_trace_checks():
     rows = [_row("q1", 5), _row("q2", 5)]
     _, stats = ht.check_units("baseline", 5, 2, rows)
-    ch = {"trace_ids": ["t-q1", "t-q2"], "max_k": 5, "k_spans": 2, "models": ["m"],
-          "input_tokens": 200, "output_tokens": 20, "cost_usd": 0.002}
+    ch = _ch([_span("t-q1", "a"), _span("t-q2", "b")])
     assert all(c.ok for c in ht.check_traces("baseline", 5, "m", rows, ch, stats))
     ch2 = {**ch, "trace_ids": ["t-q1"], "max_k": 6, "models": ["m", "other"]}
     bad = {c.name for c in ht.check_traces("baseline", 5, "m", rows, ch2, stats) if not c.ok}
     assert bad == {
         "baseline_traces_in_clickhouse", "baseline_span_retrieval_k", "baseline_span_model"}
+
+
+def _failed_checks(rows, ch, cache_mode="off"):
+    _, stats = ht.check_units("baseline", 5, len(rows), rows)
+    return {c.name for c in ht.check_traces("baseline", 5, "m", rows, ch, stats, cache_mode)
+            if not c.ok and c.blocking}
+
+
+def test_pilot_double_accounting_fails_single_owner_but_reconciles():
+    # Run cafae810 at 125c94d: every Vigil gen_ai span had a native anthropic.messages.create
+    # child with the same usage, so the plain ClickHouse sums were exactly 2× Postgres.
+    rows = [_row("q1", 5), _row("q2", 5)]
+    spans = [_span("t-q1", "a"), _span("t-q2", "b"),
+             _span("t-q1", "na", parent="a", name="anthropic.messages.create"),
+             _span("t-q2", "nb", parent="b", name="anthropic.messages.create")]
+    ch = _ch(spans)
+    assert ch["accounting"]["as_stored"]["input_tokens"] == 400  # the doubled report
+    assert ch["input_tokens"] == 200 and math.isclose(ch["cost_usd"], 0.002)
+    assert _failed_checks(rows, ch) == {"baseline_span_single_owner"}
+
+
+def test_exact_spend_mismatch_fails_when_runs_are_comparable():
+    rows = [_row("q1", 5), _row("q2", 5)]
+    # An unowned (sibling) native span cannot be proven a duplicate: it is counted and fails
+    # both ownership and the exact comparison.
+    spans = [_span("t-q1", "a"), _span("t-q2", "b"),
+             _span("t-q1", "n", parent="root", name="anthropic.messages.create")]
+    assert _failed_checks(rows, _ch(spans)) == {
+        "baseline_span_single_owner", "baseline_span_spend_reconciles"}
+    # Spans below Postgres (lost spans) fail the comparison too.
+    lost = _ch([_span("t-q1", "a")], trace_ids=["t-q1", "t-q2"])
+    assert _failed_checks(rows, lost) == {"baseline_span_spend_reconciles"}
+
+
+def test_retried_or_failed_units_only_need_a_lower_bound():
+    rows = [{**_row("q1", 5), "attempts": 2}, _row("q2", 5)]
+    # The failed first attempt of q1 spent tokens no OK unit reports: more is legitimate.
+    spans = [_span("t-q1", "a"), _span("t-q1", "a0"), _span("t-q2", "b")]
+    assert _failed_checks(rows, _ch(spans)) == set()
+    lost = _ch([_span("t-q1", "a")], trace_ids=["t-q1", "t-q2"])
+    assert _failed_checks(rows, lost) == {"baseline_span_spend_reconciles"}
+
+
+def test_cache_runs_compare_informationally():
+    rows = [_row("q1", 5), _row("q2", 5)]
+    spans = [_span("t-q1", "a"), _span("t-q2", "b", cache_hit=1, cost=0.0)]
+    _, stats = ht.check_units("baseline", 5, 2, rows)
+    c = next(c for c in ht.check_traces("baseline", 5, "m", rows, _ch(spans), stats, "read")
+             if c.name == "baseline_span_spend_reconciles")
+    assert not c.blocking and "not comparable" in c.detail
+
+
+def test_pipeline_flags_double_accounting(data_dir, tmp_path, manifests):
+    v = _verdict("regression")
+    holder = {}
+    backend = FakeBackend(lambda: holder["plan"], verdict=v, shadowed=True)
+    runner = _fake_runner(backend, v, [])
+
+    def capturing_runner(cmd, log_path, env):
+        holder.setdefault("plan", json.loads((log_path.parent / "plan.json").read_text()))
+        return runner(cmd, log_path, env)
+
+    rc = ht.cmd_run(_run_args(tmp_path, data_dir), backend=backend, runner=capturing_runner,
+                    env=FAKE_ENV, manifests=manifests, free_bytes=lambda p: 10 * GIB)
+    d = _only_result_dir(tmp_path)
+    summary = json.loads((d / "summary.json").read_text())
+    assert rc == 1
+    assert set(summary["checks_failed"]) == {"baseline_span_single_owner",
+                                             "candidate_span_single_owner"}
+    assert "reconciled; the stored rows sum to" in (d / "summary.md").read_text()
+
+    # Re-verifying keeps the summary it replaces (evidence is never overwritten).
+    first = (d / "summary.md").read_text()
+    ht.verify(d, api_url="http://127.0.0.1:8080", backend=backend)
+    kept = sorted(d.glob("summary.before-*.md"))
+    assert len(kept) == 1 and kept[0].read_text() == first
 
 
 def _verdict(v="regression"):
@@ -384,12 +480,13 @@ def test_version_diff_check():
 
 
 class FakeBackend:
-    def __init__(self, plan_getter, *, verdict, ch_missing=False, api=True):
+    def __init__(self, plan_getter, *, verdict, ch_missing=False, api=True, shadowed=False):
         self.suites: dict[str, list[str]] = {}
         self.plan_getter = plan_getter
         self.verdict = verdict
         self.ch_missing = ch_missing
         self.api = api
+        self.shadowed = shadowed  # pre-fix pilot: a native SDK span nested under every call
         self.run_id = "11111111-2222-3333-4444-555555555555"
 
     def suite_case_ids(self, name):
@@ -421,9 +518,13 @@ class FakeBackend:
                         if v["agent_version"] == version)
         ids = plan["predeclared"]["case_ids"]
         tids = [f"{label}-{i}" for i in ids][: (1 if self.ch_missing else None)]
-        return {"trace_ids": tids, "max_k": v["top_k"], "k_spans": len(ids),
-                "models": [plan["execution"]["model"]], "input_tokens": 200,
-                "output_tokens": 20, "cost_usd": 0.002}
+        # One gen_ai span per OK unit, carrying exactly that unit's Postgres tokens and cost.
+        model = plan["execution"]["model"]
+        spans = [_span(f"{label}-{i}", "s1", model=model) for i in ids]
+        if self.shadowed:
+            spans += [_span(f"{label}-{i}", "n1", parent="s1", name="anthropic.messages.create",
+                            model=model) for i in ids]
+        return _ch(spans, trace_ids=tids, max_k=v["top_k"], k_spans=len(ids))
 
     def api_get(self, base, path, params):
         assert base.startswith("http://127.0.0.1")

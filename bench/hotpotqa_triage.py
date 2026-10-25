@@ -54,6 +54,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "engine"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import span_accounting  # noqa: E402 — bench/ is on sys.path only from here
+
 DEFAULT_DATA_DIR = ROOT / "data" / "hotpotqa"
 DEFAULT_RESULTS_ROOT = ROOT / "bench" / "results" / "hotpotqa_triage"
 MIN_FREE_BYTES = 1 << 30  # 1 GiB, stricter than the engine's 1 GB default floor
@@ -699,9 +701,11 @@ def check_units(
 
 
 def check_traces(label: str, top_k: int, model: str, pg_rows: list[dict], ch: dict,
-                 pg_stats: dict) -> list[Check]:
+                 pg_stats: dict, cache_mode: str | None = CACHE_MODE) -> list[Check]:
     """``ch``: {"trace_ids": [...], "max_k": int|None, "k_spans": int, "models": [...],
-    "input_tokens": int, "output_tokens": int, "cost_usd": float} for this run+version."""
+    "input_tokens": int, "output_tokens": int, "cost_usd": float, "accounting": {...}} for
+    this run+version; the token/cost figures are the canonical ones of
+    ``span_accounting.reconcile``, which ``accounting`` is."""
     want = {r["trace_id"] for r in pg_rows if r["status"] == "ok" and r.get("trace_id")}
     have = set(ch.get("trace_ids") or [])
     missing = sorted(want - have)
@@ -721,8 +725,70 @@ def check_traces(label: str, top_k: int, model: str, pg_rows: list[dict], ch: di
               f"${float(ch.get('cost_usd') or 0):.4f} (Postgres OK units: "
               f"{pg_stats['input_tokens']} / {pg_stats['output_tokens']}, "
               f"${pg_stats['cost_usd']:.4f}; spans also include retried/failed attempts)"),
+        check_single_owner(label, ch.get("accounting")),
+        check_spend_reconciles(label, pg_rows, ch, pg_stats, cache_mode),
     ]
     return checks
+
+
+def check_single_owner(label: str, acct: dict | None) -> Check:
+    """Every LLM span with usage is a Vigil ``gen_ai.*`` span: no second instrumentation
+    (e.g. the anthropic SDK's native call spans) recording the same calls again."""
+    name = f"{label}_span_single_owner"
+    if acct is None:
+        return Check(name, False, "span accounting not reported")
+    detail = (f"{acct['owner_spans']} gen_ai spans; {acct['shadow_spans']} proven duplicate "
+              f"native spans (excluded), {acct['unresolved_spans']} unresolved nested LLM "
+              f"spans {acct['unresolved_reasons'] or ''} and {acct['unowned_spans']} unowned "
+              f"ones (both still counted); {acct['duplicate_identity_rows']} replayed rows "
+              "collapsed")
+    if not acct["single_owner"]:
+        s, c = acct["as_stored"], acct["canonical"]
+        ex = acct["examples"]
+        detail += (f". Stored rows sum to {s['input_tokens']} in / {s['output_tokens']} out, "
+                   f"${s['cost_usd']:.6f}; reconciled {c['input_tokens']} / "
+                   f"{c['output_tokens']}, ${c['cost_usd']:.6f}"
+                   + ("" if not (acct["unresolved_spans"] or acct["unowned_spans"]) else
+                      " (an upper bound: unresolved/unowned spans may be duplicates)")
+                   + f"; e.g. {(ex['unresolved'] or ex['unowned'] or ex['shadow'])[:2]}")
+    return Check(name, acct["single_owner"], detail)
+
+
+def check_spend_reconciles(label: str, pg_rows: list[dict], ch: dict, pg_stats: dict,
+                           cache_mode: str | None) -> Check:
+    """The canonical span spend against the Postgres OK units.
+
+    Exact when the two must agree: every unit OK on its first attempt, no LLM cache and no
+    span of another role (e.g. a user simulator). Otherwise the spans may legitimately hold
+    more — failed units and retried attempts spent tokens that no OK unit reports — so they
+    must be at least the Postgres totals. With the cache on, a hit's tokens are in Postgres
+    but not spend, so the comparison is informational only."""
+    name = f"{label}_span_spend_reconciles"
+    acct = ch.get("accounting") or {}
+    have = (int(ch.get("input_tokens") or 0), int(ch.get("output_tokens") or 0),
+            float(ch.get("cost_usd") or 0))
+    want = (pg_stats["input_tokens"], pg_stats["output_tokens"], pg_stats["cost_usd"])
+    figures = (f"spans {have[0]} in / {have[1]} out, ${have[2]:.6f}; Postgres OK units "
+               f"{want[0]} / {want[1]}, ${want[2]:.6f}")
+    reasons = []
+    if any(r["status"] != "ok" for r in pg_rows):
+        reasons.append("non-OK units")
+    if any((r.get("attempts") or 1) > 1 for r in pg_rows):
+        reasons.append("retried units")
+    if acct.get("roles"):
+        reasons.append(f"other roles {acct['roles']}")
+    if cache_mode != "off":
+        return Check(name, True, f"not comparable (cache {cache_mode}): {figures}",
+                     blocking=False)
+    if not reasons:
+        same = (have[0] == want[0] and have[1] == want[1]
+                and math.isclose(have[2], want[2], rel_tol=1e-6, abs_tol=1e-9))
+        return Check(name, same, f"exact (every unit OK on its first attempt, cache off): "
+                     f"{figures}" + ("" if same else
+                                     f"; ratio {have[0] / want[0] if want[0] else 0:.3f}×"))
+    at_least = (have[0] >= want[0] and have[1] >= want[1]
+                and have[2] >= want[2] * (1 - 1e-6) - 1e-9)
+    return Check(name, at_least, f"lower bound ({', '.join(reasons)}): {figures}")
 
 
 def _close(a, b, tol=1e-9) -> bool:
@@ -858,15 +924,16 @@ class Backend:
             "SELECT max(toUInt32OrZero(span_attributes['vigil.retrieval.k'])) AS max_k, "
             f"count() AS n FROM spans WHERE {where} "
             "AND mapContains(span_attributes, 'vigil.retrieval.k')", p)[0]
-        llm = ch.query(
-            "SELECT groupUniqArray(gen_ai_request_model) AS models, "
-            "sum(gen_ai_usage_input_tokens) AS i, sum(gen_ai_usage_output_tokens) AS o, "
-            f"sum(cost_usd) AS c FROM spans WHERE {where} AND gen_ai_request_model != ''", p)[0]
+        # Not a plain sum over the rows: one accounting owner per call, one row per span
+        # identity, cache hits excluded (bench/span_accounting.py).
+        acct = span_accounting.reconcile(span_accounting.fetch_llm_spans(ch, run_id, version))
+        canonical = acct["canonical"]
         return {
             "trace_ids": tids, "max_k": int(k["max_k"]) if int(k["n"]) else None,
-            "k_spans": int(k["n"]), "models": list(llm["models"]),
-            "input_tokens": int(llm["i"]), "output_tokens": int(llm["o"]),
-            "cost_usd": float(llm["c"]),
+            "k_spans": int(k["n"]), "models": acct["models"],
+            "input_tokens": canonical["input_tokens"],
+            "output_tokens": canonical["output_tokens"], "cost_usd": canonical["cost_usd"],
+            "accounting": acct,
         }
 
     def api_get(self, base: str, path: str, params: dict) -> dict:
@@ -1063,7 +1130,8 @@ def verify(result_dir: Path, *, api_url: str | None, backend: Backend | None = N
         stats[label] = s
         try:
             ch = backend.clickhouse(run_id, ver)
-            checks += check_traces(label, top_k, plan["execution"]["model"], rows, ch, s)
+            checks += check_traces(label, top_k, plan["execution"]["model"], rows, ch, s,
+                                   (data["run"] or {}).get("cache_mode"))
             stats[label]["clickhouse"] = {k: v for k, v in ch.items() if k != "trace_ids"}
             stats[label]["clickhouse"]["traces"] = len(ch["trace_ids"])
         except Exception as exc:  # noqa: BLE001 — reported as a failed check, not a crash
@@ -1122,6 +1190,15 @@ def verify(result_dir: Path, *, api_url: str | None, backend: Backend | None = N
         "checks": [asdict(c) for c in checks], "checks_failed": len(failed), "stats": stats,
     }
     _write_json(result_dir / f"verify-{stamp}.json", report)
+    # A re-verify replaces the summary; the one it replaces is evidence too, so it is kept.
+    for name in ("summary.json", "summary.md"):
+        old = result_dir / name
+        n = 0
+        while old.exists():
+            kept = result_dir / f"{old.stem}.before-{stamp}{f'-{n}' if n else ''}{old.suffix}"
+            if not kept.exists():
+                old.rename(kept)
+            n += 1
     summary = {
         "status": "verified" if not failed else "checks_failed",
         "stage": plan["stage"], "run_id": run_id, "verdict": report["verdict"],
@@ -1177,6 +1254,17 @@ def render_summary(plan: dict, run_id: str, verdict: dict | None, checks: list[C
             f"- {label}: {s['ok_units']}/{s['expected_units']} OK units, "
             f"${s['cost_usd']:.4f}, {s['input_tokens']} in / {s['output_tokens']} out tokens, "
             f"{s['searches']} searches (max {s['max_docs_per_search']} docs each)")
+        acct = (s.get("clickhouse") or {}).get("accounting")
+        if acct:
+            c, st = acct["canonical"], acct["as_stored"]
+            lines.append(
+                f"  - spans (one owner per call): {c['spans']} LLM spans, "
+                f"{c['input_tokens']} in / {c['output_tokens']} out, ${c['cost_usd']:.4f}"
+                + ("" if acct["single_owner"] else
+                   f" — reconciled; the stored rows sum to {st['input_tokens']} / "
+                   f"{st['output_tokens']}, ${st['cost_usd']:.4f} ({acct['shadow_spans']} "
+                   f"proven duplicate spans excluded; {acct['unresolved_spans']} unresolved "
+                   f"and {acct['unowned_spans']} unowned spans still counted)"))
     lines += ["", "Checks:", ""]
     for c in checks:
         mark = "ok" if c.ok else ("FAIL" if c.blocking else "not run/warn")

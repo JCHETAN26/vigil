@@ -184,7 +184,7 @@ and creation fails if it already exists.
 | `bundle/` | the `engine regress --save` evidence bundle |
 | `units_{baseline,candidate}.json`, `table_*.md` | raw per-unit rows (stored scores, tokens, cost, latency) and the `hotpotqa_baseline.py` question-level bootstrap tables per version; written once, and later `verify` runs only confirm they still match the DB |
 | `verify-<UTC>.json` | every check with its details and per-version stats (one file per verify) |
-| `summary.json`, `summary.md` | gate verdict, metric table, stats, checks, reproduce command, dashboard URL, limits |
+| `summary.json`, `summary.md` | gate verdict, metric table, stats, checks, reproduce command, dashboard URL, limits; a re-`verify` first renames the previous pair to `summary.before-<UTC>.{json,md}` |
 
 `verify` fails (exit 1) if any blocking check fails. **The verdict itself is never a check**, so
 `regression`, `no_regression` and `incomplete` are all reported as computed. The checks:
@@ -201,9 +201,21 @@ and creation fails if it already exists.
   top_k, and some returned exactly top_k.
 - **\*_traces_in_clickhouse, \*_span_retrieval_k, \*_span_model, \*_span_tokens_nonzero:** from
   ClickHouse, every OK unit's trace exists, `vigil.retrieval.k` ≤ top_k, the spans' request model
-  is the planned one, and span tokens and cost are above 0. Span totals also include retried
-  attempts, so they are shown next to the Postgres totals rather than required to equal them.
+  is the planned one, and span tokens and cost are above 0. Span tokens and cost are the
+  canonical ones of `bench/span_accounting.py` (one row per span identity, one accounting owner
+  per call, cache hits excluded), not a plain sum over the rows; see §8.
   Right after a run, the writer may still be flushing. Re-run `verify`.
+- **\*_span_single_owner:** every LLM span with usage is a Vigil `gen_ai.*` span. It fails on
+  any other usage span. That can be a proven copy of a Vigil call (a *shadow*: the anthropic
+  SDK's own `anthropic.messages.create` span as the unique, matching child, which is excluded),
+  a nested span that cannot be proven a copy (*unresolved*, still counted, with a reason), or
+  one with no Vigil parent (*unowned*, still counted). The detail gives the stored-row sum next
+  to the reconciled one.
+- **\*_span_spend_reconciles:** canonical span spend against the Postgres OK units. **Exact**
+  (tokens equal, cost within 1e-6 relative) when every unit is OK on its first attempt, the cache
+  is off and no span has another role. Otherwise a **lower bound**: failed units and retried
+  attempts spent tokens that no OK unit reports, so spans may hold more, never less. With the
+  cache on it is informational (a hit's tokens are in Postgres but are not spend).
 - **bundle_reproduces, cli_exit_matches_bundle:** the offline reproduction passed, and the CLI
   exit code (0/2/3) agrees with `verdict.json`.
 - **api_matches_cli, api_version_diff** (when `--api-url` is given): `GET /compare` returns the
@@ -249,3 +261,82 @@ Dashboard: `/compare?baseline=<run>&baseline_version=<b>&candidate=<run>&candida
   every version in a run together, so it is not suitable for this two-version run.
 - **Trace flush lag.** ClickHouse ingestion is asynchronous. `verify` can be re-run, and each run
   writes a new `verify-<UTC>.json`.
+
+## 8. Pilot finding: span spend was counted twice (run cafae810)
+
+The first real pilot (`cafae810-f2e9-4c50-b34d-cfac8b18c509`, source `125c94d`, 20 dev
+questions × 1 trial per version, concurrency 1, cache off, all 40 units OK) passed every check,
+yet its ClickHouse span totals were **exactly twice** the Postgres ones:
+
+| version | Postgres OK units | ClickHouse plain sum (the old check) |
+|---|---|---|
+| baseline (top_k 5) | 118 912 in / 5 531 out, $0.146567 | 237 824 / 11 062, $0.2931 |
+| candidate (top_k 1) | 77 699 / 5 737, $0.106384 | 155 398 / 11 474, $0.2128 |
+
+The retrieval spans were not doubled (51 and 64 search spans, as in Postgres), and no
+`(trace_id, span_id)` was stored twice, so neither replay nor ReplacingMergeTree merging caused
+it. A read-only query of the run found 121 `gen_ai.chat claude-haiku-4-5-20251001` spans and 121
+`anthropic.messages.create` spans with distinct ids, each group totalling 196 611 input tokens and
+$0.252951 (baseline + candidate in Postgres).
+
+**Cause.** anthropic 1.17.0 (installed in the engine venv; the engine allows `>=1.8,<2`, the SDK
+extra allowed `>=0.40`) traces its own API calls. Each call gets an `anthropic.messages.create`
+CLIENT span (scope `com.anthropic.sdk.python`) with `gen_ai.request.model` and `gen_ai.usage.*`,
+sent to the global tracer provider. `vigil.init` registers Vigil's provider globally, so that
+span went through Vigil's exporter, got the run identity, and was priced by the ingest consumer
+like the Vigil span. `vigil.wrap` makes its span current during the call, so the native span is
+its **child**. The duck-typed stubs in the SDK tests have no native tracing, which is why they
+(and the offline usage diagnostic) saw exactly one span per call. The real client over a mock
+HTTP transport reproduces the pair (`sdk-python/tests/test_anthropic_native.py`).
+
+**Fix.** The Vigil span is the one accounting owner of each call.
+
+- `vigil.wrap` sends `messages.create` / `messages.stream` through a copy of the caller's client,
+  made with the SDK's public `with_options(open_telemetry=...)` and `traces.enabled = False`. The
+  copy shares the HTTP client (so custom transports are kept), headers, retries and middleware.
+  The caller's client is unchanged, other methods (`count_tokens`, …) keep their native spans,
+  and a client whose native spans go to a provider other than Vigil's is left alone. Wrapping a
+  wrapped client returns it unchanged.
+- The engine worker puts its dev cache between the real client and `vigil.wrap`, so it turns
+  native spans off on the real client itself (`vigil.anthropic.without_native_spans`).
+- The streaming paths now make the Vigil span current while the request is sent. With the real
+  client, `messages.stream()` now records usage from the SDK's `MessageStream`; it recorded none
+  before.
+
+**Validation.** `verify` now fails `*_span_single_owner` on a run like this one, and compares the
+canonical span spend to Postgres (`*_span_spend_reconciles`: exact when comparable, else a lower
+bound). The old `*_span_tokens_nonzero` only required the sums to be positive and printed them
+side by side, so the doubling passed.
+
+**Historical data is not rewritten.** The stored rows of affected runs keep both spans. Any plain
+sum over `spans`, and the on-insert rollups (`trace_index.total_cost_usd`,
+`agent_version_stats_daily`), stay inflated for those runs. The Vigil API and dashboard do not
+read those rollups, and the trace view shows tokens and cost only on `gen_ai.*` spans. The gate's
+`cost_usd` metric comes from Postgres, so the pilot verdict is unaffected. Canonical totals for an
+affected run come only from the reconciliation:
+
+    engine/.venv/bin/python bench/span_accounting.py <run_id> --postgres --out <new file>
+
+It excludes only a proven copy: an `anthropic.messages.create` span whose direct parent is a
+Vigil `gen_ai.chat*` span in the same trace, that is the only non-`gen_ai.*` usage span under that
+parent, and that has the same model, the same output tokens, compatible input/cache tokens (the
+native span folds prompt-cache tokens into its input) and, without cache tokens, the same cost.
+Everything else stays counted:
+
+- a nested span that differs in model, tokens or cost, has another name (unknown
+  instrumentation), sits under a non-chat `gen_ai.*` span, or shares its parent with another
+  nested usage span is *unresolved*, reported with its reason. It may be a genuine distinct call,
+  so counting it can only over-count, never hide spend;
+- a native span with no Vigil parent is *unowned*, because structure cannot prove it a
+  duplicate.
+
+Either one fails `*_span_single_owner`, and the canonical total is then an upper bound. Nothing
+is excluded on its name or on equal values alone, so distinct calls with identical usage all
+count. The manager's read-only check of the pilot found all 121 native spans to be direct
+children of a Vigil span with identical tokens and cost
+(`vigil-work/trace-accounting-root-cause.json`). So the strict rule excludes exactly those 121,
+assuming their request model matches too: the native span copies it from the same request.
+The canonical totals then equal Postgres per version. Running the diagnostic on the run confirms
+this (`shadow_spans` 121 in total, no `unresolved_reasons`). Which earlier runs are affected
+depends on when anthropic 1.17 entered the venv; `shadow_spans` answers that per run. The pilot's `summary.md` is preserved as recorded.
+Re-running `verify` on it keeps the old summary as `summary.before-<UTC>.md`.

@@ -8,19 +8,106 @@ anthropic package and works against test stubs.
     from vigil import wrap
     client = wrap(Anthropic())
     client.messages.create(model="claude-haiku-4-5", max_tokens=1024, messages=[...])
+
+Single accounting ownership: anthropic>=1.17 has OpenTelemetry tracing of its own, which
+gives each API call an ``anthropic.messages.create`` span carrying the same
+``gen_ai.usage.*`` tokens. Left on, that span lands in the same pipeline as the Vigil span
+(both use the global provider ``vigil.init`` registers), as its child, and every token and
+dollar is counted twice. So the calls this wrapper records (``messages.create`` and
+``messages.stream``) go through a copy of the client whose native spans are off — made with
+the SDK's public ``with_options(open_telemetry=...)``, sharing the client's HTTP client,
+headers, retries and middleware. The caller's client is not changed, and every other method
+(``count_tokens``, ``batches``, …) keeps its native spans. A client whose native spans go to a
+provider other than Vigil's (its own ``tracer_provider``) is left alone, since nothing is
+counted twice there.
 """
 
 from __future__ import annotations
 
 import inspect
+from collections.abc import Mapping
 from typing import Any
 
+from opentelemetry import trace
 from opentelemetry.trace import SpanKind, Status, StatusCode
 
 from .spans import set_gen_ai_request, set_gen_ai_response
-from .tracer import get_content_capture, get_tracer
+from .tracer import get_content_capture, get_tracer, span_provider
 
 _REQUEST_PARAM_KEYS = ("max_tokens", "temperature", "top_p", "top_k")
+
+
+# --- native SDK tracing (anthropic>=1.17): one owner per call ---
+
+
+def _is_native_client(client: Any) -> bool:
+    """True for a real Anthropic client that has the native ``open_telemetry`` option.
+
+    Looked up statically, on the type: a wrapper that delegates by ``__getattr__`` (e.g. the
+    engine's dev cache) must not count, or ``with_options`` would hand back a copy of the
+    client *inside* it and bypass the wrapper."""
+    for name in ("with_options", "open_telemetry"):
+        try:
+            inspect.getattr_static(client, name)
+        except AttributeError:
+            return False
+    return True
+
+
+def _native_options(client: Any) -> Mapping | None:
+    """The client's resolved ``open_telemetry`` option when its native call spans are on."""
+    if not _is_native_client(client):
+        return None
+    try:
+        options = client.open_telemetry
+    except Exception:
+        return None
+    if not isinstance(options, Mapping):
+        return None
+    traces = options.get("traces")
+    if not isinstance(traces, Mapping) or not traces.get("enabled"):
+        return None
+    return options
+
+
+def without_native_spans(client: Any) -> Any:
+    """A copy of ``client`` whose native SDK call spans are off, or ``client`` itself when it
+    has none (an older anthropic, spans already off, or not a real client).
+
+    The copy comes from the public ``with_options(open_telemetry=...)``: it shares the
+    client's HTTP client (so a custom transport is kept), credentials, headers, query,
+    timeout, retries and middleware, and keeps its other ``open_telemetry`` fields. ``client``
+    is not changed. ``wrap`` applies this on its own to the calls it records; use it directly
+    where a wrapper sits between the real client and ``wrap``, as the engine's cache does."""
+    options = _native_options(client)
+    if options is None:
+        return client
+    return client.with_options(
+        open_telemetry={**options, "traces": {**options["traces"], "enabled": False}}
+    )
+
+
+class _NativeSpanOwner:
+    """Picks, per call, the client whose ``messages`` the wrapper calls: the caller's own, or
+    (when its native call spans would reach Vigil's provider and duplicate the Vigil span) a
+    lazily made copy with them off."""
+
+    def __init__(self, client):
+        self.client = client
+        self._quiet = None
+
+    def messages(self):
+        options = _native_options(self.client)
+        if options is None or not self._reaches_vigil(options):
+            return self.client.messages
+        if self._quiet is None:
+            self._quiet = without_native_spans(self.client)
+        return self._quiet.messages
+
+    @staticmethod
+    def _reaches_vigil(options: Mapping) -> bool:
+        native = options.get("tracer_provider")
+        return (native if native is not None else trace.get_tracer_provider()) is span_provider()
 
 
 def _span_name(kwargs: dict) -> str:
@@ -156,14 +243,16 @@ class _StreamAccumulator:
 
 
 class _SyncMessages:
-    def __init__(self, messages):
-        self._messages = messages
+    def __init__(self, owner: _NativeSpanOwner):
+        self._owner = owner
 
     def create(self, **kwargs):
         span = _start_span(kwargs)
         if kwargs.get("stream"):
             try:
-                raw = self._messages.create(**kwargs)
+                # Current while the request is sent, so HTTP-client spans nest under it.
+                with _current_span(span):
+                    raw = self._owner.messages().create(**kwargs)
             except Exception as exc:
                 _fail(span, exc)
                 span.end()
@@ -171,7 +260,7 @@ class _SyncMessages:
             return _sync_stream_iter(span, raw)
         try:
             with _current_span(span):
-                response = self._messages.create(**kwargs)
+                response = self._owner.messages().create(**kwargs)
                 _record_response(span, response)
                 return response
         except Exception as exc:
@@ -181,10 +270,11 @@ class _SyncMessages:
             span.end()
 
     def stream(self, **kwargs):
-        return _SyncStreamCM(self._messages, kwargs)
+        return _SyncStreamCM(self._owner, kwargs)
 
     def __getattr__(self, name):
-        return getattr(self._messages, name)
+        # Methods the wrapper does not record go to the caller's own client, native spans and all.
+        return getattr(self._owner.client.messages, name)
 
 
 def _sync_stream_iter(span, raw):
@@ -202,20 +292,26 @@ def _sync_stream_iter(span, raw):
 
 
 class _SyncStreamCM:
-    def __init__(self, messages, kwargs):
-        self._messages = messages
+    def __init__(self, owner: _NativeSpanOwner, kwargs):
+        self._owner = owner
         self._kwargs = kwargs
 
     def __enter__(self):
         self._span = _start_span(self._kwargs)
-        self._mgr = self._messages.stream(**self._kwargs)
-        return self._mgr.__enter__()
+        try:
+            with _current_span(self._span):
+                self._mgr = self._owner.messages().stream(**self._kwargs)
+                self._stream = self._mgr.__enter__()
+                return self._stream
+        except Exception as exc:
+            _fail(self._span, exc)
+            self._span.end()
+            raise
 
     def __exit__(self, exc_type, exc, tb):
         try:
             if exc is None:
-                stream = getattr(self._mgr, "_stream", None) or self._mgr
-                final = _final_message(stream)
+                final = _final_message(_message_holder(self._mgr, self._stream))
                 if final is not None:
                     _record_response(self._span, final)
             else:
@@ -228,7 +324,7 @@ class _SyncStreamCM:
 class _SyncClient:
     def __init__(self, client):
         self._client = client
-        self._messages = _SyncMessages(client.messages)
+        self._messages = _SyncMessages(_NativeSpanOwner(client))
 
     @property
     def messages(self):
@@ -242,14 +338,15 @@ class _SyncClient:
 
 
 class _AsyncMessages:
-    def __init__(self, messages):
-        self._messages = messages
+    def __init__(self, owner: _NativeSpanOwner):
+        self._owner = owner
 
     async def create(self, **kwargs):
         span = _start_span(kwargs)
         if kwargs.get("stream"):
             try:
-                raw = await self._messages.create(**kwargs)
+                with _current_span(span):
+                    raw = await self._owner.messages().create(**kwargs)
             except Exception as exc:
                 _fail(span, exc)
                 span.end()
@@ -257,7 +354,7 @@ class _AsyncMessages:
             return _async_stream_iter(span, raw)
         try:
             with _current_span(span):
-                response = await self._messages.create(**kwargs)
+                response = await self._owner.messages().create(**kwargs)
                 _record_response(span, response)
                 return response
         except Exception as exc:
@@ -267,10 +364,10 @@ class _AsyncMessages:
             span.end()
 
     def stream(self, **kwargs):
-        return _AsyncStreamCM(self._messages, kwargs)
+        return _AsyncStreamCM(self._owner, kwargs)
 
     def __getattr__(self, name):
-        return getattr(self._messages, name)
+        return getattr(self._owner.client.messages, name)
 
 
 async def _async_stream_iter(span, raw):
@@ -288,20 +385,26 @@ async def _async_stream_iter(span, raw):
 
 
 class _AsyncStreamCM:
-    def __init__(self, messages, kwargs):
-        self._messages = messages
+    def __init__(self, owner: _NativeSpanOwner, kwargs):
+        self._owner = owner
         self._kwargs = kwargs
 
     async def __aenter__(self):
         self._span = _start_span(self._kwargs)
-        self._mgr = self._messages.stream(**self._kwargs)
-        return await self._mgr.__aenter__()
+        try:
+            with _current_span(self._span):
+                self._mgr = self._owner.messages().stream(**self._kwargs)
+                self._stream = await self._mgr.__aenter__()
+                return self._stream
+        except Exception as exc:
+            _fail(self._span, exc)
+            self._span.end()
+            raise
 
     async def __aexit__(self, exc_type, exc, tb):
         try:
             if exc is None:
-                stream = getattr(self._mgr, "_stream", None) or self._mgr
-                final = await _final_message_async(stream)
+                final = await _final_message_async(_message_holder(self._mgr, self._stream))
                 if final is not None:
                     _record_response(self._span, final)
             else:
@@ -314,7 +417,7 @@ class _AsyncStreamCM:
 class _AsyncClient:
     def __init__(self, client):
         self._client = client
-        self._messages = _AsyncMessages(client.messages)
+        self._messages = _AsyncMessages(_NativeSpanOwner(client))
 
     @property
     def messages(self):
@@ -327,12 +430,43 @@ class _AsyncClient:
 # --- helpers ---
 
 
+def _message_holder(mgr, entered):
+    """What holds the streamed message: the object ``__enter__`` returned (the real SDK's
+    ``MessageStream``; its manager keeps it under a private name-mangled attribute), else a
+    ``_stream`` attribute or the manager itself, as simpler stand-ins have it."""
+    for candidate in (entered, getattr(mgr, "_stream", None)):
+        if _has_snapshot(candidate) or callable(getattr(candidate, "get_final_message", None)):
+            return candidate
+    return mgr
+
+
+def _has_snapshot(stream) -> bool:
+    try:
+        inspect.getattr_static(stream, "current_message_snapshot")
+    except AttributeError:
+        return False
+    return True
+
+
+def _snapshot(stream):
+    """The real SDK's message accumulated so far, read without consuming more of the stream
+    (a caller that leaves the block early is not made to wait for the rest)."""
+    try:
+        return stream.current_message_snapshot
+    except Exception:  # nothing arrived yet
+        return None
+
+
 def _final_message(stream):
+    if _has_snapshot(stream):
+        return _snapshot(stream)
     getter = getattr(stream, "get_final_message", None)
     return getter() if callable(getter) else None
 
 
 async def _final_message_async(stream):
+    if _has_snapshot(stream):
+        return _snapshot(stream)
     getter = getattr(stream, "get_final_message", None)
     if not callable(getter):
         return None
@@ -379,7 +513,11 @@ def _is_async_callable(fn: Any) -> bool:
 
 def wrap(client: Any):
     """Return an instrumented wrapper around an Anthropic or AsyncAnthropic client. The
-    wrapper delegates every attribute except ``messages``, which it instruments."""
+    wrapper delegates every attribute except ``messages``, which it instruments. Wrapping an
+    already wrapped client returns it unchanged: a second layer would record every call twice.
+    """
+    if isinstance(client, (_SyncClient, _AsyncClient)):
+        return client
     create = getattr(getattr(client, "messages", None), "create", None)
     if create is None:
         raise TypeError("wrap() expects an Anthropic client with a .messages.create method")
