@@ -51,10 +51,21 @@ Portfolio project — code quality, tests, and measured results matter more than
   chart rendered as an empty box. The App Router renders with Next's vendored React 19, and
   Recharts 2.12.7 identified its chart children with react-is 16 (which does not recognise
   React 19 elements) and relied on React 18 element-time `defaultProps`. Fix: Recharts
-  2.12.7 → 2.15.4 (exact pin; React 19 support), no other dependency change. New route-mocked
+  2.12.7 → 2.15.4 (exact pin; React 19 support), no other direct dependency change. New route-mocked
   regression test checks a real SVG with one bar per metric, negative bars below and positive
   above the zero line. It failed against 2.12.7 and passes on 2.15.4; the chart is verified live
   in the final walkthrough above.
+- **Chart zero line, found afterwards in the final screenshot and fixed:** with only negative
+  deltas the Y axis auto-ranged to about [-0.9, -0.3], so the zero line was off the plot and
+  every bar started at -0.3 instead of 0. The Y domain now always includes 0
+  (`Math.min(0, min)` / `Math.max(0, max)`). The chart test became three route-mocked cases
+  (mixed, all-negative, all-positive: zero line inside the plot, each bar starting at 0 on its
+  sign's side with length proportional to |delta|), so the mocked suite has **33** tests. The
+  all-negative case failed without the fix; all three pass with it, and typecheck passed. The
+  required full tests, all 33 mocked Chrome cases and production build passed after this fix.
+  The final real-Chrome walkthrough also passed, checking a visible zero line and bars starting
+  at zero in all three seeded comparisons, alongside verdicts, diffs and trace navigation;
+  there were no page errors or failed requests.
 - Earlier test counts in this file and in `docs/REGRESSION_TRIAGE.md` §7 are dated history
   (2026-10-23).
 - **Real HotpotQA pilot done** (2026-10-25, run `cafae810`, 40/40 units, $0.252951):
