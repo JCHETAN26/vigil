@@ -48,7 +48,7 @@ class FakeDb:
         if "FROM eval_runs r JOIN eval_suites" in sql:
             return {"id": RUN, "suite": "s", "agent_id": "agent", "mode": "full",
                     "trials_per_case": 2, "status": "succeeded", "cost_spent_usd": 0.08,
-                    "created_at": None}
+                    "created_at": None, "notes": "SYNTHETIC fixture run"}
         ok = [r for r in RESULTS if r["status"] == "ok"]
         return {"n": len(RESULTS), "n_ok": len(ok),
                 "pass_rate": sum(r["passed"] for r in ok) / len(ok),
@@ -113,6 +113,11 @@ def test_run_detail_reports_how_many_versions_its_pooled_aggregates_span(client)
     assert body["n_versions"] == 2
     assert body["n_cases"] == len(RESULTS)
     assert body["pass_rate"] == 0.5  # pooled across both versions, deliberately unchanged
+
+
+def test_run_detail_returns_the_run_notes(client):
+    # The demo fixture's SYNTHETIC label travels in eval_runs.notes; the API passes it through.
+    assert client.get(f"/runs/{RUN}").json()["notes"] == "SYNTHETIC fixture run"
 
 
 def test_unknown_run_cases_is_404(client):

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback } from "react";
 
 import { EmptyState, ErrorBox, Loading, useAsync } from "@/components/States";
+import { SyntheticBadge } from "@/components/Synthetic";
 import { api } from "@/lib/api";
 
 export default function RunsPage() {
@@ -16,7 +17,7 @@ export default function RunsPage() {
       {loading && <Loading label="Loading runs…" />}
       {error && <ErrorBox error={error} onRetry={reload} />}
       {!loading && !error && data && data.runs.length === 0 && (
-        <EmptyState label="No eval runs recorded yet." />
+        <EmptyState label="No eval runs recorded yet. For prepared examples without an API key, run `make demo` (see demo/README.md)." />
       )}
       {!loading && !error && data && data.runs.length > 0 && (
         <table className="w-full text-sm border-collapse">
@@ -39,6 +40,12 @@ export default function RunsPage() {
                   <Link href={`/runs/${r.id}`} className="underline">
                     {r.suite}
                   </Link>
+                  <SyntheticBadge suite={r.suite} />
+                  {r.notes && (
+                    <p className="text-xs opacity-70 mt-0.5 max-w-xl" title={r.notes}>
+                      {r.notes.length > 160 ? `${r.notes.slice(0, 160)}…` : r.notes}
+                    </p>
+                  )}
                 </td>
                 <td className="p-2">{r.agent_id}</td>
                 <td className="p-2">{r.mode}</td>

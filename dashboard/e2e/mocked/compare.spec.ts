@@ -150,6 +150,40 @@ test.describe("correctness fixture (not AI quality): compare", () => {
     expect(params(log.filter((l) => l.startsWith("/compare/cases")).at(-1)!).get("filter")).toBe("adverse");
   });
 
+  // The metrics chart is real rendering, not a placeholder: under Recharts 2.12 it stayed an
+  // empty 220px box, because the App Router renders with React 19 (Next's vendored React) and
+  // 2.12 identified its <Bar>/<XAxis> children with react-is 16, which does not know React 19
+  // elements (and relied on element-time defaultProps). Recharts 2.15 supports React 19. Bars
+  // must exist, one per metric with a point estimate, on the right side of the zero line.
+  test("the metrics chart renders an SVG with a bar per metric, negatives below zero", async ({ page, mockApi }) => {
+    const metrics = [
+      triageMetric("passed", { point_estimate: -0.2, status: "regression", regressed: true }),
+      triageMetric("TokenF1", { point_estimate: -0.05 }),
+      triageMetric("ExactMatch", { point_estimate: 0.1 }),
+    ];
+    await mockApi(
+      triage([], { compare: (url, route) => json(route, compareResult(url, { verdict: "regression", metrics })) }),
+    );
+    await gotoAndSettle(page, PAIR);
+    const chart = page.locator(".recharts-responsive-container");
+    await expect(chart.locator("svg.recharts-surface")).toBeVisible();
+    const bars = chart.locator(".recharts-bar-rectangle path");
+    await expect(bars).toHaveCount(3);
+    for (const name of ["passed", "TokenF1", "ExactMatch"]) {
+      await expect(chart.locator(".recharts-cartesian-axis-tick-value", { hasText: name })).toHaveCount(1);
+    }
+    const zero = await chart.locator(".recharts-reference-line line").boundingBox();
+    const boxes = await Promise.all([0, 1, 2].map((i) => bars.nth(i).boundingBox()));
+    expect(zero).not.toBeNull();
+    const zeroY = zero!.y + zero!.height / 2;
+    const [passed, f1, em] = boxes.map((b) => b!);
+    for (const b of [passed, f1, em]) expect(b.height).toBeGreaterThan(0);
+    expect(passed.y).toBeGreaterThanOrEqual(zeroY - 1); // drawn downward from zero
+    expect(f1.y).toBeGreaterThanOrEqual(zeroY - 1);
+    expect(em.y + em.height).toBeLessThanOrEqual(zeroY + 1); // drawn upward to zero
+    expect(passed.height).toBeGreaterThan(f1.height); // -0.2 is longer than -0.05
+  });
+
   test("a failed comparison shows the API error and can be retried", async ({ page, mockApi }) => {
     let calls = 0;
     const log: string[] = [];

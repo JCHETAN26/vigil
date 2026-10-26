@@ -2,6 +2,7 @@
 
 import { Bar, BarChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
+import { SyntheticBadge } from "@/components/Synthetic";
 import { VerdictBadge, verdictOf } from "@/components/VerdictBadge";
 import type { CompareResult, Coverage, Policy, RunSide, SideCoverage } from "@/lib/types";
 
@@ -106,7 +107,10 @@ function SideCard({
         <dt className="opacity-70">Run</dt>
         <dd className="font-mono text-xs break-all">{s.run_id}</dd>
         <dt className="opacity-70">Suite</dt>
-        <dd>{s.suite_name}</dd>
+        <dd>
+          {s.suite_name}
+          <SyntheticBadge suite={s.suite_name} />
+        </dd>
         <dt className="opacity-70">Agent</dt>
         <dd>{s.agent_id}</dd>
         <dt className="opacity-70">Version</dt>

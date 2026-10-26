@@ -54,7 +54,7 @@ PROBES := \
     [ -z "$(REQUIRE_LIVE)" ] || { echo "REQUIRE_LIVE is set: failing instead of skipping." >&2; exit 1; }; \
   };
 
-.PHONY: test-all test-unit test-python test-bench test-go test-dashboard test-live test-infra test-paid test-browser dev
+.PHONY: test-all test-unit test-python test-bench test-demo test-go test-dashboard test-live test-infra test-paid test-browser dev demo demo-seed demo-check demo-evidence
 
 # Every gate shares one venv and one stack; never run them concurrently under `make -j`.
 .NOTPARALLEL:
@@ -83,9 +83,39 @@ test-python:
 	@echo "==> hotpotqa_agent (offline)"; $(MAKE) -s -C agents/hotpotqa_agent test
 	@echo "==> tau2_retail_agent (offline)"; $(MAKE) -s -C agents/tau2_retail_agent test
 	@$(MAKE) -s test-bench
+	@$(MAKE) -s test-demo
 
 test-bench:
 	@echo "==> bench (aggregation)";      $(PYTEST) bench/tests
+
+# Offline: the synthetic fixture under the production gate, the frozen pilot evidence (and its
+# tamper refusal), the launcher's guards. The seeder's Postgres tests live in engine/tests.
+test-demo:
+	@echo "==> demo (offline)";           $(PYTEST) demo/tests
+
+# --- Demo (demo/README.md). No API key, no model calls, nothing installed or deleted. ---------
+# demo-evidence: verify the committed REAL pilot evidence offline (no DB, no key). DEMO_PY lets
+#   CI point it at a minimal SDK + engine[api] venv.
+# demo-seed / demo-check: write (admin creds) / verify read-only (RO roles) the SYNTHETIC fixture.
+# demo: seed + check, then the real API and dashboard on free loopback ports (DEMO_API_PORT,
+#   DEMO_UI_PORT); prints canned links; Ctrl-C stops only what it started.
+DEMO_PY ?= $(ENGINE_PY)
+DEMO_API_PORT ?= 8091
+DEMO_UI_PORT ?= 3318
+NEED_VENV = [ -x $(ENGINE_PY) ] || { echo "engine/.venv is missing: run 'make -C engine install'" >&2; exit 1; }
+
+demo-evidence:
+	@$(ISOLATE) env -u ANTHROPIC_API_KEY $(DEMO_PY) demo/evidence.py verify
+
+demo-seed:
+	@$(NEED_VENV); $(LOADENV) $(ISOLATE) env -u ANTHROPIC_API_KEY $(ENGINE_PY) demo/seed.py seed
+
+demo-check:
+	@$(NEED_VENV); $(LOADENV) $(ISOLATE) env -u ANTHROPIC_API_KEY $(ENGINE_PY) demo/seed.py check
+
+demo:
+	@$(NEED_VENV); $(LOADENV) $(ISOLATE) env -u ANTHROPIC_API_KEY $(ENGINE_PY) demo/launch.py \
+	  --api-port $(DEMO_API_PORT) --ui-port $(DEMO_UI_PORT)
 
 test-go:
 	@echo "==> ingest (Go units)";        cd ingest && go test ./...

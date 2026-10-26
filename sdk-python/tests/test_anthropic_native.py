@@ -222,6 +222,84 @@ def test_nested_wrap_records_once(spans, native_tracing):
     _assert_one_owned_llm_span(spans())
 
 
+def test_sync_copies_stay_wrapped(spans, native_tracing):
+    # with_options / copy / with_middleware return new clients; reached through delegation they
+    # came back bare, so their calls produced native spans only and no Vigil span.
+    transport = Transport()
+    raw = _sync_client(transport)
+    client = vigil.wrap(raw)
+    copies = [
+        client.with_options(default_headers={"x-copy": "with_options"}, max_retries=1),
+        client.copy(default_headers={"x-copy": "copy"}),
+        client.with_middleware(),
+    ]
+    for c in copies:
+        assert type(c) is type(client) and c is not client
+        spans_before = len(spans())
+        c.messages.create(**CALL)
+        _assert_one_owned_llm_span(spans()[spans_before:])
+    assert [r.headers.get("x-copy") for r in transport.requests] == ["with_options", "copy", None]
+    # The caller's raw client is not changed by copying through the wrapper.
+    assert raw.max_retries == 0 and "x-copy" not in raw.default_headers
+    assert raw.open_telemetry["traces"]["enabled"] is True
+
+
+def test_async_copies_stay_wrapped(spans, native_tracing):
+    transport = Transport()
+    client = vigil.wrap(_async_client(transport))
+
+    async def go():
+        a = await client.with_options(timeout=5.0).messages.create(**CALL)
+        b = await client.copy(default_headers={"x-copy": "1"}).messages.create(**CALL)
+        return a, b
+
+    a, b = asyncio.run(go())
+    assert a.usage.input_tokens == b.usage.input_tokens == 9
+    usage = _usage_spans(spans())
+    assert [s.instrumentation_scope.name for s in usage] == ["vigil", "vigil"]
+    assert _native(spans()) == []
+    assert transport.requests[1].headers["x-copy"] == "1"
+
+
+def test_copy_to_another_provider_keeps_its_native_spans(spans, native_tracing):
+    # A copy is judged on its own open_telemetry: sent to a separate provider, its native spans
+    # duplicate nothing in Vigil's pipeline and are kept; the original stays suppressed.
+    other_exporter = InMemorySpanExporter()
+    other = TracerProvider()
+    other.add_span_processor(SimpleSpanProcessor(other_exporter))
+    client = vigil.wrap(_sync_client(Transport()))
+    client.with_options(open_telemetry={"tracer_provider": other}).messages.create(**CALL)
+    client.messages.create(**CALL)
+    usage = _usage_spans(spans())
+    assert [s.instrumentation_scope.name for s in usage] == ["vigil", "vigil"]
+    assert _native(spans()) == []
+    assert [s.name for s in other_exporter.get_finished_spans()] == ["anthropic.messages.create"]
+
+
+def test_copy_through_a_delegating_wrapper_is_refused(native_tracing):
+    raw = _sync_client(Transport())
+
+    class Delegating:  # copies only by delegation: the copy would drop this layer
+        def __init__(self, inner):
+            self._inner = inner
+            self.messages = inner.messages
+
+        def __getattr__(self, name):
+            return getattr(self._inner, name)
+
+    client = vigil.wrap(Delegating(raw))
+    for method in ("with_options", "copy", "with_middleware"):
+        with pytest.raises(TypeError, match=f"only delegates {method}"):
+            getattr(client, method)()
+
+    class Bare:  # no copy method at all: the usual AttributeError
+        def __init__(self, inner):
+            self.messages = inner.messages
+
+    with pytest.raises(AttributeError):
+        vigil.wrap(Bare(raw)).with_options(timeout=1)
+
+
 def test_without_native_spans(native_tracing):
     transport = Transport()
     raw = _sync_client(transport, open_telemetry={"traces": {"content_mode": "content"}})

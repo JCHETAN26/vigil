@@ -1,0 +1,56 @@
+{
+  "kind": "REAL exploratory pilot (frozen evidence)",
+  "not_a_claim": "One exploratory pilot of one controlled change on 20 questions with 1 trial each: low power and uncalibrated. Its no_regression verdict is NOT evidence of equivalence, and nothing here is a quality, latency or cost claim about either configuration.",
+  "bundle_files_sha256": {
+    "SHA256SUMS": "38809516fd665a288e880181be692d7d815ab345dcffb3f6b4677101fa0956e9",
+    "inputs.json": "0b973c5bf2c7b648cb17ee98ad5b9467246be84461c9b28c21d0f7228d5fd4ed",
+    "metadata.json": "a60f6aaadcec3fdd252a626a92fd6595df5101453a19bf9c95234a8a4996af49",
+    "policy.json": "e51da6537e29c277f438aafd96189329f92a8ba62e2533eb78899c0ff25094c0",
+    "verdict.json": "f2a589024626486c563dadbfb24a88354ac4ad54102e145ed138ffbc6a55cec3"
+  },
+  "bundle_copied_from": "the owner's validation workspace, hotpotqa-real/20261025T072856Z-pilot/bundle (outside the repo; the five files are byte-for-byte copies, checked against the sha256 values above)",
+  "exported_by": "python -m engine regress ... --save (bench/hotpotqa_triage.py pilot stage)",
+  "exported_at": "2026-10-25T07:31:27.278907+00:00",
+  "source_commit": "125c94d302ad4c75e5267993d9725b148fb1d9b7",
+  "run_id": "cafae810-f2e9-4c50-b34d-cfac8b18c509",
+  "suite": "hotpotqa-triage-pilot-27300e54a989",
+  "model": "claude-haiku-4-5-20251001",
+  "design": {
+    "questions": 20,
+    "versions": 2,
+    "trials_per_case": 1,
+    "successful_units": 40,
+    "baseline": {
+      "label": "hotpotqa_agent.validation.top_k5",
+      "agent_version": "c2eda30a02146432a38387ed183420243d6752683d87856ddd8cb38e447d5b4c",
+      "retrieval_top_k": 5
+    },
+    "candidate": {
+      "label": "hotpotqa_agent.validation.top_k1",
+      "agent_version": "4b6ff74526af186f0df0017aa96d9d34e3c6b86a476c8aa39f85d2b95d2d3949",
+      "retrieval_top_k": 1
+    }
+  },
+  "expected": {
+    "verdict": "no_regression",
+    "paired_cases": 20,
+    "gated_metrics_not_regressed": ["passed", "TokenF1"],
+    "informational": {"metric": "AllGoldRetrieved", "point_estimate": -0.3, "status": "regression", "gated": false},
+    "unit_cost_usd": {"baseline": 0.146567, "candidate": 0.106384, "total": 0.252951}
+  },
+  "verification_environment": {
+    "exported_under": {"python": "3.12.11", "numpy": "2.5.4"},
+    "scipy_at_export": "1.18.1 (not recorded in this bundle's metadata, which predates SciPy provenance; independently confirmed on the export environment and reproduced by the minimal SDK + engine[api] install)",
+    "note": "Method 't' needs SciPy; without it the verifier refuses instead of approximating, because a normal quantile changes 8 of the saved bounds."
+  },
+  "known_disclosures": [
+    "metadata.json holds absolute paths of the exporting machine (argv, suite config). They are not secrets; editing them would break the bundle's checksums, so they are kept and disclosed.",
+    "The bundle holds case/trial ids, normalized scores, statuses, per-unit cost/latency, trace ids and the two version manifests (system prompt, tool schema, params). It holds no captured transcripts, answers or credentials.",
+    "Native anthropic SDK spans and Vigil spans were both stored for every model call of this run (the SDK double-accounting fixed in 0e68bd9); see span-accounting.json. The unit costs above come from Postgres and are single-counted."
+  ],
+  "separate_attempt": {
+    "run_id": "45e1b86b-a1b1-472c-8774-3820d1b73ef7",
+    "status": "provider-capped: all 40 units failed before any model output, $0 cost, verdict incomplete",
+    "note": "An earlier attempt the same day. It is not a quality result and is not part of this evidence."
+  }
+}

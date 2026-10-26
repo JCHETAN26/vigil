@@ -1,6 +1,6 @@
 # Vigil — project status (resume guide)
 
-_Last updated: 2026-10-23. Purpose: let a fresh session resume without the prior chat._
+_Last updated: 2026-10-25. Purpose: let a fresh session resume without the prior chat._
 
 Vigil is an agent reliability + evaluation platform: it traces agents (OpenTelemetry →
 ClickHouse), runs them over datasets, scores them, and detects regressions between agent
@@ -8,20 +8,73 @@ versions (CLI, API, dashboard). Diagnosing them (investigation agent) is still p
 Portfolio project — code quality, tests, and measured results matter more than feature count
 (see `CLAUDE.md`).
 
-## Snapshot
+## Snapshot (2026-10-25)
 
-- Branch `improve/reliable-regression-triage`: the reliable regression triage milestone below,
-  **uncommitted** in the working tree. Everything else below is committed on `main`.
+- **Two open pull requests, neither merged, no GitHub approval recorded:**
+  - [PR #1](https://github.com/JCHETAN26/vigil/pull/1), branch
+    `improve/reliable-regression-triage`: the reliable regression triage milestone below plus
+    the demo-readiness core fixes (gate refuses a pass with no compared gated metric, run-version
+    discovery API + run-detail compare action, explicit NumPy/SciPy dependencies with no silent
+    normal fallback, ClickHouse calls off the event loop).
+  - [PR #2](https://github.com/JCHETAN26/vigil/pull/2), branch `validate/hotpotqa-real-agent`
+    (stacked on PR #1): the real HotpotQA validation tooling, its exploratory pilot, the
+    single-owner span accounting fix (`0e68bd9`) and the portfolio demo (`demo/`, below).
+  - Hosted CI: PR #2's earlier head `0e68bd9` passed the three jobs CI had then
+    ([run 40208224559](https://github.com/JCHETAN26/vigil/actions/runs/40208224559)); PR #1's
+    head `466765f` passed all three jobs
+    ([run 40251722382](https://github.com/JCHETAN26/vigil/actions/runs/40251722382)). These are
+    results for those exact heads only. For PR #2's latest head (demo, review fixes, the added
+    `evidence` job) see its [checks](https://github.com/JCHETAN26/vigil/pull/2/checks).
+
+### Current verification (2026-10-25, manager, local)
+
+- `make test-all` passed: SDK 51, engine 287 offline + 10 live API, hello_agent 5,
+  hotpotqa_agent 22, tau2 2, bench 162, demo 36, Go units + integration, dashboard typecheck.
+  **Paid model-call suites were not run.** After the chart dependency change below, `make
+  test-all`, all 31 route-mocked Chrome tests, the production build and ruff on changed files
+  passed again.
+- Real stack: the SYNTHETIC seed imported 1 suite, 12 cases, 4 manifests, 3 runs, 6 run
+  versions, 68 results and 270 spans; a second seed wrote nothing; the read-only check gave the
+  three expected verdicts; real-database conflict tests (Postgres mismatch, span mismatch,
+  partial span set) were refused with both stores unchanged. The 3 pre-existing runs (240
+  results) kept exact checksums and span counts/tokens (a cost float aggregate differed only in
+  summation order, 9e-17).
+- Evidence: the original 121 native/Vigil pairs still reconcile to $0.252951; the committed
+  bundle is byte-exact; the minimal SDK + `engine[api]` verifier and tamper refusal passed.
+- Final real-Chrome walkthrough **passed** (after the chart fix and a restart) against the
+  actual API (127.0.0.1:8092) and dashboard (3318) through the same-origin proxy, no mocks: all
+  three synthetic scenario verdicts with a visible Recharts SVG and bar paths on each, their
+  manifest diffs, the candidate `syn-q02` affected-case trace with its top-1 retrieval detail,
+  and the original real pilot's `no_regression` comparison, with zero page errors and zero
+  failed requests.
+- **Blank metrics chart, found in the final visual review and fixed:** the compare page's bar
+  chart rendered as an empty box. The App Router renders with Next's vendored React 19, and
+  Recharts 2.12.7 identified its chart children with react-is 16 (which does not recognise
+  React 19 elements) and relied on React 18 element-time `defaultProps`. Fix: Recharts
+  2.12.7 → 2.15.4 (exact pin; React 19 support), no other dependency change. New route-mocked
+  regression test checks a real SVG with one bar per metric, negative bars below and positive
+  above the zero line. It failed against 2.12.7 and passes on 2.15.4; the chart is verified live
+  in the final walkthrough above.
+- Earlier test counts in this file and in `docs/REGRESSION_TRIAGE.md` §7 are dated history
+  (2026-10-23).
+- **Real HotpotQA pilot done** (2026-10-25, run `cafae810`, 40/40 units, $0.252951):
+  `no_regression`, exploratory only — `docs/HOTPOTQA_VALIDATION.md` §9. No usage-cap blocker is
+  current. The larger paid comparison (base100 × 3) still needs separate owner approval and is not
+  needed for the demo.
+- **Portfolio demo** (`demo/README.md`): `make demo-evidence` re-verifies the committed REAL
+  pilot bundle offline (no DB, no key); `make demo` seeds a small SYNTHETIC fixture (12 cases,
+  regression / no_regression / incomplete, invented data, no model calls) into the real stores and
+  starts the real read-only API and dashboard on loopback ports. Local only; nothing is deployed.
 - Components: `ingest/` (Go), `sdk-python/`, `engine/` (Python eval engine + read-only
   FastAPI), `dashboard/` (Next.js), `agents/` (`hello_agent`, `hotpotqa_agent`,
-  `tau2_retail_agent`), `bench/`, `deploy/` (Compose only), `docs/`.
+  `tau2_retail_agent`), `bench/`, `demo/`, `deploy/` (Compose only), `docs/`.
 - **Not implemented** (planned): `sdk-ts/` (placeholder `.gitkeep`), LLM-as-judge scorers,
-  investigation agent, MCP server, Helm/Terraform.
+  investigation agent, MCP server, Helm/Terraform, any public deployment or API authentication.
 - Design docs: `docs/design/data-model.md` (ingest/ClickHouse), `docs/design/eval-engine.md`
   (the eval engine), `docs/REGRESSION_TRIAGE.md` (triage journey), `engine/TRIAGE_API.md`
   (API contract), `docs/TESTING.md` (test gates). This file is the living status/plan.
 
-## Reliable regression triage (in progress, 2026-10-23)
+## Reliable regression triage (PR #1; first validated 2026-10-23)
 
 What the branch adds (walkthrough and commands: `docs/REGRESSION_TRIAGE.md`):
 - **One gate** (`engine/engine/gate.py`) used by `engine regress` and the API's `/compare`,
@@ -78,21 +131,55 @@ bootstrap runs in a thread pool. `npm audit` on production dependencies reports 
 vulnerabilities (Next 15.5.28, Playwright 1.58.2, direct `postcss` 8.5.31, `source-map-js`
 1.2.2, `next.postcss` override 8.5.31).
 
-**Open before closing the milestone:** review of draft
-[PR #1](https://github.com/JCHETAN26/vigil/pull/1). Hosted CI results: see the
-[PR checks](https://github.com/JCHETAN26/vigil/pull/1/checks) and
-[workflow run](https://github.com/JCHETAN26/vigil/actions/runs/40064325583) for current status.
+The test counts and checks above are as of 2026-10-23 (they have grown since; CI on the PRs is
+the current record). **Open before closing the milestone:** owner review and merge of
+[PR #1](https://github.com/JCHETAN26/vigil/pull/1); see its
+[checks](https://github.com/JCHETAN26/vigil/pull/1/checks) for current CI status.
+
+## HotpotQA real-agent validation and demo (PR #2, 2026-10-25)
+
+- **Pilot** (`bench/hotpotqa_triage.py pilot`, run `cafae810`, source `125c94d`): 20 dev
+  questions × 1 trial × 2 versions (top_k 5 → 1), dated Haiku 4.5, 40/40 OK, $0.252951,
+  `no_regression` on the gated `passed`/`TokenF1`; informational AllGoldRetrieved −0.30.
+  Exploratory, not an equivalence claim. An earlier attempt (`45e1b86b`) hit a provider usage
+  cap before any output and is not a result. Details: `docs/HOTPOTQA_VALIDATION.md` §9.
+- **Span double counting found by the pilot, fixed in `0e68bd9`:** anthropic ≥ 1.17's native
+  span duplicated every Vigil LLM span's usage. `vigil.wrap` now owns each call alone; copies made
+  with `with_options`/`copy`/`with_middleware` stay wrapped (the engine's dev cache keeps its
+  store on copies); `bench/span_accounting.py` reconciles historical rows without rewriting them
+  and flags nested `gen_ai.*` usage spans as unresolved. Reconciled pilot record:
+  `demo/evidence/hotpotqa-pilot/span-accounting.json`.
+- **Demo** (`demo/`): frozen pilot bundle (byte-identical, pinned checksums), offline verifier
+  with tamper refusal, SYNTHETIC fixture + idempotent seeder that refuses conflicts, launcher,
+  dashboard demo notice + SYNTHETIC labels + optional same-origin API proxy, and a CI job that
+  re-verifies the evidence from a minimal SDK + `engine[api]` install.
 
 **Known limitations:** the full `npm audit` still reports 3 moderate, dev-only advisories in the
 Tailwind 3 chain. npm's suggested fix is a Tailwind 4 migration, which is deferred and not
 planned for this milestone. The synthetic check used Kafka 4.1, not the pinned Redpanda. Paid suites were not
 run on the final code. Ingest dedup across restarts is limited as described above.
 
-## Environment (migrated 2026-09-27)
+## Current validation environment (2026-10-25)
 
-**Primary environment: the owner's Oracle Cloud ARM machine** (Ubuntu 22.04, aarch64, 4 cores,
-23 GB RAM, ~40 GB free disk, no GPU; not shared). **The IdeaPad (x86_64, shared) is retired
-from Vigil** — nothing runs there any more.
+- The PR #1/#2 work, the HotpotQA pilot and the demo checks ran natively over SSH on an
+  **x86_64 Linux** host (the IdeaPad), in the worktree `/home/grv22/projects/vigil-work/repo`.
+  A separate checkout on an external SSD is read-only for this work: never write to or remount it.
+- Its own local stack for checks: Kafka 4.1 (not the pinned Redpanda), ClickHouse, Postgres,
+  with read-only roles; Python 3.12.11 (one shared `engine/.venv`), Node 22, Google Chrome for the
+  browser checks. The disk is shared and was nearly full earlier; re-check free space before any
+  eval run (the 1 GB floor applies).
+- **Product defaults stay portable** (loopback ports 8080/3000, Compose stack, uv venvs): nothing
+  in the repo assumes either machine. Whether the Oracle Cloud machine below is still in use is
+  not recorded here; nothing has been decommissioned by this work.
+
+## History: Oracle Cloud environment (migrated 2026-09-27)
+
+_As recorded on 2026-09-27; the cloud measurements below are dated history. The statement that
+nothing runs on the IdeaPad was true then and is superseded by the section above._
+
+**Primary environment then: the owner's Oracle Cloud ARM machine** (Ubuntu 22.04, aarch64, 4
+cores, 23 GB RAM, ~40 GB free disk, no GPU; not shared). The IdeaPad (x86_64, shared) was retired
+from Vigil at that point.
 
 - **Toolchain (user-space, no sudo):** Go 1.27.1 in `~/.local/go`, Node 20 in `~/.local/node`,
   uv in `~/.local/bin` with uv-managed CPython 3.12.14; PATH line in `~/.bashrc`. `make` and
@@ -336,10 +423,32 @@ real OTel SDK exporter; refuse fault injection while a real eval run is in progr
   - **CI:** a GitHub Actions workflow running the unit/offline suites on every push, with a
     README status badge.
 
-## What's next (in order)
+## What's next (2026-10-25)
 
-> **2026-09-27:** Vigil moved to the Oracle Cloud ARM machine (see "Environment" above); data,
-> suites and runs migrated and verified. The plan below is unchanged.
+1. **Owner review of PR #1 and PR #2**, then merge (PR #2 is stacked on PR #1). The manager runs
+   the full local checks and hosted CI on the newest commits first.
+2. **Present the demo** (`demo/README.md`: offline evidence, seeded synthetic scenarios, a 3–5
+   minute walkthrough script). Optional: record screenshots of the launcher-started UI, where the
+   demo notice and SYNTHETIC labels are visible.
+3. **Optional, each a separate decision:**
+   - the paid HotpotQA `full` comparison (base100 × 3, `docs/HOTPOTQA_VALIDATION.md`) — needs
+     owner approval for the spend; not needed for a truthful demo;
+   - hardening for any public deployment (authentication, TLS, rate limits, operations) — none
+     exists, and the API is local and unauthenticated today;
+   - roadmap features (investigation agent, LLM-as-judge scorers, MCP server, TypeScript SDK,
+     Kubernetes/Terraform).
+
+Routine, reversible code changes do not need prior approval; paid model runs, deletions of
+Docker images/volumes/caches, and anything public do.
+
+## Archived plans (superseded 2026-10-25)
+
+_Kept for history only. These were the next steps at the dates shown; most are done (HotpotQA
+Stage D, τ² dev, the A/A test, regression detection, the dashboard and API) and the usage-cap
+block below expired. They are not the current plan._
+
+> **2026-09-27:** Vigil moved to the Oracle Cloud ARM machine (see the history section above);
+> data, suites and runs migrated and verified. The plan below is unchanged.
 >
 > **Current state (2026-09-26 pause):** Sessions 1–3 done. HotpotQA Stage D **done** (100×3
 > measurement baseline committed). Session 4 **τ²-bench retail done** (agent/adapter/scorer/
@@ -381,7 +490,7 @@ real OTel SDK exporter; refuse fault injection while a real eval run is in progr
 > Every eval run is disk-guarded (refuses under 1 GB free) and needs the owner's OK for the
 > measurement baseline. Do not prune Docker caches without asking the owner.
 
-1. **HotpotQA Stage D** (not started):
+1. **HotpotQA Stage D** (as written before it ran; done since — see the 2026-09-26 note above):
    - Build artifacts if absent: `python bench/build_hotpotqa_corpus.py --n 500`.
    - Create suites from `data/hotpotqa/subsets/{dev20,base100}.txt` (adapter `hotpotqa`,
      config `path` + `subset_path`); set `VIGIL_HOTPOTQA_CORPUS=data/hotpotqa/corpus.v1.jsonl`
@@ -440,8 +549,9 @@ real OTel SDK exporter; refuse fault injection while a real eval run is in progr
 
 ## How to resume
 
-Prereqs: Docker up, the toolchain on PATH (`~/.local/go/bin`, `~/.local/node/bin`,
-`~/.local/bin` — see "Environment"), a repo-root `.env` (gitignored) with these variable
+For a no-key look at the product, start with `demo/README.md`. Prereqs: Docker up, the toolchain
+on PATH (Go, Node, uv/Python 3.12; the `~/.local/...` paths are the 2026-09 cloud setup), a
+repo-root `.env` (gitignored) with these variable
 **names** (values not recorded here): `CLICKHOUSE_DB`, `CLICKHOUSE_USER`, `CLICKHOUSE_PASSWORD`,
 `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `REDIS_PASSWORD`, `ANTHROPIC_API_KEY`,
 `OPENAI_API_KEY`, plus `POSTGRES_RO_USER`/`POSTGRES_RO_PASSWORD`/`CLICKHOUSE_RO_USER`/

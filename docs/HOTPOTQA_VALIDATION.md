@@ -6,12 +6,16 @@ model calls. Here the two sides are the current agent and a copy that differs in
 setting, run through the real orchestrator, workers, SDK instrumentation, scorers, gate, API and
 offline export. The tool is [`bench/hotpotqa_triage.py`](../bench/hotpotqa_triage.py).
 
-**Status: tooling only, no results yet.** No stage has been run: `ANTHROPIC_API_KEY` is not
-configured, so no model call has been made. Only the offline `plan` has run, and nothing below
-reports a measured outcome. The approved next step is `pilot` with `--budget 1.50`, under the
-owner-approved $2. A paid `full` run is not approved yet. When a stage
-has been run, its raw outputs live under `bench/results/hotpotqa_triage/<UTC>-<stage>/` and its
-`summary.md` is the record.
+**Status (2026-10-25): the `pilot` stage has run; result in [§9](#9-pilot-result-2026-10-25).**
+It is one exploratory run (20 questions × 1 trial per version, run `cafae810`), low power and
+uncalibrated: its `no_regression` verdict is not an equivalence or quality claim. Its frozen
+evidence bundle is committed under
+[`demo/evidence/hotpotqa-pilot/`](../demo/evidence/hotpotqa-pilot/) and re-verifies offline with
+`make demo-evidence`. An earlier attempt the same day (`45e1b86b`) was stopped by a provider
+usage cap before any model output (40 failed units, $0): it is not a quality result. The paid
+`full` stage (base100 × 3) has **not** run and needs separate owner approval; the portfolio demo
+does not depend on it. The stage's other raw outputs (plan, unit tables, verify reports, logs)
+stayed in the owner's validation workspace and are not in the repo.
 
 ## 1. The controlled change
 
@@ -330,13 +334,55 @@ Everything else stays counted:
 - a native span with no Vigil parent is *unowned*, because structure cannot prove it a
   duplicate.
 
-Either one fails `*_span_single_owner`, and the canonical total is then an upper bound. Nothing
-is excluded on its name or on equal values alone, so distinct calls with identical usage all
-count. The manager's read-only check of the pilot found all 121 native spans to be direct
-children of a Vigil span with identical tokens and cost
-(`vigil-work/trace-accounting-root-cause.json`). So the strict rule excludes exactly those 121,
-assuming their request model matches too: the native span copies it from the same request.
-The canonical totals then equal Postgres per version. Running the diagnostic on the run confirms
-this (`shadow_spans` 121 in total, no `unresolved_reasons`). Which earlier runs are affected
-depends on when anthropic 1.17 entered the venv; `shadow_spans` answers that per run. The pilot's `summary.md` is preserved as recorded.
-Re-running `verify` on it keeps the old summary as `summary.before-<UTC>.md`.
+- a `gen_ai.*` usage span directly under another `gen_ai.*` usage span (for example a manual
+  `vigil.llm_call` that records usage around a call through a wrapped client) is *unresolved*
+  with reason `nested_owner`: the outer span may re-report the inner call or be a distinct call
+  of its own. Both stay counted.
+
+Any of these fails `*_span_single_owner`, and the canonical total is then an upper bound.
+Nothing is excluded on its name or on equal values alone, so distinct calls with identical usage
+all count. A read-only check of the pilot's stored spans found all 121 native spans to be direct
+children of a Vigil span with identical tokens and cost, so the strict rule excludes exactly those
+121 and the canonical totals equal Postgres per version (`shadow_spans` 56 + 65, nothing
+unresolved or unowned). That reconciliation is committed as
+[`demo/evidence/hotpotqa-pilot/span-accounting.json`](../demo/evidence/hotpotqa-pilot/span-accounting.json),
+with its provenance; `make demo-evidence` cross-checks it against the bundle's per-unit costs.
+Which earlier runs are affected depends on when anthropic 1.17 entered the venv; `shadow_spans`
+answers that per run. The pilot's original `summary.md` marked the doubled sums `[ok]` (the old
+check); it is preserved, unedited, in the owner's workspace and is not committed. Re-running
+`verify` on it keeps the old summary as `summary.before-<UTC>.md`.
+
+## 9. Pilot result (2026-10-25)
+
+**REAL, exploratory.** Run `cafae810-f2e9-4c50-b34d-cfac8b18c509`, source `125c94d`, model
+`claude-haiku-4-5-20251001` (dated Haiku 4.5), suite `hotpotqa-triage-pilot-27300e54a989` (the 20
+dev questions), 1 trial per question per version, concurrency 1, cache off: **40 of 40 units
+OK**. Unit cost from Postgres: baseline $0.146567 + candidate $0.106384 = **$0.252951**.
+
+Gate verdict (default policy, computed by `engine.gate`, not predicted): **`no_regression`**,
+20 paired cases.
+
+| metric | gated | Δ (top_k 1 − top_k 5) | one-sided 95% bound | status |
+|---|---|---|---|---|
+| passed | yes | −0.050 | +0.036 | ok |
+| TokenF1 | yes | −0.027 | +0.028 | ok |
+| AllGoldRetrieved | no | −0.300 | −0.079 | regression (informational) |
+
+The other informational metrics (ExactMatch, RetrievalRecall@5/@10, NDCG, cost, latency) are in
+the bundle's `verdict.json`. Neither gated metric regressed, while the informational
+AllGoldRetrieved dropped by 0.30 (fewer questions with both gold passages retrieved at top_k 1).
+
+How to read it:
+
+- 20 questions and one trial give wide intervals: `no_regression` means the gate found no
+  evidence of a gated drop at this size, **not** that top_k 1 is as good as top_k 5. It is not a
+  quality, latency or cost claim about either configuration.
+- The span double counting of §8 affects only the stored span sums; the verdict and the unit
+  costs above come from Postgres and are single-counted.
+- The bundle was exported under Python 3.12.11, NumPy 2.5.4 and SciPy 1.18.1 (SciPy is not
+  recorded in this bundle's metadata, which predates that field; it was confirmed on the export
+  environment, and a minimal SDK + `engine[api]` install reproduces every metric). Without SciPy
+  the verifier refuses instead of approximating: a normal quantile changes 8 of the saved bounds.
+
+Reproduce offline (no database, no API key): `make demo-evidence`, or
+`engine/.venv/bin/python bench/regression_verdict.py reproduce demo/evidence/hotpotqa-pilot/bundle`.

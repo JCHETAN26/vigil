@@ -98,6 +98,10 @@ version is the baseline, and a client must not assign sides from it. 404 if the 
 exist; an existing run with no versions returns `versions: []`, `total: 0`. When `total`
 exceeds the page, the remaining versions are still selectable by hash or prefix.
 
+`GET /runs` rows and `GET /runs/{run_id}` also carry `notes` (`eval_runs.notes`, free text or
+null). The demo's seeded runs say `SYNTHETIC ...` there (`demo/synthetic_fixture.py`), and the
+dashboard shows the notes with the run.
+
 ## `GET /compare`
 
 ```jsonc

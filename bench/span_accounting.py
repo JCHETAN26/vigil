@@ -26,6 +26,10 @@ twice — the HotpotQA pilot run cafae810 (docs/HOTPOTQA_VALIDATION.md).
   can only over-count, never hide spend. With no ``gen_ai.*`` parent it is *unowned* (e.g. a
   native span that is a sibling of a Vigil span): structure cannot tell it from a separate
   call, so it is kept too.
+- A ``gen_ai.*`` usage span whose direct parent is another ``gen_ai.*`` usage span (e.g. a
+  manual ``vigil.llm_call`` recording usage around a call through a wrapped client) is
+  *unresolved* too, reason ``nested_owner``: the outer span may be re-reporting the inner call
+  or may be a distinct call of its own, and structure cannot say which. Both stay counted.
 - Nothing is excluded on name or equal values alone: distinct calls with identical usage are
   distinct owner spans and all count.
 - Cache hits (``cache_hit = 1``, the engine's dev cache) cost nothing; they are reported but
@@ -108,6 +112,10 @@ def _int(r: dict, field: str) -> int:
     return int(r.get(field) or 0)
 
 
+def _has_usage(r: dict) -> bool:
+    return any(_int(r, f) for f in _TOKEN_FIELDS) or float(r.get("cost_usd") or 0) > 0
+
+
 def _shadow_mismatch(native: dict, owner: dict) -> str | None:
     """Why ``native`` is not provably ``owner``'s call recorded again, or None if it is.
 
@@ -155,6 +163,12 @@ def reconcile(rows: Iterable[dict]) -> dict:
             unowned.append(r)
     shadows: list[dict] = []
     unresolved: list[tuple[dict, str]] = []
+    for r in owners.values():
+        # An owner nested directly in another owner, both with usage: possibly one call
+        # reported twice, possibly two calls. Flagged, never dropped.
+        parent = owners.get((str(r["trace_id"]), str(r.get("parent_span_id") or "")))
+        if parent is not None and _has_usage(r) and _has_usage(parent):
+            unresolved.append((r, "nested_owner"))
     for parent, kids in children.items():
         owner = owners[parent]
         for r in kids:

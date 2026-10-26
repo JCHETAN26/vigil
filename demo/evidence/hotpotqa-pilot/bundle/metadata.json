@@ -1,0 +1,123 @@
+{
+  "argv": [
+    "/home/grv22/projects/vigil-work/repo/engine/engine/__main__.py",
+    "regress",
+    "--baseline",
+    "cafae810-f2e9-4c50-b34d-cfac8b18c509",
+    "--baseline-version",
+    "c2eda30a02146432a38387ed183420243d6752683d87856ddd8cb38e447d5b4c",
+    "--candidate",
+    "cafae810-f2e9-4c50-b34d-cfac8b18c509",
+    "--candidate-version",
+    "4b6ff74526af186f0df0017aa96d9d34e3c6b86a476c8aa39f85d2b95d2d3949",
+    "--save",
+    "/home/grv22/projects/vigil-work/hotpotqa-real/20261025T072856Z-pilot/bundle",
+    "--exit-code"
+  ],
+  "created_at": "2026-10-25T07:31:27.278907+00:00",
+  "engine_source": {
+    "dirty_tree": "not recorded",
+    "git_sha": "125c94d302ad4c75e5267993d9725b148fb1d9b7"
+  },
+  "environment": {
+    "numpy": "2.5.4",
+    "python": "3.12.11"
+  },
+  "format": "vigil-regress-bundle",
+  "format_version": 2,
+  "manifest_redaction_note": "values under credential-like keys (api_key, secret, password, authorization, access/auth/refresh/session token, private_key, credential, bearer) are redacted; free text such as prompt bodies and tool descriptions is NOT scanned",
+  "manifests": {
+    "baseline": {
+      "manifest": {
+        "code_ref": null,
+        "created_at": "2026-10-25T07:22:15.013045+00:00",
+        "git_sha": "125c94d302ad4c75e5267993d9725b148fb1d9b7",
+        "model": "claude-haiku-4-5-20251001",
+        "params": {
+          "max_tokens": 1024,
+          "retrieval_top_k": 5
+        },
+        "prompts": {
+          "system": "You answer multi-hop questions using a Wikipedia `search` tool over a large paragraph corpus. You will usually need MORE THAN ONE search: first find a bridge entity or the two entities being compared, then search again for the detail that answers the question. Base your answer only on retrieved text; do not rely on prior knowledge. For yes/no comparison questions, answer exactly 'yes' or 'no'. Keep the answer as short as possible \u2014 a name, entity, date, or number, with no explanation. End your reply with a line 'FINAL: <answer>' containing just that answer."
+        },
+        "tools": [
+          {
+            "description": "Search the Wikipedia paragraph corpus for text relevant to a query. Returns the top 5 matching paragraphs (title + text). Call it multiple times, refining the query, to gather the evidence a multi-hop question needs.",
+            "input_schema": {
+              "properties": {
+                "query": {
+                  "description": "A focused search query (keywords or a phrase).",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "query"
+              ],
+              "type": "object"
+            },
+            "name": "search"
+          }
+        ]
+      },
+      "redacted_paths": [],
+      "truncated_paths": []
+    },
+    "candidate": {
+      "manifest": {
+        "code_ref": null,
+        "created_at": "2026-10-25T07:22:15.013045+00:00",
+        "git_sha": "125c94d302ad4c75e5267993d9725b148fb1d9b7",
+        "model": "claude-haiku-4-5-20251001",
+        "params": {
+          "max_tokens": 1024,
+          "retrieval_top_k": 1
+        },
+        "prompts": {
+          "system": "You answer multi-hop questions using a Wikipedia `search` tool over a large paragraph corpus. You will usually need MORE THAN ONE search: first find a bridge entity or the two entities being compared, then search again for the detail that answers the question. Base your answer only on retrieved text; do not rely on prior knowledge. For yes/no comparison questions, answer exactly 'yes' or 'no'. Keep the answer as short as possible \u2014 a name, entity, date, or number, with no explanation. End your reply with a line 'FINAL: <answer>' containing just that answer."
+        },
+        "tools": [
+          {
+            "description": "Search the Wikipedia paragraph corpus for text relevant to a query. Returns the top 1 matching paragraphs (title + text). Call it multiple times, refining the query, to gather the evidence a multi-hop question needs.",
+            "input_schema": {
+              "properties": {
+                "query": {
+                  "description": "A focused search query (keywords or a phrase).",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "query"
+              ],
+              "type": "object"
+            },
+            "name": "search"
+          }
+        ]
+      },
+      "redacted_paths": [],
+      "truncated_paths": []
+    }
+  },
+  "suites": {
+    "baseline": {
+      "adapter": "hotpotqa",
+      "config": {
+        "path": "/home/grv22/projects/vigil-work/repo/data/hotpotqa/cases.v1.json",
+        "subset_path": "/home/grv22/projects/vigil-work/repo/data/hotpotqa/subsets/dev20.txt",
+        "version": "v1"
+      },
+      "name": "hotpotqa-triage-pilot-27300e54a989",
+      "suite_id": "ec7115f8-9af2-485a-b66a-17da067a8145"
+    },
+    "candidate": {
+      "adapter": "hotpotqa",
+      "config": {
+        "path": "/home/grv22/projects/vigil-work/repo/data/hotpotqa/cases.v1.json",
+        "subset_path": "/home/grv22/projects/vigil-work/repo/data/hotpotqa/subsets/dev20.txt",
+        "version": "v1"
+      },
+      "name": "hotpotqa-triage-pilot-27300e54a989",
+      "suite_id": "ec7115f8-9af2-485a-b66a-17da067a8145"
+    }
+  }
+}

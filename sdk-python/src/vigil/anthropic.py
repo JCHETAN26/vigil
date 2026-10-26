@@ -87,6 +87,14 @@ def without_native_spans(client: Any) -> Any:
     )
 
 
+def native_spans_reach_vigil(client: Any) -> bool:
+    """True when ``client``'s native call spans are on and go to Vigil's provider (its own
+    ``tracer_provider`` is Vigil's, or it has none and the global one is), so they would
+    duplicate a Vigil span's usage."""
+    options = _native_options(client)
+    return options is not None and _NativeSpanOwner._reaches_vigil(options)
+
+
 class _NativeSpanOwner:
     """Picks, per call, the client whose ``messages`` the wrapper calls: the caller's own, or
     (when its native call spans would reach Vigil's provider and duplicate the Vigil span) a
@@ -97,8 +105,7 @@ class _NativeSpanOwner:
         self._quiet = None
 
     def messages(self):
-        options = _native_options(self.client)
-        if options is None or not self._reaches_vigil(options):
+        if not native_spans_reach_vigil(self.client):
             return self.client.messages
         if self._quiet is None:
             self._quiet = without_native_spans(self.client)
@@ -321,10 +328,43 @@ class _SyncStreamCM:
         return self._mgr.__exit__(exc_type, exc, tb)
 
 
-class _SyncClient:
+class _WrappedClient:
+    """What the sync and async wrappers share: delegation, and copies that stay wrapped.
+
+    The SDK's ``with_options`` / ``copy`` / ``with_middleware`` return a new client. Reached
+    through ``__getattr__`` they would return the bare copy, whose calls Vigil never sees, so
+    they are wrapped here: the copy is made by the wrapped object's own method, then wrapped
+    (with its own native-span owner, so a copy's ``open_telemetry`` is judged on its own).
+    The wrapped object must define the method itself: a wrapper that only delegates it (by
+    ``__getattr__``) would hand back a copy of the client *inside* it, silently dropping that
+    wrapper (e.g. the engine's cache), so that is refused with a TypeError."""
+
     def __init__(self, client):
         self._client = client
-        self._messages = _SyncMessages(_NativeSpanOwner(client))
+
+    def _copy_with(self, method: str, *args, **kwargs):
+        try:
+            inspect.getattr_static(self._client, method)
+        except AttributeError:
+            if hasattr(self._client, method):
+                raise TypeError(
+                    f"vigil.wrap: {type(self._client).__name__} only delegates {method}() to "
+                    "the client inside it, so the copy would bypass it; define "
+                    f"{method}() on {type(self._client).__name__} to return a copy of itself"
+                ) from None
+            raise AttributeError(
+                f"{type(self._client).__name__!r} object has no attribute {method!r}"
+            ) from None
+        return wrap(getattr(self._client, method)(*args, **kwargs))
+
+    def with_options(self, *args, **kwargs):
+        return self._copy_with("with_options", *args, **kwargs)
+
+    def copy(self, *args, **kwargs):
+        return self._copy_with("copy", *args, **kwargs)
+
+    def with_middleware(self, *middleware):
+        return self._copy_with("with_middleware", *middleware)
 
     @property
     def messages(self):
@@ -332,6 +372,12 @@ class _SyncClient:
 
     def __getattr__(self, name):
         return getattr(self._client, name)
+
+
+class _SyncClient(_WrappedClient):
+    def __init__(self, client):
+        super().__init__(client)
+        self._messages = _SyncMessages(_NativeSpanOwner(client))
 
 
 # --- async wrappers ---
@@ -414,17 +460,10 @@ class _AsyncStreamCM:
         return await self._mgr.__aexit__(exc_type, exc, tb)
 
 
-class _AsyncClient:
+class _AsyncClient(_WrappedClient):
     def __init__(self, client):
-        self._client = client
+        super().__init__(client)
         self._messages = _AsyncMessages(_NativeSpanOwner(client))
-
-    @property
-    def messages(self):
-        return self._messages
-
-    def __getattr__(self, name):
-        return getattr(self._client, name)
 
 
 # --- helpers ---
@@ -513,10 +552,12 @@ def _is_async_callable(fn: Any) -> bool:
 
 def wrap(client: Any):
     """Return an instrumented wrapper around an Anthropic or AsyncAnthropic client. The
-    wrapper delegates every attribute except ``messages``, which it instruments. Wrapping an
-    already wrapped client returns it unchanged: a second layer would record every call twice.
+    wrapper delegates every attribute except ``messages``, which it instruments, and the copy
+    methods (``with_options`` / ``copy`` / ``with_middleware``), whose copies come back wrapped.
+    Wrapping an already wrapped client returns it unchanged: a second layer would record every
+    call twice.
     """
-    if isinstance(client, (_SyncClient, _AsyncClient)):
+    if isinstance(client, _WrappedClient):
         return client
     create = getattr(getattr(client, "messages", None), "create", None)
     if create is None:

@@ -1,0 +1,17 @@
+{
+  "alpha": 0.05,
+  "default_threshold": 0.0,
+  "failed_trials": "failed_trials_score_zero_on_quality_metrics",
+  "gated": [
+    "passed",
+    "TokenF1"
+  ],
+  "method": "t",
+  "n_boot": 10000,
+  "seed": 1234,
+  "thresholds": {
+    "TokenF1": 0.03,
+    "passed": 0.05
+  },
+  "two_level": false
+}

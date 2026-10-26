@@ -59,13 +59,47 @@ def test_native_child_with_cache_tokens_folded_into_input_is_a_shadow():
 
 
 def test_equal_valued_distinct_calls_all_count():
-    # Three real calls with identical usage — siblings, and a gen_ai span nested in another
-    # gen_ai span (an owner is never a shadow) — are three calls, never deduplicated by value.
+    # Three independent calls with identical usage and price are three calls, never
+    # deduplicated by value, and the run is single-owner.
     rows = [_span("t1", "a", parent="root"), _span("t1", "b", parent="root"),
-            _span("t1", "c", parent="a")]
+            _span("t2", "a", parent="root")]
     r = sa.reconcile(rows)
-    assert r["single_owner"] and r["canonical"]["spans"] == 3
+    assert r["single_owner"] and r["unresolved_spans"] == 0 and r["canonical"]["spans"] == 3
     assert r["canonical"]["input_tokens"] == 300 and math.isclose(r["canonical"]["cost_usd"], 0.003)
+
+
+@pytest.mark.parametrize("inner", [
+    {},  # identical usage: the outer span may be re-reporting the inner call
+    {"tokens": (60, 4), "cost": 0.0004},  # different usage: may be a distinct call
+])
+def test_gen_ai_usage_span_nested_in_another_is_unresolved(inner):
+    # A manual vigil.llm_call recording usage around a call through a wrapped client: two
+    # gen_ai usage spans, parent and child. Structure cannot tell one call reported twice from
+    # two calls, so both stay counted (nothing arbitrarily dropped) and the run is NOT
+    # single-owner.
+    rows = [_span("t1", "outer", parent="root"), _span("t1", "inner", parent="outer", **inner)]
+    r = sa.reconcile(rows)
+    assert not r["single_owner"] and r["shadow_spans"] == 0
+    assert r["unresolved_reasons"] == {"nested_owner": 1}
+    assert r["examples"]["unresolved"] == ["t1/inner (nested_owner)"]
+    assert r["canonical"] == r["as_stored"] and r["canonical"]["spans"] == 2
+
+
+def test_nested_owner_without_usage_on_the_parent_is_not_flagged():
+    # A gen_ai parent that only names the model (no tokens, no cost) re-reports nothing.
+    rows = [_span("t1", "outer", tokens=(0, 0), cost=0.0), _span("t1", "inner", parent="outer")]
+    r = sa.reconcile(rows)
+    assert r["single_owner"] and r["canonical"]["input_tokens"] == 100
+
+
+def test_nested_owner_with_its_own_native_shadow():
+    # The wrapped call under a manual span still has its native copy proven a shadow; the
+    # nesting is flagged separately and both owner spans stay counted.
+    rows = [_span("t1", "outer", parent="root"), _span("t1", "inner", parent="outer"),
+            _native("t1", "n", "inner")]
+    r = sa.reconcile(rows)
+    assert r["shadow_spans"] == 1 and r["unresolved_reasons"] == {"nested_owner": 1}
+    assert not r["single_owner"] and r["canonical"]["spans"] == 2
 
 
 def test_same_span_id_in_another_trace_is_another_span():

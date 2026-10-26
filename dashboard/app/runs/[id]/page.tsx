@@ -6,6 +6,7 @@ import { Suspense, useCallback, useState } from "react";
 
 import { Pager, parseOffset } from "@/components/Pager";
 import { EmptyState, ErrorBox, Loading, useAsync, useKeyed } from "@/components/States";
+import { SyntheticBadge } from "@/components/Synthetic";
 import { api } from "@/lib/api";
 import { compareHref, versionLabels } from "@/lib/compareQuery";
 import type { RunDetail } from "@/lib/types";
@@ -34,10 +35,18 @@ function RunDetailInner() {
         <Link href="/runs" className="text-sm underline">
           ← Runs
         </Link>
-        <h1 className="text-xl font-semibold mt-1">{run.suite}</h1>
+        <h1 className="text-xl font-semibold mt-1">
+          {run.suite}
+          <SyntheticBadge suite={run.suite} />
+        </h1>
         <p className="text-sm opacity-70">
           {run.agent_id} · {run.mode} · {run.trials_per_case} trial(s) · {run.status}
         </p>
+        {run.notes && (
+          <p aria-label="run notes" className="text-sm mt-1 max-w-3xl">
+            {run.notes}
+          </p>
+        )}
       </div>
 
       <dl className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">

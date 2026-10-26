@@ -10,5 +10,7 @@ next-env.d.ts
 # Local build dir of a dev server run with NEXT_DIST_DIR=.next-live (e.g. a second instance on
 # non-default ports); never tracked or typechecked.
 /.next-live
+# Build dir of the dev server the demo launcher (`make demo`) starts; never tracked or typechecked.
+/.next-demo
 /test-results
 /playwright-report
