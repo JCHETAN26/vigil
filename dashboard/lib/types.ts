@@ -9,6 +9,8 @@ export interface RunSummary {
   status: string;
   cost_usd: number;
   created_at: string | null;
+  // eval_runs.notes (free text; the demo fixture's runs say SYNTHETIC here). Absent from older APIs.
+  notes?: string | null;
 }
 
 export interface RunDetail extends RunSummary {

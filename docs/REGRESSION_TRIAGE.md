@@ -234,11 +234,14 @@ Other final checks:
 | route-mocked Playwright suite (`e2e:mocked`, Chrome) | 18 passed |
 | `npm audit`, production dependencies only | 0 vulnerabilities |
 | `npm audit` (including dev) | 3 moderate, dev-only (see below) |
-| GitHub CI (hosted) | see the [PR checks](https://github.com/JCHETAN26/vigil/pull/1/checks) and [workflow run](https://github.com/JCHETAN26/vigil/actions/runs/40064325583) for current results |
+| GitHub CI (hosted) | see the [PR checks](https://github.com/JCHETAN26/vigil/pull/1/checks) for current results ([run 40064325583](https://github.com/JCHETAN26/vigil/actions/runs/40064325583) was the run at the time) |
 
-Hosted CI runs on draft [PR #1](https://github.com/JCHETAN26/vigil/pull/1). The links above
-show its current status; this document does not record a final CI result. The remaining review
-step is the review of that PR.
+The counts and checks in this section are a dated record (2026-10-23); the suites have grown
+since. Hosted CI runs on [PR #1](https://github.com/JCHETAN26/vigil/pull/1) and on the stacked
+[PR #2](https://github.com/JCHETAN26/vigil/pull/2); their checks pages are the current record
+(this document does not record a final CI result). The remaining step is the owner's review of
+those PRs. For a no-key way to see this journey on prepared data, see
+[demo/README.md](../demo/README.md).
 
 The mocked browser suite includes regression tests for three bugs fixed in review. A stale
 response must not overwrite a retried request. Paging across several versions must stay

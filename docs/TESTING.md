@@ -17,7 +17,9 @@ Two switches turn skips into failures (any non-empty value counts):
 
 | Target | Runs | Needs |
 |---|---|---|
-| `make test-unit` | `test-python` (SDK, engine, three agents offline, bench), `test-go` (ingest units), `test-dashboard` (typecheck) | venvs installed; engine DB tests self-skip without Postgres unless `REQUIRE_DB`/`REQUIRE_LIVE` is set |
+| `make test-unit` | `test-python` (SDK, engine, three agents offline, bench, `test-demo`), `test-go` (ingest units), `test-dashboard` (typecheck) | venvs installed; engine DB tests (including the demo seeder's, `engine/tests/test_demo_seed.py`) self-skip without Postgres unless `REQUIRE_DB`/`REQUIRE_LIVE` is set |
+| `make test-demo` | `demo/tests`: the SYNTHETIC fixture under the production gate, the frozen pilot evidence and its tamper refusal, the launcher's guards | engine venv; no DB, no network |
+| `make demo-evidence` | `demo/evidence.py verify` on the committed pilot bundle (`DEMO_PY` picks the interpreter) | Python with the SDK + `engine[api]` (SciPy); no DB, no key |
 | `make test-infra` | ingest Go integration; every `integration`-marked engine test except `test_integration.py` (API + DB) | Postgres, ClickHouse HTTP + native, Redpanda, `POSTGRES_PASSWORD`, `CLICKHOUSE_PASSWORD`. Runs with `ANTHROPIC_API_KEY` **unset** |
 | `make test-paid` | engine `test_integration.py` (real model calls), hello/hotpotqa/tau2 agent e2e | the above Postgres/ClickHouse HTTP, OTLP receiver on 127.0.0.1:4317, `ANTHROPIC_API_KEY`. **Spends API credit** |
 | `make test-live` | `test-infra` then `test-paid` | |
@@ -43,12 +45,18 @@ run there.
   lets the engine DB tests actually run; a pre-check fails the job if Postgres is unreachable, and
   `REQUIRE_DB=1` makes any DB fixture that still cannot provision fail rather than skip. Then
   `make test-python` (`PYTEST_ADDOPTS=-rs` prints any remaining skip reasons).
+- **evidence**: an empty venv with **only** `./sdk-python` and `./engine[api]` (no agents, no
+  `bm25s`, no dev extras; the job fails if an agent package came along), then
+  `make demo-evidence DEMO_PY=<that venv>` and `bench/regression_verdict.py reproduce` on the
+  committed pilot bundle. Shows a fresh clone can re-verify the real evidence with the engine's
+  declared dependencies alone.
 - **dashboard**: `npm ci`, typecheck, `next build`, then Playwright's chromium (passed through
-  `PLAYWRIGHT_CHROME_PATH`) for `make test-browser`.
+  `PLAYWRIGHT_CHROME_PATH`) for `make test-browser` (including `e2e/mocked/demo.spec.ts`: demo
+  labels and the optional API proxy against a stand-in upstream on 127.0.0.1:3319).
 
-The workflow has not run on GitHub yet for the regression-triage branch, so there is no hosted
-CI result to cite. The latest local results (including `npm run build:isolated`, a production
-build into `.next-build` that leaves a running dev server's `.next` alone) are in
+Hosted CI results are on the open PRs' checks pages (PR #1 and the stacked PR #2). A dated local
+record (including `npm run build:isolated`, a production build into `.next-build` that leaves a
+running dev server's `.next` alone) is in
 [`REGRESSION_TRIAGE.md` §7](./REGRESSION_TRIAGE.md#7-validation-record-2026-10-23-synthetic-check-and-final-local-checks).
 
 Actions are pinned to explicit release tags (`checkout@v7.0.1`, `setup-go@v7.0.0`,

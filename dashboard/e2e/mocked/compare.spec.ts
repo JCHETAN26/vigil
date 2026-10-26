@@ -150,6 +150,55 @@ test.describe("correctness fixture (not AI quality): compare", () => {
     expect(params(log.filter((l) => l.startsWith("/compare/cases")).at(-1)!).get("filter")).toBe("adverse");
   });
 
+  // The metrics chart is real rendering, not a placeholder: under Recharts 2.12 it stayed an
+  // empty 220px box, because the App Router renders with React 19 (Next's vendored React) and
+  // 2.12 identified its <Bar>/<XAxis> children with react-is 16, which does not know React 19
+  // elements (and relied on element-time defaultProps). Recharts 2.15 supports React 19. Bars
+  // must exist, one per metric with a point estimate, on the right side of the zero line.
+  // The bars are deltas, so the Y domain must always include 0: with only negative (or only
+  // positive) deltas an auto domain such as [-0.9, -0.3] hid the zero line and started every
+  // bar at -0.3, misstating its length.
+  const CHART_CASES: { name: string; deltas: [string, number][] }[] = [
+    { name: "mixed signs", deltas: [["passed", -0.2], ["TokenF1", -0.05], ["ExactMatch", 0.1]] },
+    { name: "all negative", deltas: [["passed", -0.416], ["TokenF1", -0.332], ["AllGoldRetrieved", -0.6]] },
+    { name: "all positive", deltas: [["passed", 0.3], ["TokenF1", 0.6], ["ExactMatch", 0.45]] },
+  ];
+  for (const { name, deltas } of CHART_CASES) {
+    test(`the metrics chart draws each delta from a visible zero line (${name})`, async ({ page, mockApi }) => {
+      const metrics = deltas.map(([m, d]) => triageMetric(m, { point_estimate: d }));
+      await mockApi(
+        triage([], { compare: (url, route) => json(route, compareResult(url, { verdict: "regression", metrics })) }),
+      );
+      await gotoAndSettle(page, PAIR);
+      const chart = page.locator(".recharts-responsive-container");
+      await expect(chart.locator("svg.recharts-surface")).toBeVisible();
+      const bars = chart.locator(".recharts-bar-rectangle path");
+      await expect(bars).toHaveCount(deltas.length);
+      for (const [m] of deltas) {
+        await expect(chart.locator(".recharts-cartesian-axis-tick-value", { hasText: m })).toHaveCount(1);
+      }
+      // The zero line is drawn and lies inside the plot area.
+      const zeroLine = chart.locator(".recharts-reference-line line");
+      await expect(zeroLine).toHaveCount(1);
+      const zero = (await zeroLine.boundingBox())!;
+      const plot = (await chart.locator(".recharts-cartesian-grid").boundingBox())!;
+      const zeroY = zero.y + zero.height / 2;
+      expect(zero.width).toBeGreaterThan(0);
+      expect(zeroY).toBeGreaterThanOrEqual(plot.y - 1);
+      expect(zeroY).toBeLessThanOrEqual(plot.y + plot.height + 1);
+      // Each bar starts at zero, on its sign's side, with a length proportional to |delta|.
+      const boxes = (await Promise.all(deltas.map((_, i) => bars.nth(i).boundingBox()))).map((b) => b!);
+      const pxPerUnit = boxes[0].height / Math.abs(deltas[0][1]);
+      deltas.forEach(([m, d], i) => {
+        const b = boxes[i];
+        expect(b.height, m).toBeGreaterThan(0);
+        if (d < 0) expect(Math.abs(b.y - zeroY), `${m} hangs from zero`).toBeLessThanOrEqual(1.5);
+        else expect(Math.abs(b.y + b.height - zeroY), `${m} rises from zero`).toBeLessThanOrEqual(1.5);
+        expect(b.height / pxPerUnit, `${m} length`).toBeCloseTo(Math.abs(d), 1);
+      });
+    });
+  }
+
   test("a failed comparison shows the API error and can be retried", async ({ page, mockApi }) => {
     let calls = 0;
     const log: string[] = [];

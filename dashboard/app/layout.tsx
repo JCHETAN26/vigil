@@ -3,6 +3,8 @@ import "./globals.css";
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { DemoNotice } from "@/components/Synthetic";
+
 export const metadata: Metadata = {
   title: "Vigil dashboard",
   description: "Traces, runs, and regression comparison for the Vigil eval platform.",
@@ -21,6 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Link href="/compare">Compare</Link>
           </nav>
         </header>
+        <DemoNotice />
         <main className="max-w-6xl mx-auto p-4">{children}</main>
       </body>
     </html>

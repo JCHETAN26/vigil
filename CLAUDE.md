@@ -18,6 +18,8 @@ Implemented:
                regression triage (affected cases, trace links, version diff)
 - agents/      Agents under test: hello_agent (tool-calling), HotpotQA RAG, τ²-bench retail
 - bench/       Load tests, measurement scripts, offline verdict reproduction
+- demo/        No-key portfolio demo: frozen REAL HotpotQA pilot evidence + offline verifier,
+               SYNTHETIC fixture seeded into the real stores, launcher (`make demo`; demo/README.md)
 - deploy/      Docker Compose
 - docs/        Design docs, status, results (see docs/REGRESSION_TRIAGE.md)
 
@@ -27,12 +29,16 @@ LLM-as-judge scorers, investigation agent, MCP server, Helm charts / Terraform.
 ## Infrastructure
 - Redpanda (Kafka-compatible queue), ClickHouse (traces), Postgres (metadata,
   eval results), Redis (cache, job queue)
-- Primary environment: the owner's Oracle Cloud ARM machine (Ubuntu 22.04, aarch64, 4 cores,
-  23 GB RAM, ~40 GB free disk, no GPU). The stack runs in Docker (arm64 images); Python
-  agents/engine run natively in uv venvs. Not shared; Docker containers have normal egress.
-  Toolchain is user-space: Go and Node under `~/.local/{go,node}`, uv + CPython 3.12.
-  The old IdeaPad (x86_64, shared) is retired from Vigil — see docs/plans/status.md
-  "Environment" for its leftover workarounds. Keep memory usage reasonable.
+- Product defaults are portable: the stack runs in Docker Compose, Python agents/engine run
+  natively in uv venvs, and the API/dashboard bind loopback (8080/3000 by default).
+- Current validation environment (2026-10-25): native over SSH on an x86_64 Linux host (the
+  IdeaPad, shared), worktree `/home/grv22/projects/vigil-work/repo`; its own local stack (Kafka
+  4.1 in place of the pinned Redpanda, ClickHouse, Postgres with read-only roles), Python 3.12,
+  Node 22. A checkout on an external SSD is read-only: never write to or remount it. Disk is
+  tight there; keep memory and disk usage reasonable.
+- History: from 2026-09-27 the owner's Oracle Cloud ARM machine (aarch64) was the primary
+  environment; its measurements in docs/plans/status.md are dated history. Whether it is still
+  in use is not recorded; do not assume it was decommissioned.
 
 ## Conventions
 - Work in small, testable steps. Every component has tests.
@@ -47,6 +53,8 @@ LLM-as-judge scorers, investigation agent, MCP server, Helm charts / Terraform.
   suite across all packages and skips the live suites cleanly when the stack or
   `ANTHROPIC_API_KEY` is missing.
 - Before any eval run, check free disk and refuse under 1 GB — `python -m engine run` enforces
-  this (floor `VIGIL_MIN_FREE_DISK_GB`, default 1.0; the 1 GB margin was sized for the IdeaPad
-  and is under review, see status.md). Never delete Docker images/volumes/build cache or
-  caches without asking the owner first.
+  this (floor `VIGIL_MIN_FREE_DISK_GB`, default 1.0, sized for the IdeaPad's shared disk). Never
+  delete Docker images/volumes/build cache or caches without asking the owner first.
+- Paid model runs need the owner's approval; routine, reversible code changes do not.
+- Demo data stays honest: seeded examples are SYNTHETIC (named `vigil-demo-synthetic-*`, notes say
+  so, no model calls); only measured runs and the frozen pilot evidence are described as real.

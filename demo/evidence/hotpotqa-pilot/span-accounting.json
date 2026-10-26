@@ -1,0 +1,46 @@
+{
+  "what": "Single-owner reconciliation of the pilot's stored ClickHouse LLM spans (run cafae810). Every model call was stored twice: a Vigil gen_ai.chat span and, as its direct child, the anthropic SDK's native anthropic.messages.create span with the same model, tokens and cost. A plain SUM over the stored rows doubles the spend; bench/span_accounting.reconcile excludes only the proven native copies and returns the per-unit Postgres totals exactly. The raw rows were not rewritten.",
+  "provenance": {
+    "method": "bench/span_accounting.py reconcile (read-only SELECTs over the stored spans of run cafae810-f2e9-4c50-b34d-cfac8b18c509), run through the pilot's verify checks on 2026-10-25 after the SDK fix (0e68bd9); Postgres OK-unit totals read alongside",
+    "derived_from": [
+      "historical-accounting-verification.json (owner's validation workspace, outside the repo): per-version reconcile output + Postgres totals; original pilot files confirmed unchanged",
+      "trace-accounting-root-cause.json (same workspace): raw span count and the native/Vigil pairing census"
+    ],
+    "reproduce": "engine/.venv/bin/python bench/span_accounting.py cafae810-f2e9-4c50-b34d-cfac8b18c509 --postgres (needs that run's rows in your own ClickHouse/Postgres; a fresh clone has neither, so this committed record is what demo/evidence.py cross-checks against the bundle)"
+  },
+  "run_id": "cafae810-f2e9-4c50-b34d-cfac8b18c509",
+  "raw_span_rows_in_run": 397,
+  "native_llm_spans": 121,
+  "native_spans_with_matching_usage_on_vigil_parent": 121,
+  "versions": {
+    "c2eda30a02146432a38387ed183420243d6752683d87856ddd8cb38e447d5b4c": {
+      "label": "baseline (top_k 5)",
+      "llm_span_rows": 112,
+      "owner_spans": 56,
+      "shadow_spans": 56,
+      "unresolved_spans": 0,
+      "unowned_spans": 0,
+      "single_owner": false,
+      "as_stored": {"input_tokens": 237824, "output_tokens": 11062, "cost_usd": 0.293134},
+      "canonical": {"input_tokens": 118912, "output_tokens": 5531, "cost_usd": 0.146567},
+      "postgres_ok_units": {"units": 20, "input_tokens": 118912, "output_tokens": 5531, "cost_usd": 0.146567}
+    },
+    "4b6ff74526af186f0df0017aa96d9d34e3c6b86a476c8aa39f85d2b95d2d3949": {
+      "label": "candidate (top_k 1)",
+      "llm_span_rows": 130,
+      "owner_spans": 65,
+      "shadow_spans": 65,
+      "unresolved_spans": 0,
+      "unowned_spans": 0,
+      "single_owner": false,
+      "as_stored": {"input_tokens": 155398, "output_tokens": 11474, "cost_usd": 0.212768},
+      "canonical": {"input_tokens": 77699, "output_tokens": 5737, "cost_usd": 0.106384},
+      "postgres_ok_units": {"units": 20, "input_tokens": 77699, "output_tokens": 5737, "cost_usd": 0.106384}
+    }
+  },
+  "totals": {
+    "as_stored_cost_usd": 0.505902,
+    "canonical_cost_usd": 0.252951
+  },
+  "single_owner_check": "FAILS for both versions, as expected for spans stored before the SDK fix: the doubled sums the original pilot summary marked [ok] (237824 / $0.2931 and 155398 / $0.2128) are the as_stored figures above, not spend"
+}

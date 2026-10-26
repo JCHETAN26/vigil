@@ -14,6 +14,9 @@ import { defineConfig, devices } from "@playwright/test";
 // else the installed Google Chrome channel.
 //   npm run e2e:mocked
 const port = Number(process.env.VIGIL_MOCK_PORT ?? 3317);
+// Loopback port of the stand-in upstream that e2e/mocked/demo.spec.ts starts to exercise the
+// optional API proxy (keep the default in sync there).
+const proxyPort = Number(process.env.VIGIL_MOCK_PROXY_PORT ?? 3319);
 const MOCK_API = "http://vigil-api.invalid"; // keep in sync with e2e/mocked/fixtures.ts
 const chromePath = process.env.PLAYWRIGHT_CHROME_PATH;
 
@@ -44,6 +47,9 @@ export default defineConfig({
     timeout: 180_000,
     env: {
       NEXT_PUBLIC_API_URL: MOCK_API,
+      // As the demo launcher starts it: the demo notice on, the proxy pointed at a loopback port.
+      NEXT_PUBLIC_VIGIL_DEMO: "1",
+      VIGIL_API_PROXY_TARGET: `http://127.0.0.1:${proxyPort}`,
       NEXT_DIST_DIR: ".next-mocked",
       NEXT_TELEMETRY_DISABLED: "1",
       NODE_OPTIONS: "--max-old-space-size=1536",

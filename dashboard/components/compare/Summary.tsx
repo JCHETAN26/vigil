@@ -2,6 +2,7 @@
 
 import { Bar, BarChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
+import { SyntheticBadge } from "@/components/Synthetic";
 import { VerdictBadge, verdictOf } from "@/components/VerdictBadge";
 import type { CompareResult, Coverage, Policy, RunSide, SideCoverage } from "@/lib/types";
 
@@ -106,7 +107,10 @@ function SideCard({
         <dt className="opacity-70">Run</dt>
         <dd className="font-mono text-xs break-all">{s.run_id}</dd>
         <dt className="opacity-70">Suite</dt>
-        <dd>{s.suite_name}</dd>
+        <dd>
+          {s.suite_name}
+          <SyntheticBadge suite={s.suite_name} />
+        </dd>
         <dt className="opacity-70">Agent</dt>
         <dd>{s.agent_id}</dd>
         <dt className="opacity-70">Version</dt>
@@ -265,7 +269,12 @@ export function MetricsPanel({ data }: { data: CompareResult }) {
               <BarChart data={chart} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="metric" fontSize={11} interval={0} angle={-20} textAnchor="end" height={60} />
-                <YAxis fontSize={11} />
+                {/* Deltas are read against zero: the domain always includes it, so an all-negative
+                    or all-positive set still draws each bar from 0 and keeps the zero line. */}
+                <YAxis
+                  fontSize={11}
+                  domain={[(min: number) => Math.min(0, min), (max: number) => Math.max(0, max)]}
+                />
                 <Tooltip />
                 <ReferenceLine y={0} stroke="#667085" />
                 <Bar dataKey="delta" fill="#2563eb" />

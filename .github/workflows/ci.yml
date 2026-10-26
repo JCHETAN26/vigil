@@ -1,5 +1,6 @@
 # Offline CI: Go units (+ race), Python offline suites against a throwaway Postgres service,
-# dashboard typecheck/build + the route-mocked browser suite. No model API keys, no paid calls,
+# a minimal-install re-verification of the committed pilot evidence, dashboard typecheck/build +
+# the route-mocked browser suite. No model API keys, no paid calls,
 # no ClickHouse/Redpanda: the stack-backed (`make test-infra`) and paid (`make test-paid`) gates
 # run on the owner's machine, not here.
 name: ci
@@ -98,6 +99,36 @@ jobs:
         run: engine/.venv/bin/python -c 'import psycopg; from engine.config import pg_dsn; psycopg.connect(pg_dsn(), connect_timeout=5).close()'
       - name: Python offline suites
         run: make test-python
+
+  # A fresh clone's offline path: ONLY the SDK and engine[api] (no agents, no bm25s, no dev
+  # extras) in an empty venv, then the committed REAL pilot evidence is re-verified with the
+  # production gate. No database, no API key; proves the engine declares what the gate needs.
+  evidence:
+    name: evidence (minimal install, offline)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.1.0
+        with:
+          python-version: "3.12"
+      - name: Install SDK + engine[api] into an empty venv
+        run: |
+          python -m venv "$RUNNER_TEMP/minimal"
+          "$RUNNER_TEMP/minimal/bin/python" -m pip install --upgrade pip
+          "$RUNNER_TEMP/minimal/bin/python" -m pip install ./sdk-python "./engine[api]"
+      - name: Check no agent or retrieval package came along
+        run: |
+          for p in bm25s hello-agent hotpotqa-agent tau2-retail-agent; do
+            if "$RUNNER_TEMP/minimal/bin/python" -m pip show "$p" >/dev/null 2>&1; then
+              echo "unexpected package in the minimal install: $p" >&2; exit 1
+            fi
+          done
+          "$RUNNER_TEMP/minimal/bin/python" -m pip list --format=freeze
+      - name: Verify the committed pilot evidence (pins, recomputed verdict, accounting)
+        run: make demo-evidence DEMO_PY="$RUNNER_TEMP/minimal/bin/python"
+      - name: Reproduce the bundle with the generic verifier
+        run: env -u PYTHONPATH "$RUNNER_TEMP/minimal/bin/python" bench/regression_verdict.py reproduce demo/evidence/hotpotqa-pilot/bundle
 
   dashboard:
     name: dashboard (typecheck, build, mocked browser)

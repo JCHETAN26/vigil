@@ -23,6 +23,7 @@ import json
 from typing import Any
 
 from opentelemetry import trace
+from vigil.anthropic import native_spans_reach_vigil, without_native_spans
 
 _READ_MODES = ("read", "read_write")
 
@@ -178,9 +179,29 @@ class RedisLLMCache:
     ):
         check_refusal(mode, cache_mode)
         self._raw = raw_client
-        self.messages = _CachedMessages(
-            raw_client.messages, store, mode=mode, cache_mode=cache_mode, ttl=ttl
-        )
+        self._store = store
+        self._settings = {"mode": mode, "cache_mode": cache_mode, "ttl": ttl}
+        self.messages = _CachedMessages(raw_client.messages, store, **self._settings)
+
+    # The SDK's copy methods, defined here so a copy keeps the cache (same store, mode,
+    # cache_mode, ttl) instead of returning the bare client copy that ``__getattr__`` would.
+    # ``vigil.wrap`` copies through these, so ``wrapped.with_options(...)`` stays cached and
+    # traced. The raw copy inherits the raw client's ``open_telemetry`` (the worker turns its
+    # native spans off); one that turns them back on toward Vigil's provider is turned off
+    # again, since Vigil's span above the cache already owns the call's usage.
+    def _rewrap(self, raw_copy) -> RedisLLMCache:
+        if native_spans_reach_vigil(raw_copy):
+            raw_copy = without_native_spans(raw_copy)
+        return RedisLLMCache(raw_copy, self._store, **self._settings)
+
+    def with_options(self, *args, **kwargs) -> RedisLLMCache:
+        return self._rewrap(self._raw.with_options(*args, **kwargs))
+
+    def copy(self, *args, **kwargs) -> RedisLLMCache:
+        return self._rewrap(self._raw.copy(*args, **kwargs))
+
+    def with_middleware(self, *middleware) -> RedisLLMCache:
+        return self._rewrap(self._raw.with_middleware(*middleware))
 
     def __getattr__(self, name):
         return getattr(self._raw, name)

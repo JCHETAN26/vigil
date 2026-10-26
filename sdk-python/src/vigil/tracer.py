@@ -106,9 +106,12 @@ def shutdown() -> None:
 
 
 def get_tracer():
-    if _PROVIDER is not None:
-        return _PROVIDER.get_tracer("vigil")
-    return trace.get_tracer("vigil")
+    return span_provider().get_tracer("vigil")
+
+
+def span_provider():
+    """The provider Vigil's own spans go to: the one ``init`` built, else the global one."""
+    return _PROVIDER if _PROVIDER is not None else trace.get_tracer_provider()
 
 
 def get_config() -> Config:

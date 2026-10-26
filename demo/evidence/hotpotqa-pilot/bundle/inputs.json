@@ -1,0 +1,784 @@
+{
+  "baseline": {
+    "agent_id": "hotpotqa-agent",
+    "agent_version": "c2eda30a02146432a38387ed183420243d6752683d87856ddd8cb38e447d5b4c",
+    "cache_mode": "off",
+    "git_sha": "125c94d302ad4c75e5267993d9725b148fb1d9b7",
+    "mode": "development",
+    "run_id": "cafae810-f2e9-4c50-b34d-cfac8b18c509",
+    "run_status": "succeeded",
+    "suite_id": "ec7115f8-9af2-485a-b66a-17da067a8145",
+    "suite_name": "hotpotqa-triage-pilot-27300e54a989",
+    "trials_per_case": 1,
+    "version_selection": "explicit",
+    "version_status": "succeeded",
+    "versions_in_run": [
+      "4b6ff74526af186f0df0017aa96d9d34e3c6b86a476c8aa39f85d2b95d2d3949",
+      "c2eda30a02146432a38387ed183420243d6752683d87856ddd8cb38e447d5b4c"
+    ]
+  },
+  "baseline_rows": [
+    {
+      "case_id": "5a70eee85542994082a3e3f0",
+      "cost_usd": 0.017076,
+      "error": null,
+      "latency_ms": 7348.0,
+      "passed": true,
+      "scores": {
+        "AllGoldRetrieved": 1.0,
+        "ExactMatch": 1.0,
+        "NDCG": 0.45560514958746035,
+        "RetrievalRecall@10": 1.0,
+        "RetrievalRecall@5": 0.5,
+        "TokenF1": 1.0
+      },
+      "status": "ok",
+      "trace_id": "3559b6790af5147ba8abb9ed112017c8",
+      "trial": 0
+    },
+    {
+      "case_id": "5a70f0a75542994082a3e403",
+      "cost_usd": 0.002966,
+      "error": null,
+      "latency_ms": 1995.0,
+      "passed": false,
+      "scores": {
+        "AllGoldRetrieved": 1.0,
+        "ExactMatch": 0.0,
+        "NDCG": 1.0,
+        "RetrievalRecall@10": 1.0,
+        "RetrievalRecall@5": 1.0,
+        "TokenF1": 0.5
+      },
+      "status": "ok",
+      "trace_id": "d55aca53475b1dccd52fab5c02a4ca5c",
+      "trial": 0
+    },
+    {
+      "case_id": "5a70f0e75542994082a3e408",
+      "cost_usd": 0.007363,
+      "error": null,
+      "latency_ms": 4248.0,
+      "passed": false,
+      "scores": {
+        "AllGoldRetrieved": 1.0,
+        "ExactMatch": 0.0,
+        "NDCG": 0.5249810332008933,
+        "RetrievalRecall@10": 1.0,
+        "RetrievalRecall@5": 0.5,
+        "TokenF1": 0.0
+      },
+      "status": "ok",
+      "trace_id": "de25f82d7b828b1ec3003908e8082967",
+      "trial": 0
+    },
+    {
+      "case_id": "5a70f11a5542994082a3e40b",
+      "cost_usd": 0.042869,
+      "error": null,
+      "latency_ms": 10476.0,
+      "passed": false,
+      "scores": {
+        "AllGoldRetrieved": 1.0,
+        "ExactMatch": 0.0,
+        "NDCG": 0.8772153153380493,
+        "RetrievalRecall@10": 1.0,
+        "RetrievalRecall@5": 1.0,
+        "TokenF1": 0.2857142857142857
+      },
+      "status": "ok",
+      "trace_id": "7250c382cb6635828c3f720a6827d155",
+      "trial": 0
+    },
+    {
+      "case_id": "5a70f1685542994082a3e40f",
+      "cost_usd": 0.003509,
+      "error": null,
+      "latency_ms": 3112.0,
+      "passed": false,
+      "scores": {
+        "AllGoldRetrieved": 1.0,
+        "ExactMatch": 0.0,
+        "NDCG": 1.0,
+        "RetrievalRecall@10": 1.0,
+        "RetrievalRecall@5": 1.0,
+        "TokenF1": 0.18181818181818182
+      },
+      "status": "ok",
+      "trace_id": "f7b51e51eafb03a471d19f6ffae78ecc",
+      "trial": 0
+    },
+    {
+      "case_id": "5a70f39c5542994082a3e429",
+      "cost_usd": 0.002999,
+      "error": null,
+      "latency_ms": 2401.0,
+      "passed": true,
+      "scores": {
+        "AllGoldRetrieved": 1.0,
+        "ExactMatch": 1.0,
+        "NDCG": 0.6509209298071326,
+        "RetrievalRecall@10": 1.0,
+        "RetrievalRecall@5": 1.0,
+        "TokenF1": 1.0
+      },
+      "status": "ok",
+      "trace_id": "60d671c2df1083ca8ac931650613dfa3",
+      "trial": 0
+    },
+    {
+      "case_id": "5a70f4695542994082a3e435",
+      "cost_usd": 0.003883,
+      "error": null,
+      "latency_ms": 2508.0,
+      "passed": true,
+      "scores": {
+        "AllGoldRetrieved": 1.0,
+        "ExactMatch": 1.0,
+        "NDCG": 0.9197207891481876,
+        "RetrievalRecall@10": 1.0,
+        "RetrievalRecall@5": 1.0,
+        "TokenF1": 1.0
+      },
+      "status": "ok",
+      "trace_id": "bec41095d2736011ec12d66d5202c523",
+      "trial": 0
+    },
+    {
+      "case_id": "5a70f4c45542994082a3e437",
+      "cost_usd": 0.003213,
+      "error": null,
+      "latency_ms": 2821.0,
+      "passed": true,
+      "scores": {
+        "AllGoldRetrieved": 0.0,
+        "ExactMatch": 1.0,
+        "NDCG": 0.6131471927654584,
+        "RetrievalRecall@10": 0.5,
+        "RetrievalRecall@5": 0.5,
+        "TokenF1": 1.0
+      },
+      "status": "ok",
+      "trace_id": "7c087c72eef35a87cfd10a458817b679",
+      "trial": 0
+    },
+    {
+      "case_id": "5a70f6425542994082a3e44c",
+      "cost_usd": 0.009959,
+      "error": null,
+      "latency_ms": 6210.0,
+      "passed": true,
+      "scores": {
+        "AllGoldRetrieved": 1.0,
+        "ExactMatch": 0.0,
+        "NDCG": 0.45560514958746035,
+        "RetrievalRecall@10": 1.0,
+        "RetrievalRecall@5": 0.5,
+        "TokenF1": 0.8
+      },
+      "status": "ok",
+      "trace_id": "1c3f265095425bd88c94906544107a13",
+      "trial": 0
+    },
+    {
+      "case_id": "5a70f9335542994082a3e46a",
+      "cost_usd": 0.003627,
+      "error": null,
+      "latency_ms": 2335.0,
+      "passed": true,
+      "scores": {
+        "AllGoldRetrieved": 1.0,
+        "ExactMatch": 1.0,
+        "NDCG": 0.6052602440527057,
+        "RetrievalRecall@10": 1.0,
+        "RetrievalRecall@5": 0.5,
+        "TokenF1": 1.0
+      },
+      "status": "ok",
+      "trace_id": "8776488cf9644d18b2782573cf0598a1",
+      "trial": 0
+    },
+    {
+      "case_id": "5a70ff335542994082a3e49c",
+      "cost_usd": 0.007865,
+      "error": null,
+      "latency_ms": 4026.0,
+      "passed": true,
+      "scores": {
+        "AllGoldRetrieved": 1.0,
+        "ExactMatch": 0.0,
+        "NDCG": 0.0,
+        "RetrievalRecall@10": 0.0,
+        "RetrievalRecall@5": 0.0,
+        "TokenF1": 0.8
+      },
+      "status": "ok",
+      "trace_id": "64972998fb32624dcb7bf6431cd307b7",
+      "trial": 0
+    },
+    {
+      "case_id": "5a7100435542994082a3e4a3",
+      "cost_usd": 0.004148,
+      "error": null,
+      "latency_ms": 2589.0,
+      "passed": false,
+      "scores": {
+        "AllGoldRetrieved": 1.0,
+        "ExactMatch": 0.0,
+        "NDCG": 0.8315546295836225,
+        "RetrievalRecall@10": 1.0,
+        "RetrievalRecall@5": 0.5,
+        "TokenF1": 0.0
+      },
+      "status": "ok",
+      "trace_id": "ba236e2e55100e2a52b1a3ce9b64a4cc",
+      "trial": 0
+    },
+    {
+      "case_id": "5a7103b35542994082a3e4c0",
+      "cost_usd": 0.004,
+      "error": null,
+      "latency_ms": 2571.0,
+      "passed": true,
+      "scores": {
+        "AllGoldRetrieved": 1.0,
+        "ExactMatch": 1.0,
+        "NDCG": 0.8503449055347546,
+        "RetrievalRecall@10": 1.0,
+        "RetrievalRecall@5": 1.0,
+        "TokenF1": 1.0
+      },
+      "status": "ok",
+      "trace_id": "ffa869e375c9c5d4d16df64b42f0e6de",
+      "trial": 0
+    },
+    {
+      "case_id": "5a7108fa5542994082a3e4ef",
+      "cost_usd": 0.003755,
+      "error": null,
+      "latency_ms": 2535.0,
+      "passed": true,
+      "scores": {
+        "AllGoldRetrieved": 1.0,
+        "ExactMatch": 1.0,
+        "NDCG": 0.5249810332008933,
+        "RetrievalRecall@10": 1.0,
+        "RetrievalRecall@5": 0.5,
+        "TokenF1": 1.0
+      },
+      "status": "ok",
+      "trace_id": "f6be99bb2ca2a4ade39d4df22124ebe8",
+      "trial": 0
+    },
+    {
+      "case_id": "5a71095e5542994082a3e4f3",
+      "cost_usd": 0.002493,
+      "error": null,
+      "latency_ms": 1413.0,
+      "passed": true,
+      "scores": {
+        "AllGoldRetrieved": 1.0,
+        "ExactMatch": 1.0,
+        "NDCG": 1.0,
+        "RetrievalRecall@10": 1.0,
+        "RetrievalRecall@5": 1.0,
+        "TokenF1": 1.0
+      },
+      "status": "ok",
+      "trace_id": "20bcabec73f79c1e204a9b6294244ff7",
+      "trial": 0
+    },
+    {
+      "case_id": "5a7109e95542994082a3e4fa",
+      "cost_usd": 0.007774,
+      "error": null,
+      "latency_ms": 4041.0,
+      "passed": false,
+      "scores": {
+        "AllGoldRetrieved": 1.0,
+        "ExactMatch": 0.0,
+        "NDCG": 0.8315546295836225,
+        "RetrievalRecall@10": 1.0,
+        "RetrievalRecall@5": 0.5,
+        "TokenF1": 0.5
+      },
+      "status": "ok",
+      "trace_id": "7893420c8c11a3176ee134202419e3cc",
+      "trial": 0
+    },
+    {
+      "case_id": "5a710a1e5542994082a3e4fd",
+      "cost_usd": 0.005549,
+      "error": null,
+      "latency_ms": 3533.0,
+      "passed": true,
+      "scores": {
+        "AllGoldRetrieved": 1.0,
+        "ExactMatch": 1.0,
+        "NDCG": 0.8315546295836225,
+        "RetrievalRecall@10": 1.0,
+        "RetrievalRecall@5": 0.5,
+        "TokenF1": 1.0
+      },
+      "status": "ok",
+      "trace_id": "c6913a2c38d4190c0751d398e6a52b2d",
+      "trial": 0
+    },
+    {
+      "case_id": "5a710a915542994082a3e504",
+      "cost_usd": 0.003923,
+      "error": null,
+      "latency_ms": 3029.0,
+      "passed": true,
+      "scores": {
+        "AllGoldRetrieved": 1.0,
+        "ExactMatch": 1.0,
+        "NDCG": 0.8065735963827293,
+        "RetrievalRecall@10": 1.0,
+        "RetrievalRecall@5": 0.5,
+        "TokenF1": 1.0
+      },
+      "status": "ok",
+      "trace_id": "d31d7adcbf74e0bbb2d0e37b94d8dc2e",
+      "trial": 0
+    },
+    {
+      "case_id": "5a710bb15542994082a3e50d",
+      "cost_usd": 0.005267,
+      "error": null,
+      "latency_ms": 3114.0,
+      "passed": true,
+      "scores": {
+        "AllGoldRetrieved": 1.0,
+        "ExactMatch": 1.0,
+        "NDCG": 0.8315546295836225,
+        "RetrievalRecall@10": 1.0,
+        "RetrievalRecall@5": 0.5,
+        "TokenF1": 1.0
+      },
+      "status": "ok",
+      "trace_id": "cfe08c58f9da7ee3ee9b17785c3cd0f6",
+      "trial": 0
+    },
+    {
+      "case_id": "5a710d155542994082a3e520",
+      "cost_usd": 0.004329,
+      "error": null,
+      "latency_ms": 3004.0,
+      "passed": true,
+      "scores": {
+        "AllGoldRetrieved": 1.0,
+        "ExactMatch": 1.0,
+        "NDCG": 0.6052602440527057,
+        "RetrievalRecall@10": 1.0,
+        "RetrievalRecall@5": 0.5,
+        "TokenF1": 1.0
+      },
+      "status": "ok",
+      "trace_id": "e2e6f0c872d320325f66421ad0ff92ef",
+      "trial": 0
+    }
+  ],
+  "candidate": {
+    "agent_id": "hotpotqa-agent",
+    "agent_version": "4b6ff74526af186f0df0017aa96d9d34e3c6b86a476c8aa39f85d2b95d2d3949",
+    "cache_mode": "off",
+    "git_sha": "125c94d302ad4c75e5267993d9725b148fb1d9b7",
+    "mode": "development",
+    "run_id": "cafae810-f2e9-4c50-b34d-cfac8b18c509",
+    "run_status": "succeeded",
+    "suite_id": "ec7115f8-9af2-485a-b66a-17da067a8145",
+    "suite_name": "hotpotqa-triage-pilot-27300e54a989",
+    "trials_per_case": 1,
+    "version_selection": "explicit",
+    "version_status": "succeeded",
+    "versions_in_run": [
+      "4b6ff74526af186f0df0017aa96d9d34e3c6b86a476c8aa39f85d2b95d2d3949",
+      "c2eda30a02146432a38387ed183420243d6752683d87856ddd8cb38e447d5b4c"
+    ]
+  },
+  "candidate_rows": [
+    {
+      "case_id": "5a70eee85542994082a3e3f0",
+      "cost_usd": 0.010839,
+      "error": null,
+      "latency_ms": 7499.0,
+      "passed": true,
+      "scores": {
+        "AllGoldRetrieved": 1.0,
+        "ExactMatch": 1.0,
+        "NDCG": 0.6934264036172708,
+        "RetrievalRecall@10": 1.0,
+        "RetrievalRecall@5": 1.0,
+        "TokenF1": 1.0
+      },
+      "status": "ok",
+      "trace_id": "5147cb077935b1541c5504f4484f60a6",
+      "trial": 0
+    },
+    {
+      "case_id": "5a70f0a75542994082a3e403",
+      "cost_usd": 0.004244,
+      "error": null,
+      "latency_ms": 3430.0,
+      "passed": false,
+      "scores": {
+        "AllGoldRetrieved": 1.0,
+        "ExactMatch": 0.0,
+        "NDCG": 1.0,
+        "RetrievalRecall@10": 1.0,
+        "RetrievalRecall@5": 1.0,
+        "TokenF1": 0.5
+      },
+      "status": "ok",
+      "trace_id": "8448915f7dd63e8aa314591c4132fd5d",
+      "trial": 0
+    },
+    {
+      "case_id": "5a70f0e75542994082a3e408",
+      "cost_usd": 0.004958,
+      "error": null,
+      "latency_ms": 3437.0,
+      "passed": false,
+      "scores": {
+        "AllGoldRetrieved": 1.0,
+        "ExactMatch": 0.0,
+        "NDCG": 0.6934264036172708,
+        "RetrievalRecall@10": 1.0,
+        "RetrievalRecall@5": 1.0,
+        "TokenF1": 0.0
+      },
+      "status": "ok",
+      "trace_id": "44c1f93404868455ae84f1ef6c59e1e3",
+      "trial": 0
+    },
+    {
+      "case_id": "5a70f11a5542994082a3e40b",
+      "cost_usd": 0.018467,
+      "error": null,
+      "latency_ms": 10096.0,
+      "passed": false,
+      "scores": {
+        "AllGoldRetrieved": 1.0,
+        "ExactMatch": 0.0,
+        "NDCG": 0.8772153153380493,
+        "RetrievalRecall@10": 1.0,
+        "RetrievalRecall@5": 1.0,
+        "TokenF1": 0.4
+      },
+      "status": "ok",
+      "trace_id": "9c8ea6f798dc9f1b629314c67b6154e0",
+      "trial": 0
+    },
+    {
+      "case_id": "5a70f1685542994082a3e40f",
+      "cost_usd": 0.002718,
+      "error": null,
+      "latency_ms": 2246.0,
+      "passed": false,
+      "scores": {
+        "AllGoldRetrieved": 0.0,
+        "ExactMatch": 0.0,
+        "NDCG": 0.6131471927654584,
+        "RetrievalRecall@10": 0.5,
+        "RetrievalRecall@5": 0.5,
+        "TokenF1": 0.14285714285714288
+      },
+      "status": "ok",
+      "trace_id": "8d6a21c8e2c9c91a225137624b944278",
+      "trial": 0
+    },
+    {
+      "case_id": "5a70f39c5542994082a3e429",
+      "cost_usd": 0.002995,
+      "error": null,
+      "latency_ms": 2643.0,
+      "passed": true,
+      "scores": {
+        "AllGoldRetrieved": 1.0,
+        "ExactMatch": 1.0,
+        "NDCG": 1.0,
+        "RetrievalRecall@10": 1.0,
+        "RetrievalRecall@5": 1.0,
+        "TokenF1": 1.0
+      },
+      "status": "ok",
+      "trace_id": "5f7bab4d0806dcd8412ee86a35e716db",
+      "trial": 0
+    },
+    {
+      "case_id": "5a70f4695542994082a3e435",
+      "cost_usd": 0.002673,
+      "error": null,
+      "latency_ms": 2140.0,
+      "passed": true,
+      "scores": {
+        "AllGoldRetrieved": 0.0,
+        "ExactMatch": 1.0,
+        "NDCG": 0.6131471927654584,
+        "RetrievalRecall@10": 0.5,
+        "RetrievalRecall@5": 0.5,
+        "TokenF1": 1.0
+      },
+      "status": "ok",
+      "trace_id": "316c48aa410fc24e024d7443f978c5be",
+      "trial": 0
+    },
+    {
+      "case_id": "5a70f4c45542994082a3e437",
+      "cost_usd": 0.003961,
+      "error": null,
+      "latency_ms": 2982.0,
+      "passed": true,
+      "scores": {
+        "AllGoldRetrieved": 1.0,
+        "ExactMatch": 1.0,
+        "NDCG": 1.0,
+        "RetrievalRecall@10": 1.0,
+        "RetrievalRecall@5": 1.0,
+        "TokenF1": 1.0
+      },
+      "status": "ok",
+      "trace_id": "2a78a566e0d332ef0370d2517d2e75fb",
+      "trial": 0
+    },
+    {
+      "case_id": "5a70f6425542994082a3e44c",
+      "cost_usd": 0.013957,
+      "error": null,
+      "latency_ms": 7643.0,
+      "passed": false,
+      "scores": {
+        "AllGoldRetrieved": 0.0,
+        "ExactMatch": 0.0,
+        "NDCG": 0.2640681225725909,
+        "RetrievalRecall@10": 0.5,
+        "RetrievalRecall@5": 0.5,
+        "TokenF1": 0.18181818181818182
+      },
+      "status": "ok",
+      "trace_id": "39b38984fb6774e124c44294466f6f72",
+      "trial": 0
+    },
+    {
+      "case_id": "5a70f9335542994082a3e46a",
+      "cost_usd": 0.004441,
+      "error": null,
+      "latency_ms": 3498.0,
+      "passed": true,
+      "scores": {
+        "AllGoldRetrieved": 1.0,
+        "ExactMatch": 1.0,
+        "NDCG": 0.6934264036172708,
+        "RetrievalRecall@10": 1.0,
+        "RetrievalRecall@5": 1.0,
+        "TokenF1": 1.0
+      },
+      "status": "ok",
+      "trace_id": "66eaf2f962811d704a6dc5f1ae44d5c5",
+      "trial": 0
+    },
+    {
+      "case_id": "5a70ff335542994082a3e49c",
+      "cost_usd": 0.00675,
+      "error": null,
+      "latency_ms": 5069.0,
+      "passed": true,
+      "scores": {
+        "AllGoldRetrieved": 0.0,
+        "ExactMatch": 0.0,
+        "NDCG": 0.38685280723454163,
+        "RetrievalRecall@10": 0.5,
+        "RetrievalRecall@5": 0.5,
+        "TokenF1": 0.8
+      },
+      "status": "ok",
+      "trace_id": "997d4129ace914178f4f3749b3bd12db",
+      "trial": 0
+    },
+    {
+      "case_id": "5a7100435542994082a3e4a3",
+      "cost_usd": 0.002728,
+      "error": null,
+      "latency_ms": 2329.0,
+      "passed": false,
+      "scores": {
+        "AllGoldRetrieved": 1.0,
+        "ExactMatch": 0.0,
+        "NDCG": 1.0,
+        "RetrievalRecall@10": 1.0,
+        "RetrievalRecall@5": 1.0,
+        "TokenF1": 0.0
+      },
+      "status": "ok",
+      "trace_id": "b65c71f10b37609ce33991736bedeee7",
+      "trial": 0
+    },
+    {
+      "case_id": "5a7103b35542994082a3e4c0",
+      "cost_usd": 0.002899,
+      "error": null,
+      "latency_ms": 2307.0,
+      "passed": true,
+      "scores": {
+        "AllGoldRetrieved": 1.0,
+        "ExactMatch": 1.0,
+        "NDCG": 1.0,
+        "RetrievalRecall@10": 1.0,
+        "RetrievalRecall@5": 1.0,
+        "TokenF1": 1.0
+      },
+      "status": "ok",
+      "trace_id": "5c629873a95a8440043f49c8e4470331",
+      "trial": 0
+    },
+    {
+      "case_id": "5a7108fa5542994082a3e4ef",
+      "cost_usd": 0.004527,
+      "error": null,
+      "latency_ms": 3434.0,
+      "passed": true,
+      "scores": {
+        "AllGoldRetrieved": 0.0,
+        "ExactMatch": 1.0,
+        "NDCG": 0.38685280723454163,
+        "RetrievalRecall@10": 0.5,
+        "RetrievalRecall@5": 0.5,
+        "TokenF1": 1.0
+      },
+      "status": "ok",
+      "trace_id": "c0ffeeb37568b5492962c1554b8c28ec",
+      "trial": 0
+    },
+    {
+      "case_id": "5a71095e5542994082a3e4f3",
+      "cost_usd": 0.001988,
+      "error": null,
+      "latency_ms": 1387.0,
+      "passed": true,
+      "scores": {
+        "AllGoldRetrieved": 0.0,
+        "ExactMatch": 1.0,
+        "NDCG": 0.6131471927654584,
+        "RetrievalRecall@10": 0.5,
+        "RetrievalRecall@5": 0.5,
+        "TokenF1": 1.0
+      },
+      "status": "ok",
+      "trace_id": "b37a266289a0fab41f4b0cc4ad7ec97c",
+      "trial": 0
+    },
+    {
+      "case_id": "5a7109e95542994082a3e4fa",
+      "cost_usd": 0.002809,
+      "error": null,
+      "latency_ms": 2262.0,
+      "passed": false,
+      "scores": {
+        "AllGoldRetrieved": 1.0,
+        "ExactMatch": 0.0,
+        "NDCG": 1.0,
+        "RetrievalRecall@10": 1.0,
+        "RetrievalRecall@5": 1.0,
+        "TokenF1": 0.5
+      },
+      "status": "ok",
+      "trace_id": "01b73dac16560e8dffd18d991c995bf4",
+      "trial": 0
+    },
+    {
+      "case_id": "5a710a1e5542994082a3e4fd",
+      "cost_usd": 0.003946,
+      "error": null,
+      "latency_ms": 2862.0,
+      "passed": true,
+      "scores": {
+        "AllGoldRetrieved": 1.0,
+        "ExactMatch": 1.0,
+        "NDCG": 1.0,
+        "RetrievalRecall@10": 1.0,
+        "RetrievalRecall@5": 1.0,
+        "TokenF1": 1.0
+      },
+      "status": "ok",
+      "trace_id": "b32141ca77674af3f5f21068a466db45",
+      "trial": 0
+    },
+    {
+      "case_id": "5a710a915542994082a3e504",
+      "cost_usd": 0.002884,
+      "error": null,
+      "latency_ms": 2550.0,
+      "passed": true,
+      "scores": {
+        "AllGoldRetrieved": 0.0,
+        "ExactMatch": 1.0,
+        "NDCG": 0.6131471927654584,
+        "RetrievalRecall@10": 0.5,
+        "RetrievalRecall@5": 0.5,
+        "TokenF1": 1.0
+      },
+      "status": "ok",
+      "trace_id": "3c6f61c04e353146a1bb236608ae2b5f",
+      "trial": 0
+    },
+    {
+      "case_id": "5a710bb15542994082a3e50d",
+      "cost_usd": 0.004446,
+      "error": null,
+      "latency_ms": 3378.0,
+      "passed": true,
+      "scores": {
+        "AllGoldRetrieved": 1.0,
+        "ExactMatch": 1.0,
+        "NDCG": 0.6934264036172708,
+        "RetrievalRecall@10": 1.0,
+        "RetrievalRecall@5": 1.0,
+        "TokenF1": 1.0
+      },
+      "status": "ok",
+      "trace_id": "3255761b8c9700c9691de39609e04b36",
+      "trial": 0
+    },
+    {
+      "case_id": "5a710d155542994082a3e520",
+      "cost_usd": 0.004154,
+      "error": null,
+      "latency_ms": 3060.0,
+      "passed": true,
+      "scores": {
+        "AllGoldRetrieved": 1.0,
+        "ExactMatch": 1.0,
+        "NDCG": 1.0,
+        "RetrievalRecall@10": 1.0,
+        "RetrievalRecall@5": 1.0,
+        "TokenF1": 1.0
+      },
+      "status": "ok",
+      "trace_id": "b3389e1f5ee05046f1d29d10ad859829",
+      "trial": 0
+    }
+  ],
+  "suite_case_ids": [
+    "5a70eee85542994082a3e3f0",
+    "5a70f0a75542994082a3e403",
+    "5a70f0e75542994082a3e408",
+    "5a70f11a5542994082a3e40b",
+    "5a70f1685542994082a3e40f",
+    "5a70f39c5542994082a3e429",
+    "5a70f4695542994082a3e435",
+    "5a70f4c45542994082a3e437",
+    "5a70f6425542994082a3e44c",
+    "5a70f9335542994082a3e46a",
+    "5a70ff335542994082a3e49c",
+    "5a7100435542994082a3e4a3",
+    "5a7103b35542994082a3e4c0",
+    "5a7108fa5542994082a3e4ef",
+    "5a71095e5542994082a3e4f3",
+    "5a7109e95542994082a3e4fa",
+    "5a710a1e5542994082a3e4fd",
+    "5a710a915542994082a3e504",
+    "5a710bb15542994082a3e50d",
+    "5a710d155542994082a3e520"
+  ]
+}

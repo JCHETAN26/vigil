@@ -18,6 +18,7 @@ import sys
 import time
 
 import vigil
+from vigil.anthropic import without_native_spans
 
 from engine.config import EngineConfig, redis_url
 from engine.datasets.base import Case
@@ -35,10 +36,15 @@ def _log(msg: str) -> None:
 def _build_client(agent_module, cfg: EngineConfig, mode: str):
     """Construct the AsyncAnthropic client: request timeout below the per-case timeout as a
     backstop, then optional dev cache, then Vigil instrumentation. Engine-controlled so
-    caching and tracing are guaranteed regardless of the agent."""
+    caching and tracing are guaranteed regardless of the agent.
+
+    The Vigil span is the one accounting record of each call: the SDK's own call spans
+    (anthropic>=1.17) are turned off here, on the real client, because ``vigil.wrap`` only
+    sees the cache in front of it and cannot do it itself. Left on, each call's tokens and
+    cost reached ClickHouse twice (HotpotQA pilot run cafae810, docs/results)."""
     import anthropic
 
-    raw = anthropic.AsyncAnthropic(timeout=cfg.request_timeout_s)
+    raw = without_native_spans(anthropic.AsyncAnthropic(timeout=cfg.request_timeout_s))
     if cfg.cache_mode != "off":
         url = redis_url()
         if not url:

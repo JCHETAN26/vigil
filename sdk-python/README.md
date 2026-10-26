@@ -33,6 +33,13 @@ with vigil.agent_run(run_kind="eval", eval_run_id="batch-1", eval_case_id="q-7")
         ...
 ```
 
+`wrap()` owns the accounting of the calls it records. anthropic>=1.17 traces its own API calls
+with spans that carry the same token usage. For `messages.create` / `messages.stream` those
+spans are turned off on a copy of your client (`with_options(open_telemetry=...)`, which shares
+its HTTP client and settings), so a call is not counted twice. Your client and its other methods
+keep their native spans. If a wrapper such as a cache sits between the real client and `wrap()`,
+apply `vigil.anthropic.without_native_spans(client)` to the real client yourself.
+
 `init()` registers an atexit flush + shutdown, so a short-lived script's spans are never
 dropped. Run identity is stamped onto **every** span via a span processor, and
 `run_id` defaults to the trace id.

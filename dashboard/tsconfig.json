@@ -36,11 +36,13 @@
     ".next-mocked/types/**/*.ts",
     ".next/types/**/*.ts",
     "next-env.d.ts",
-    ".next-build/types/**/*.ts"
+    ".next-build/types/**/*.ts",
+    ".next-demo/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",
     "e2e",
-    ".next-live"
+    ".next-live",
+    ".next-demo"
   ]
 }

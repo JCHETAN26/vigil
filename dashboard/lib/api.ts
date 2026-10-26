@@ -1,5 +1,6 @@
 // Client for the read-only dashboard API. Base URL from NEXT_PUBLIC_API_URL (default the
-// local API on 127.0.0.1); every call is a GET.
+// local API on 127.0.0.1); every call is a GET. `/api/vigil` selects the optional same-origin
+// proxy (app/api/vigil/[...path]/route.ts), which forwards to VIGIL_API_PROXY_TARGET.
 
 import type {
   CaseRow,

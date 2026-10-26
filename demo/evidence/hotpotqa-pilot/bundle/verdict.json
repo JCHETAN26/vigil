@@ -1,0 +1,266 @@
+{
+  "baseline": {
+    "agent_id": "hotpotqa-agent",
+    "agent_version": "c2eda30a02146432a38387ed183420243d6752683d87856ddd8cb38e447d5b4c",
+    "cache_mode": "off",
+    "git_sha": "125c94d302ad4c75e5267993d9725b148fb1d9b7",
+    "mode": "development",
+    "run_id": "cafae810-f2e9-4c50-b34d-cfac8b18c509",
+    "run_status": "succeeded",
+    "suite_id": "ec7115f8-9af2-485a-b66a-17da067a8145",
+    "suite_name": "hotpotqa-triage-pilot-27300e54a989",
+    "trials_per_case": 1,
+    "version_selection": "explicit",
+    "version_status": "succeeded",
+    "versions_in_run": [
+      "4b6ff74526af186f0df0017aa96d9d34e3c6b86a476c8aa39f85d2b95d2d3949",
+      "c2eda30a02146432a38387ed183420243d6752683d87856ddd8cb38e447d5b4c"
+    ]
+  },
+  "candidate": {
+    "agent_id": "hotpotqa-agent",
+    "agent_version": "4b6ff74526af186f0df0017aa96d9d34e3c6b86a476c8aa39f85d2b95d2d3949",
+    "cache_mode": "off",
+    "git_sha": "125c94d302ad4c75e5267993d9725b148fb1d9b7",
+    "mode": "development",
+    "run_id": "cafae810-f2e9-4c50-b34d-cfac8b18c509",
+    "run_status": "succeeded",
+    "suite_id": "ec7115f8-9af2-485a-b66a-17da067a8145",
+    "suite_name": "hotpotqa-triage-pilot-27300e54a989",
+    "trials_per_case": 1,
+    "version_selection": "explicit",
+    "version_status": "succeeded",
+    "versions_in_run": [
+      "4b6ff74526af186f0df0017aa96d9d34e3c6b86a476c8aa39f85d2b95d2d3949",
+      "c2eda30a02146432a38387ed183420243d6752683d87856ddd8cb38e447d5b4c"
+    ]
+  },
+  "complete": true,
+  "coverage": {
+    "baseline": {
+      "cases": 20,
+      "cases_not_in_suite": [],
+      "cases_short_of_trials": [],
+      "expected_trials": 20,
+      "failed_trials": 0,
+      "missing_cases": [],
+      "ok_trials": 20,
+      "statuses": {
+        "ok": 20
+      },
+      "trials": 20
+    },
+    "candidate": {
+      "cases": 20,
+      "cases_not_in_suite": [],
+      "cases_short_of_trials": [],
+      "expected_trials": 20,
+      "failed_trials": 0,
+      "missing_cases": [],
+      "ok_trials": 20,
+      "statuses": {
+        "ok": 20
+      },
+      "trials": 20
+    },
+    "only_in_baseline": [],
+    "only_in_candidate": [],
+    "paired_cases": 20,
+    "suite_cases": 20
+  },
+  "gated_regression": false,
+  "incomplete_reasons": [],
+  "metrics": [
+    {
+      "beyond_threshold": true,
+      "ci_bound": 0.036456640576068386,
+      "ci_excludes_zero": false,
+      "direction": "higher_is_better",
+      "failure_zeros_only": [],
+      "gated": true,
+      "metric": "passed",
+      "n_questions": 20,
+      "ok_trials_missing": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "point_estimate": -0.05,
+      "regressed": false,
+      "status": "ok",
+      "tail_prob": 0.3698,
+      "threshold": 0.05
+    },
+    {
+      "beyond_threshold": false,
+      "ci_bound": 0.027680345195278122,
+      "ci_excludes_zero": false,
+      "direction": "higher_is_better",
+      "failure_zeros_only": [],
+      "gated": true,
+      "metric": "TokenF1",
+      "n_questions": 20,
+      "ok_trials_missing": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "point_estimate": -0.027142857142857142,
+      "regressed": false,
+      "status": "ok",
+      "tail_prob": 0.2725,
+      "threshold": 0.03
+    },
+    {
+      "beyond_threshold": true,
+      "ci_bound": 0.0,
+      "ci_excludes_zero": false,
+      "direction": "higher_is_better",
+      "failure_zeros_only": [],
+      "gated": false,
+      "metric": "ExactMatch",
+      "n_questions": 20,
+      "ok_trials_missing": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "point_estimate": 0.0,
+      "regressed": false,
+      "status": "ok",
+      "tail_prob": 1.0,
+      "threshold": 0.0
+    },
+    {
+      "beyond_threshold": false,
+      "ci_bound": 0.3190564763901822,
+      "ci_excludes_zero": false,
+      "direction": "higher_is_better",
+      "failure_zeros_only": [],
+      "gated": false,
+      "metric": "RetrievalRecall@5",
+      "n_questions": 20,
+      "ok_trials_missing": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "point_estimate": 0.175,
+      "regressed": false,
+      "status": "ok",
+      "tail_prob": 0.9885,
+      "threshold": 0.0
+    },
+    {
+      "beyond_threshold": true,
+      "ci_bound": 0.019007081874452728,
+      "ci_excludes_zero": false,
+      "direction": "higher_is_better",
+      "failure_zeros_only": [],
+      "gated": false,
+      "metric": "RetrievalRecall@10",
+      "n_questions": 20,
+      "ok_trials_missing": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "point_estimate": -0.1,
+      "regressed": false,
+      "status": "ok",
+      "tail_prob": 0.095,
+      "threshold": 0.0
+    },
+    {
+      "beyond_threshold": false,
+      "ci_bound": 0.14504531203975163,
+      "ci_excludes_zero": false,
+      "direction": "higher_is_better",
+      "failure_zeros_only": [],
+      "gated": false,
+      "metric": "NDCG",
+      "n_questions": 20,
+      "ok_trials_missing": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "point_estimate": 0.046272466845886,
+      "regressed": false,
+      "status": "ok",
+      "tail_prob": 0.792,
+      "threshold": 0.0
+    },
+    {
+      "beyond_threshold": true,
+      "ci_bound": -0.07913220353834247,
+      "ci_excludes_zero": true,
+      "direction": "higher_is_better",
+      "failure_zeros_only": [],
+      "gated": false,
+      "metric": "AllGoldRetrieved",
+      "n_questions": 20,
+      "ok_trials_missing": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "point_estimate": -0.3,
+      "regressed": true,
+      "status": "regression",
+      "tail_prob": 0.0146,
+      "threshold": 0.0
+    },
+    {
+      "beyond_threshold": false,
+      "ci_bound": -0.004208305069518867,
+      "ci_excludes_zero": false,
+      "direction": "lower_is_better",
+      "failure_zeros_only": [],
+      "gated": false,
+      "metric": "cost_usd",
+      "n_questions": 20,
+      "ok_trials_missing": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "point_estimate": -0.0020091500000000003,
+      "regressed": false,
+      "status": "ok",
+      "tail_prob": 0.9868,
+      "threshold": 0.0
+    },
+    {
+      "beyond_threshold": true,
+      "ci_bound": -274.71941938429615,
+      "ci_excludes_zero": false,
+      "direction": "lower_is_better",
+      "failure_zeros_only": [],
+      "gated": false,
+      "metric": "latency_ms",
+      "n_questions": 20,
+      "ok_trials_missing": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "point_estimate": 47.15,
+      "regressed": false,
+      "status": "ok",
+      "tail_prob": 0.4032,
+      "threshold": 0.0
+    }
+  ],
+  "paired_cases": 20,
+  "policy": {
+    "alpha": 0.05,
+    "default_threshold": 0.0,
+    "failed_trials": "failed_trials_score_zero_on_quality_metrics",
+    "gated": [
+      "passed",
+      "TokenF1"
+    ],
+    "method": "t",
+    "n_boot": 10000,
+    "seed": 1234,
+    "thresholds": {
+      "TokenF1": 0.03,
+      "passed": 0.05
+    },
+    "two_level": false
+  },
+  "skipped_metrics": [],
+  "verdict": "no_regression"
+}

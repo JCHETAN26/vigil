@@ -99,7 +99,8 @@ async def list_runs(
 ):
     rows = await _fetchall(
         "SELECT r.id, s.name AS suite, r.agent_id, r.mode, r.trials_per_case, r.status, "
-        "r.cost_spent_usd, r.created_at FROM eval_runs r JOIN eval_suites s ON s.id = r.suite_id "
+        "r.cost_spent_usd, r.created_at, r.notes "
+        "FROM eval_runs r JOIN eval_suites s ON s.id = r.suite_id "
         "ORDER BY r.created_at DESC LIMIT %s OFFSET %s",
         (limit, offset),
     )
@@ -116,6 +117,8 @@ def _run_row(r: dict) -> dict:
         "status": r["status"],
         "cost_usd": float(r["cost_spent_usd"]) if r["cost_spent_usd"] is not None else 0.0,
         "created_at": r["created_at"].isoformat() if r.get("created_at") else None,
+        # Free text recorded with the run (e.g. the SYNTHETIC label on the demo fixture's runs).
+        "notes": r.get("notes"),
     }
 
 
@@ -123,8 +126,8 @@ def _run_row(r: dict) -> dict:
 async def get_run(run_id: uuid.UUID):
     meta = await _fetchone(
         "SELECT r.id, s.name AS suite, r.agent_id, r.mode, r.trials_per_case, r.status, "
-        "r.cost_spent_usd, r.created_at FROM eval_runs r JOIN eval_suites s ON s.id = r.suite_id "
-        "WHERE r.id = %s",
+        "r.cost_spent_usd, r.created_at, r.notes "
+        "FROM eval_runs r JOIN eval_suites s ON s.id = r.suite_id WHERE r.id = %s",
         (run_id,),
     )
     if meta is None:
