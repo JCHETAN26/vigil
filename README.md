@@ -15,9 +15,21 @@ See [CLAUDE.md](./CLAUDE.md) for architecture and conventions.
   real read-only API and dashboard on loopback ports, with one `regression`, one `no_regression`
   and one `incomplete` comparison, affected cases, trace drill-down and version diff.
 
+- **Browser check of a running demo:** `make demo-smoke` walks the synthetic scenarios in
+  installed Chrome through the dashboard's proxy (read-only, no keys) and prints a JSON report;
+  optional synthetic-only screenshots.
+
 Prerequisites, SSH port forwarding and a 3–5 minute walkthrough: [demo/README.md](./demo/README.md).
+Talking points (real vs synthetic, trade-offs, limitations): [docs/PRESENTATION.md](./docs/PRESENTATION.md).
+
+![SYNTHETIC demo data: regression comparison metrics (invented scores, no model calls)](./docs/images/demo-synthetic-metrics.png)
+
+*Screenshot of the demo's SYNTHETIC regression example (invented data, no model calls; not a
+result). More, with the trace view: [demo/README.md](./demo/README.md#screenshots-synthetic-data).*
 The demo labels synthetic data in the UI (demo notice, SYNTHETIC badges, run notes); only the
 pilot evidence and the measured runs below are real.
+
+Hosted CI: [latest `main` runs](https://github.com/JCHETAN26/vigil/actions/workflows/ci.yml?query=branch%3Amain).
 
 **Local only.** The API is read-only (by database role) and binds 127.0.0.1, with no
 authentication; nothing is deployed and nothing here is a public service.

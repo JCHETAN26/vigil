@@ -18,7 +18,8 @@ Two switches turn skips into failures (any non-empty value counts):
 | Target | Runs | Needs |
 |---|---|---|
 | `make test-unit` | `test-python` (SDK, engine, three agents offline, bench, `test-demo`), `test-go` (ingest units), `test-dashboard` (typecheck) | venvs installed; engine DB tests (including the demo seeder's, `engine/tests/test_demo_seed.py`) self-skip without Postgres unless `REQUIRE_DB`/`REQUIRE_LIVE` is set |
-| `make test-demo` | `demo/tests`: the SYNTHETIC fixture under the production gate, the frozen pilot evidence and its tamper refusal, the launcher's guards | engine venv; no DB, no network |
+| `make test-demo` | `demo/tests`: the SYNTHETIC fixture under the production gate, the frozen pilot evidence and its tamper refusal, the launcher's guards, `seed.py links --json`; plus `node --test demo/tests/smoke_cli.test.cjs` (the `demo-smoke` URL/artifact boundaries, no browser) | engine venv, Node (skipped with a NOT RUN line if absent); no DB, no network |
+| `make demo-smoke` (not part of test-all) | real-Chrome check of an already running `make demo` dashboard through its proxy (`demo/README.md`) | a running demo, `dashboard/node_modules`, installed Chrome or `PLAYWRIGHT_CHROME_PATH`; no DB credentials, no key |
 | `make demo-evidence` | `demo/evidence.py verify` on the committed pilot bundle (`DEMO_PY` picks the interpreter) | Python with the SDK + `engine[api]` (SciPy); no DB, no key |
 | `make test-infra` | ingest Go integration; every `integration`-marked engine test except `test_integration.py` (API + DB) | Postgres, ClickHouse HTTP + native, Redpanda, `POSTGRES_PASSWORD`, `CLICKHOUSE_PASSWORD`. Runs with `ANTHROPIC_API_KEY` **unset** |
 | `make test-paid` | engine `test_integration.py` (real model calls), hello/hotpotqa/tau2 agent e2e | the above Postgres/ClickHouse HTTP, OTLP receiver on 127.0.0.1:4317, `ANTHROPIC_API_KEY`. **Spends API credit** |

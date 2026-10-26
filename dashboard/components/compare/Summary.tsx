@@ -9,6 +9,15 @@ import type { CompareResult, Coverage, Policy, RunSide, SideCoverage } from "@/l
 export const fmt = (x: number | null | undefined, digits = 4) =>
   x == null || !Number.isFinite(x) ? "—" : x.toFixed(digits);
 
+// Chart axis labels only (the table keeps fmt's four decimals): three significant digits, so a
+// tick such as -0.2777777777777778 reads -0.278; exponent form for very small or large values.
+export const axisTick = (x: number) => {
+  if (!Number.isFinite(x)) return "";
+  if (x === 0) return "0";
+  const a = Math.abs(x);
+  return a < 1e-3 || a >= 1e4 ? x.toExponential(1) : String(Number(x.toPrecision(3)));
+};
+
 export const shortVersion = (v: string | null | undefined) => (v ? v.slice(0, 12) : "—");
 
 type Banner = { kind: "regression" | "pass" | "incomplete"; reasons: string[] };
@@ -273,6 +282,7 @@ export function MetricsPanel({ data }: { data: CompareResult }) {
                     or all-positive set still draws each bar from 0 and keeps the zero line. */}
                 <YAxis
                   fontSize={11}
+                  tickFormatter={axisTick}
                   domain={[(min: number) => Math.min(0, min), (max: number) => Math.max(0, max)]}
                 />
                 <Tooltip />

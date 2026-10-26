@@ -157,10 +157,12 @@ test.describe("correctness fixture (not AI quality): compare", () => {
   // must exist, one per metric with a point estimate, on the right side of the zero line.
   // The bars are deltas, so the Y domain must always include 0: with only negative (or only
   // positive) deltas an auto domain such as [-0.9, -0.3] hid the zero line and started every
-  // bar at -0.3, misstating its length.
+  // bar at -0.3, misstating its length. The all-negative case includes -5/6 (the synthetic
+  // demo's AllGoldRetrieved): its repeating-decimal domain once printed ticks such as
+  // -0.8333333333333334 that overflowed the axis.
   const CHART_CASES: { name: string; deltas: [string, number][] }[] = [
     { name: "mixed signs", deltas: [["passed", -0.2], ["TokenF1", -0.05], ["ExactMatch", 0.1]] },
-    { name: "all negative", deltas: [["passed", -0.416], ["TokenF1", -0.332], ["AllGoldRetrieved", -0.6]] },
+    { name: "all negative", deltas: [["passed", -0.416], ["TokenF1", -0.332], ["AllGoldRetrieved", -5 / 6]] },
     { name: "all positive", deltas: [["passed", 0.3], ["TokenF1", 0.6], ["ExactMatch", 0.45]] },
   ];
   for (const { name, deltas } of CHART_CASES) {
@@ -196,6 +198,22 @@ test.describe("correctness fixture (not AI quality): compare", () => {
         else expect(Math.abs(b.y + b.height - zeroY), `${m} rises from zero`).toBeLessThanOrEqual(1.5);
         expect(b.height / pxPerUnit, `${m} length`).toBeCloseTo(Math.abs(d), 1);
       });
+      // Y tick labels are compact (at most 3 significant digits) and drawn inside the chart, not
+      // clipped at its left edge. The table keeps the full 4-decimal values.
+      const svg = (await chart.locator("svg.recharts-surface").boundingBox())!;
+      const ticks = chart.locator(".recharts-yAxis .recharts-cartesian-axis-tick-value");
+      expect(await ticks.count()).toBeGreaterThan(1);
+      const labels = await ticks.allTextContents();
+      for (const t of labels) expect(t, `tick ${t}`).toMatch(/^-?(0|0\.\d{1,3}|\d(\.\d{1,2})?)$/);
+      for (let i = 0; i < labels.length; i++) {
+        const tb = (await ticks.nth(i).boundingBox())!;
+        expect(tb.x, `tick ${labels[i]} left edge`).toBeGreaterThanOrEqual(svg.x);
+        expect(tb.x + tb.width, `tick ${labels[i]} right edge`).toBeLessThanOrEqual(plot.x + 1);
+      }
+      for (const [m, d] of deltas) {
+        const table = page.locator('section[aria-labelledby="metrics-h"]').getByRole("table");
+        await expect(table.getByRole("row").filter({ hasText: m })).toContainText(d.toFixed(4));
+      }
     });
   }
 
