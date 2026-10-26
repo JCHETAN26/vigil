@@ -90,6 +90,32 @@ export function caseRow(i: number, over: Record<string, unknown> = {}) {
 export const V_BASE = "a1".repeat(32); // 64-hex agent versions
 export const V_CAND = "b2".repeat(32);
 
+// GET /runs/{id}/versions for `versions` (registered + succeeded unless overridden per hash),
+// paged by the request's limit/offset like the API.
+export function runVersions(
+  url: URL,
+  versions: string[],
+  over: Record<string, Record<string, unknown>> = {},
+) {
+  const limit = Number(url.searchParams.get("limit") ?? 50);
+  const offset = Number(url.searchParams.get("offset") ?? 0);
+  const all = [...versions].sort().map((v) => ({
+    agent_version: v,
+    registered: true,
+    status: "succeeded",
+    cases_total: 40,
+    cases_done: 40,
+    ...over[v],
+  }));
+  return {
+    run_id: url.pathname.split("/")[2],
+    versions: all.slice(offset, offset + limit),
+    total: all.length,
+    limit,
+    offset,
+  };
+}
+
 // Resolve a `*_version` query value the way the API does: a unique prefix of a known version.
 export function resolveVersion(param: string | null, fallback: string) {
   if (!param) return fallback;

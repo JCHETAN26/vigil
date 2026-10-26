@@ -22,6 +22,7 @@ from typing import Annotated
 from fastapi import Depends, FastAPI, HTTPException, Path, Query
 from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from psycopg.rows import dict_row
 from psycopg_pool import AsyncConnectionPool
 
@@ -29,6 +30,7 @@ from engine import gate
 from engine.config import dashboard_origins, pg_ro_dsn
 from engine.db.triage import PgTriageStore
 from engine.manifests import REDACTION_NOTE, diff_manifests, sanitize_manifest
+from engine.regression import StatsDependencyError
 
 from .clickhouse import ClickHouseClient, ClickHouseError
 
@@ -66,6 +68,12 @@ def add_cors(target: FastAPI, origins: list[str]) -> None:
 app = FastAPI(title="Vigil dashboard API", lifespan=lifespan)
 # VIGIL_DASHBOARD_ORIGINS (default: localhost/127.0.0.1 :3000); malformed values fail startup.
 add_cors(app, dashboard_origins())
+
+
+@app.exception_handler(StatsDependencyError)
+async def _missing_stats_dependency(_request, exc: StatsDependencyError):
+    # A broken install, not a verdict: 503 with the actionable message (never an approximation).
+    return JSONResponse(status_code=503, content={"detail": str(exc)})
 
 
 async def _fetchall(sql: str, params: tuple = ()):
@@ -142,6 +150,38 @@ async def get_run(run_id: uuid.UUID):
     }
 
 
+@app.get("/runs/{run_id}/versions")
+async def get_run_versions(
+    run_id: uuid.UUID,
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+):
+    """The agent versions a run holds, for choosing one per comparison side: every registered
+    version (even one with no results yet) plus any version that only appears in results.
+    Full hashes, ordered by hash; the order is not a baseline/candidate suggestion."""
+    store = app.state.triage
+    if await store.get_run(str(run_id)) is None:
+        raise HTTPException(404, "run not found")
+    rows, total = await store.get_run_versions_page(str(run_id), limit, offset)
+    return {
+        "run_id": str(run_id),
+        "versions": [
+            {
+                "agent_version": r["agent_version"],
+                # eval_run_versions.status is NOT NULL, so NULL marks the results-only fallback.
+                "registered": r["status"] is not None,
+                "status": r["status"],
+                "cases_total": r["cases_total"],
+                "cases_done": r["cases_done"],
+            }
+            for r in rows
+        ],
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+    }
+
+
 @app.get("/runs/{run_id}/cases")
 async def get_cases(
     run_id: uuid.UUID,
@@ -214,7 +254,10 @@ def _parse_event(name: str, attrs_json: str) -> dict:
 @app.get("/traces/{trace_id}")
 async def get_trace(trace_id: TraceId):
     try:
-        rows = app.state.ch.query(
+        # The ClickHouse client is blocking urllib (up to its timeout); keep it off the event loop
+        # so a slow or unreachable ClickHouse cannot stall every other request.
+        rows = await run_in_threadpool(
+            app.state.ch.query,
             "SELECT span_id, parent_span_id, span_name, span_kind, role, "
             "gen_ai_request_model AS model, "
             "toUnixTimestamp64Nano(start_time) AS start_ns, "

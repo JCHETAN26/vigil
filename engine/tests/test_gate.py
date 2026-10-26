@@ -232,7 +232,70 @@ async def test_tau2_style_suite_without_f1_is_complete():
     s, b, c = store_pair(base, list(base), cases=CASES)
     cmp = await _cmp(s, b, c)
     assert cmp.verdict == "no_regression" and cmp.skipped_metrics == []
+    assert cmp.complete and cmp.incomplete_reasons == []
     assert [m["metric"] for m in cmp.metrics] == ["passed", "cost_usd", "latency_ms"]
+
+
+def _unjudged(case_id, trial, **kw):
+    """An OK trial with no pass/fail verdict and no scorer output (a legacy/imported row)."""
+    return {**row(case_id, trial, **kw), "passed": None, "scores": {}}
+
+
+async def test_no_gated_metric_compared_is_incomplete_not_a_pass():
+    # Regression: both sides succeeded and every trial is OK, but no trial carries a verdict or a
+    # gated score, so only cost/latency were compared. That used to be a complete
+    # no_regression, even with a candidate 10x more expensive, while the dashboard said
+    # INCOMPLETE for the same data.
+    base = [_unjudged(c, t) for c in CASES for t in range(3)]
+    cand = [_unjudged(c, t, cost=0.1) for c in CASES for t in range(3)]
+    s, b, c = store_pair(base, cand, cases=CASES)
+    cmp = await _cmp(s, b, c)
+    assert [m["metric"] for m in cmp.metrics] == ["cost_usd", "latency_ms"]
+    assert not any(m["gated"] for m in cmp.metrics)
+    assert cmp.verdict == "incomplete" and not cmp.complete and not cmp.gated_regression
+    assert any(r.startswith("no gated metric was compared") for r in cmp.incomplete_reasons)
+    # Coverage is perfect: the only thing missing is a quality measurement.
+    assert cmp.coverage["candidate"]["missing_cases"] == [] and cmp.paired_cases == 40
+
+
+async def test_policy_whose_gated_metrics_nothing_reports_is_incomplete():
+    # Same data shape the τ² suite produces (passed set, no TokenF1), but a policy gating only
+    # on metrics no trial reports: nothing gated was compared, so no pass.
+    base = [row(c, t) for c in CASES for t in range(3)]
+    s, b, c = store_pair(base, list(base), cases=CASES)
+    cmp = await _cmp(s, b, c, gate.Policy(gated=("ExactMatch",)))
+    assert cmp.verdict == "incomplete" and cmp.skipped_metrics == []
+    assert any("gated: ExactMatch" in r for r in cmp.incomplete_reasons)
+    cmp_none = await _cmp(s, b, c, gate.Policy(gated=()))
+    assert cmp_none.verdict == "incomplete"
+
+
+async def test_unjudged_quality_drop_is_not_hidden_behind_cost_metrics():
+    # ExactMatch collapses 1.0 → 0.0 on every case but is not gated, and passed is None
+    # throughout: the gate must not call this a pass (it is not gated, so not a regression).
+    def em(case_id, t, score):
+        return {**_unjudged(case_id, t),
+                "scores": {"ExactMatch": {"passed": score > 0, "score": score}}}
+
+    base = [em(c, 0, 1.0) for c in CASES[:20]]
+    cand = [em(c, 0, 0.0) for c in CASES[:20]]
+    s, b, c = store_pair(base, cand, cases=CASES[:20], trials=1)
+    cmp = await _cmp(s, b, c)
+    assert _metric(cmp, "ExactMatch")["status"] == "regression"  # visible, but ungated
+    assert cmp.verdict == "incomplete" and not cmp.gated_regression
+
+
+async def test_partial_verdicts_with_a_gated_regression_still_report_regression():
+    # passed is measured (and drops) on most trials; TokenF1 is absent on both sides (n/a).
+    # The adverse gated evidence wins over every incompleteness reason.
+    base = [row(c, t, passed=True) for c in CASES for t in range(3)]
+    cand = [_unjudged(c, t) if t == 0 else row(c, t, passed=False)
+            for c in CASES for t in range(3)]
+    s, b, c = store_pair(base, cand, cases=CASES)
+    cmp = await _cmp(s, b, c)
+    assert _metric(cmp, "passed")["regressed"]
+    assert cmp.verdict == "regression" and not cmp.complete
+    assert not any(r.startswith("no gated metric") for r in cmp.incomplete_reasons)
 
 
 # --- side availability: measured vs failure zeros vs partial ---

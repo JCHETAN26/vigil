@@ -18,8 +18,8 @@ Primary test is the question-level bootstrap (trial variance folded into each qu
 A two-level bootstrap (resample questions, then resample each question's trials) is available
 as a diagnostic to expose trial-to-trial noise; it requires a uniform trial count per question.
 
-Pure/numpy only — no DB — so it is unit-testable directly; the CLI and the bench power harness
-supply the per-(case, trial) series.
+Pure numpy + scipy (the t quantile) — no DB — so it is unit-testable directly; the CLI and the
+bench power harness supply the per-(case, trial) series.
 """
 
 from __future__ import annotations
@@ -37,15 +37,39 @@ _N = NormalDist()
 CI_METHODS = ("percentile", "bca", "t")
 
 
+class StatsDependencyError(RuntimeError):
+    """A required numerical library is missing. Deliberately not a ValueError: the gate turns
+    a ValueError from a metric into a skipped metric, and a missing install must fail the whole
+    comparison loudly instead of quietly changing (or dropping) a confidence bound."""
+
+
 def _t_ppf(q: float, df: int) -> float:
-    """t-distribution quantile (scipy if present; normal approximation otherwise — negligible
-    for the df~100 suites we use)."""
+    """Student-t quantile from SciPy. Never approximated: a normal quantile gives a different
+    bound (e.g. 1.645 instead of 1.729 at df=19), so a saved verdict would not reproduce."""
     try:
         from scipy.stats import t
+    except ImportError as exc:
+        raise StatsDependencyError(
+            "CI method 't' needs SciPy (scipy.stats.t), which is not installed. Install the "
+            "engine's runtime dependencies (make -C engine install, or pip install -e engine); "
+            "Vigil does not substitute a normal approximation, which would change the bound."
+        ) from exc
+    return float(t.ppf(q, df))
 
-        return float(t.ppf(q, df))
-    except Exception:  # noqa: BLE001
-        return _N.inv_cdf(q)
+
+def stats_backend() -> dict:
+    """Versions of the numerical libraries a verdict depends on (bundle provenance)."""
+    try:
+        import scipy
+
+        scipy_version: str | None = scipy.__version__
+    except ImportError:
+        scipy_version = None
+    return {
+        "numpy": np.__version__,
+        "scipy": scipy_version,
+        "t_quantile": "scipy.stats.t.ppf" if scipy_version else "unavailable (method t refuses)",
+    }
 
 HIGHER_IS_BETTER = "higher_is_better"
 LOWER_IS_BETTER = "lower_is_better"

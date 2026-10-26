@@ -9,6 +9,7 @@ import {
   gotoAndSettle,
   json,
   runSummary,
+  runVersions,
   test,
   triageMetric,
   versionDiff,
@@ -36,6 +37,7 @@ test.describe("correctness fixture (not AI quality): async request ordering", ()
 
     await mockApi([
       [/^\/runs$/, (_u, route) => json(route, runs)],
+      [/^\/runs\/[^/]+\/versions$/, (url, route) => json(route, runVersions(url, [V_CAND]))],
       [
         /^\/compare$/,
         async (url, route) => {

@@ -7,6 +7,7 @@ performance evidence."""
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import sys
@@ -20,10 +21,11 @@ sys.path.insert(0, str(ROOT / "bench"))
 sys.path.insert(0, str(ROOT / "engine" / "tests"))
 sys.path.insert(0, str(ROOT / "engine"))
 
-import regression_verdict as rv
-from triage_fakes import V1, f1_rows, f1_shift_pair, row, store_pair
+# These resolve only after the sys.path setup above (bench/ and engine/ are not installed).
+import regression_verdict as rv  # noqa: E402
+from triage_fakes import V1, block_scipy, f1_rows, f1_shift_pair, row, store_pair  # noqa: E402
 
-from engine import bundle, cli, gate
+from engine import bundle, cli, gate  # noqa: E402
 
 
 @pytest.fixture
@@ -98,6 +100,63 @@ def test_tampered_verdict_fails(saved, capsys, forge):
     assert rc == 1 and "MISMATCH" in out
     assert ("checksum mismatch: verdict.json" in out) != forge
     assert "verdict.verdict: saved 'no_regression' != recomputed 'regression'" in out
+
+
+def test_bundle_without_a_gated_metric_reproduces_as_incomplete(tmp_path, capsys):
+    # OK trials with no pass/fail verdict and no gated score: only cost/latency compare. Such a
+    # bundle reproduces as incomplete, and the pre-fix verdict for the same data (a complete
+    # no_regression) no longer reproduces — offline replay cannot launder it into a pass.
+    cases = [f"q{i}" for i in range(20)]
+    unjudged = [{**row(c, 0), "passed": None, "scores": {}} for c in cases]
+    store, b, c = store_pair(unjudged, [dict(r, cost_usd=0.5) for r in unjudged], cases=cases,
+                             trials=1)
+    inputs = asyncio.run(gate.load_inputs(store, b, c))
+    policy = gate.DEFAULT_POLICY.with_overrides(n_boot=1000)
+    out = bundle.write_bundle(tmp_path / "b", inputs, policy, gate.compare(inputs, policy), {})
+    rc, text = _reproduce(out, capsys)
+    assert rc == 0, text
+    assert "REPRODUCED: verdict incomplete" in text
+
+    def old_verdict(v):
+        v["verdict"], v["complete"], v["incomplete_reasons"] = "no_regression", True, []
+
+    _edit(out / "verdict.json", old_verdict, forge_sums=True)
+    rc, text = _reproduce(out, capsys)
+    assert rc == 1 and "verdict.verdict: saved 'no_regression' != recomputed 'incomplete'" in text
+
+
+def test_new_bundle_records_the_stats_backend(saved):
+    import numpy
+    import scipy
+
+    env = json.loads((saved / "metadata.json").read_text())["environment"]
+    assert env["numpy"] == numpy.__version__ and env["scipy"] == scipy.__version__
+    assert env["t_quantile"] == "scipy.stats.t.ppf"
+
+
+def test_bundle_from_before_the_scipy_metadata_still_reproduces(saved, capsys):
+    # Bundles exported before SciPy was recorded carry only python/numpy. Their bytes are not
+    # rewritten and they verify unchanged: metadata is provenance, not part of the verdict.
+    def old_env(m):
+        m["environment"] = {"python": m["environment"]["python"],
+                            "numpy": m["environment"]["numpy"]}
+
+    _edit(saved / "metadata.json", old_env, forge_sums=True)
+    rc, out = _reproduce(saved, capsys)
+    assert rc == 0 and "REPRODUCED: verdict regression" in out
+
+
+def test_verifying_without_scipy_fails_actionably_not_with_an_approximation(
+        saved, capsys, monkeypatch):
+    # The method-t bound cannot be recomputed without SciPy. The verifier must neither pass
+    # nor report the normal-approximation bounds as data mismatches; it says what is missing.
+    before = {p.name: p.read_bytes() for p in saved.iterdir()}
+    block_scipy(monkeypatch)
+    rc, out = _reproduce(saved, capsys)
+    assert rc == 1 and "REPRODUCED" not in out and "CANNOT VERIFY" in out
+    assert "cannot recompute the verdict: CI method 't' needs SciPy" in out
+    assert "ci_bound" not in out
+    assert {p.name: p.read_bytes() for p in saved.iterdir()} == before  # bundle untouched
 
 
 def test_tampered_metric_number_fails(saved, capsys):

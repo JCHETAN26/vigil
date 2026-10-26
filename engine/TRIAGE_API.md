@@ -1,7 +1,8 @@
 # Regression triage API — contract for the dashboard
 
-Read-only GET endpoints of `engine/engine/api/app.py`. All three resolve runs/versions and the
-policy through `engine/engine/gate.py`, the same code `python -m engine regress` uses, so the
+Read-only GET endpoints of `engine/engine/api/app.py`. The three comparison endpoints resolve
+runs/versions and the policy through `engine/engine/gate.py` (`/runs/{id}/versions` lists the
+same version set the gate selects from), the same code `python -m engine regress` uses, so the
 CLI and the UI reach identical decisions for identical inputs. All Postgres reads use bound
 parameters over the read-only role. Errors are FastAPI `{"detail": "<message>"}`.
 
@@ -40,12 +41,15 @@ Example for a UI served on port 3307 against an API on port 8087:
 **Version selection.** A run can contain several agent versions (baseline and candidate in a
 single run). Results are **never averaged across versions**.
 - Version omitted, run has exactly one version: that version is used (`version_selection: "single_version_fallback"`).
-- Version omitted, run has several versions: **400**. The message lists the 12-char prefixes. The UI should show a version picker; `context.*.versions_in_run` lists the choices once a request succeeds.
+- Version omitted, run has several versions: **400**. The message lists the 12-char prefixes. The UI should show a version picker fed by `GET /runs/{id}/versions` (below), which lists the choices before any comparison is requested; `context.*.versions_in_run` lists them too once a request succeeds.
 - Version given but not in the run: **404**. Ambiguous prefix: **400**.
 - Comparing a run against itself is allowed when both versions are given and differ (`baseline=R&candidate=R&baseline_version=…&candidate_version=…`). The same run with the same version: **400**.
 
 Status codes: 404 = run or version not found; 400 = unresolvable selection, runs from
-different suites (`/compare*` only), or an unknown `metric`; 422 = parameter validation.
+different suites (`/compare*` only), or an unknown `metric`; 422 = parameter validation;
+503 = the API's install lacks a numerical dependency the policy needs (method `t` needs SciPy).
+The engine never substitutes a normal approximation for the Student-t quantile, so a missing
+SciPy is an error with an install hint, never a verdict.
 
 ### Policy parameters (`/compare`, `/compare/cases`)
 
@@ -64,6 +68,35 @@ Gated metrics: `passed`, `TokenF1`. Every other metric is informational, with th
 **Denominators.** An `error`/`timeout` trial counts as a failure. It scores 0 on `passed` and
 on every higher-is-better quality metric in the comparison, so it is never dropped. `cost_usd`
 and `latency_ms` use OK trials only.
+
+## `GET /runs/{run_id}/versions`
+
+The agent versions a run holds, for choosing one per side. Same set the gate selects from:
+every version registered for the run (`eval_run_versions`, even with no results yet) plus any
+version that appears only in `eval_case_results`. Not derived from a page of `/runs/{id}/cases`.
+
+| param | validation | default |
+|---|---|---|
+| `limit` | 1 ≤ n ≤ 200 (422) | 50 |
+| `offset` | ≥ 0 (422) | 0 |
+
+```jsonc
+{
+  "run_id": "<run uuid>",
+  "versions": [{
+    "agent_version": "<full 64 hex>",
+    "registered": true,           // false: seen only in results; then status/cases_* are null
+    "status": "succeeded",        // eval_run_versions.status
+    "cases_total": 40, "cases_done": 40   // (case × trial) units
+  }],
+  "total": 3, "limit": 50, "offset": 0
+}
+```
+
+Ordered by hash, so pages are stable. **The order is not a role**: nothing here says which
+version is the baseline, and a client must not assign sides from it. 404 if the run does not
+exist; an existing run with no versions returns `versions: []`, `total: 0`. When `total`
+exceeds the page, the remaining versions are still selectable by hash or prefix.
 
 ## `GET /compare`
 
@@ -107,8 +140,10 @@ and `latency_ms` use OK trials only.
 **Verdict rule.** `regression` if any gated metric regressed. Adverse evidence counts even
 on incomplete data. Otherwise `incomplete` if any `incomplete_reasons` exist: a run or version
 that didn't succeed, missing cases or trials, unequal case sets, no results, a side with no OK
-trials, a gated metric that couldn't be compared, or a gated metric missing on some OK trials.
-Otherwise `no_regression`. **Never render `incomplete` as a pass.**
+trials, a gated metric that couldn't be compared, a gated metric missing on some OK trials, or
+**no gated metric compared at all** (reason `no gated metric was compared …`, e.g. OK trials
+with `passed = null` and no gated score, so only cost/latency compare). Otherwise
+`no_regression`. **Never render `incomplete` as a pass.**
 Non-finite numbers are returned as `null`.
 
 **Metric availability per side.** A metric is measured on a side when at least one of its OK
@@ -117,7 +152,14 @@ measured. A metric measured on only one side is skipped (`only reported by …`)
 other side's failed trials were zero-filled for it. A side with no OK trials is the exception:
 its failure zeros are compared (so an all-failed candidate can still be a regression) and the
 comparison is incomplete. A gated metric no side's OK trials report (e.g. TokenF1 on τ²) is
-not applicable and does not make the comparison incomplete.
+not applicable and does not by itself make the comparison incomplete, as long as another gated
+metric (τ²: `passed`) was compared.
+
+Historical bundles: a bundle saved before this rule whose data compared no gated metric
+recorded `no_regression`; `bench/regression_verdict.py reproduce` now recomputes `incomplete`
+and reports a MISMATCH. No engine scorer produces that shape (every scored trial sets
+`passed`), so normal bundles, which always compare `passed`, are unchanged and reproduce as
+before; the bundle format version is not bumped.
 
 ## `GET /compare/cases`
 

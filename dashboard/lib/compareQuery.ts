@@ -65,6 +65,27 @@ export function selectionProblems(s: Selection): string[] {
   return out;
 }
 
+export const isRunId = (s: string) => UUID_RE.test(s);
+
+// The same run on both sides is only a comparison between two different explicit versions.
+// Two spellings of one prefix (e.g. a prefix and its full hash) are left for the API to refuse.
+export function sameRunNeedsVersions(s: Pick<Selection, "baseline" | "candidate" | "baselineVersion" | "candidateVersion">) {
+  const same = Boolean(s.baseline) && s.baseline.toLowerCase() === s.candidate.toLowerCase();
+  return same && (!s.baselineVersion || !s.candidateVersion || s.baselineVersion === s.candidateVersion);
+}
+
+// Display labels for full version hashes: at least 12 chars, longer where two versions share a
+// 12-char prefix, so no two choices ever look alike.
+export function versionLabels(versions: string[]): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const v of versions) {
+    let n = Math.min(12, v.length);
+    while (n < v.length && versions.some((o) => o !== v && o.startsWith(v.slice(0, n)))) n++;
+    out[v] = v.slice(0, n);
+  }
+  return out;
+}
+
 // baseline/candidate + versions: the parameters every triage endpoint shares.
 export function pairQuery(s: Selection): URLSearchParams {
   const q = new URLSearchParams({ baseline: s.baseline, candidate: s.candidate });

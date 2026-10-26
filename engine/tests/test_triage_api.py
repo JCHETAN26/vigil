@@ -4,16 +4,31 @@ WITHOUT its context manager so the lifespan (Postgres pool) never runs."""
 
 from __future__ import annotations
 
+import asyncio
 import json
+import threading
 from contextlib import asynccontextmanager
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
-from triage_fakes import V1, V2, V3, FakeStore, f1_rows, f1_shift_pair, rid, row, store_pair
+from triage_fakes import (
+    V1,
+    V2,
+    V3,
+    FakeStore,
+    block_scipy,
+    f1_rows,
+    f1_shift_pair,
+    rid,
+    row,
+    store_pair,
+)
 
-from engine import cli
+from engine import cli, gate
 from engine.api.app import app
 from engine.api.clickhouse import ClickHouseError
+from engine.regression import StatsDependencyError
 
 
 @pytest.fixture
@@ -95,6 +110,59 @@ def test_cli_exit_codes_and_incomplete_verdict(use_store, capsys):
     assert cli.main(["regress", "--baseline", b2, "--candidate", c2, "--exit-code"]) == 2
 
 
+def test_no_gated_metric_is_incomplete_in_cli_api_and_saved_bundle(use_store, tmp_path, capsys):
+    # OK trials with no pass/fail verdict and no gated score on both sides: only cost/latency
+    # are comparable. API, CLI exit code and the saved bundle must all say incomplete — the CLI
+    # used to exit 0 ("no gated regression") while the dashboard showed INCOMPLETE.
+    cases = [f"q{i}" for i in range(20)]
+    unjudged = lambda c, **kw: {**row(c, 0, **kw), "passed": None, "scores": {}}  # noqa: E731
+    store, b, c = store_pair([unjudged(x) for x in cases], [unjudged(x, cost=0.5) for x in cases],
+                             cases=cases, trials=1)
+    client = use_store(store)
+    api = client.get("/compare", params={"baseline": b, "candidate": c}).json()
+    assert api["verdict"] == "incomplete" and api["complete"] is False
+    assert api["gated_regression"] is False
+    assert not any(m["gated"] for m in api["metrics"])
+    assert any(r.startswith("no gated metric was compared") for r in api["incomplete_reasons"])
+
+    out = tmp_path / "bundle"
+    assert cli.main(["regress", "--baseline", b, "--candidate", c, "--exit-code",
+                     "--save", str(out)]) == 3
+    assert "VERDICT: INCOMPLETE" in capsys.readouterr().out
+    saved = json.loads((out / "verdict.json").read_text())
+    assert saved["verdict"] == api["verdict"] and saved["complete"] is False
+    assert saved["incomplete_reasons"] == api["incomplete_reasons"]
+    cases_view = client.get("/compare/cases", params={"baseline": b, "candidate": c}).json()
+    assert cases_view["verdict"] == "incomplete"
+
+
+def test_missing_scipy_fails_api_cli_and_gate_loudly(use_store, tmp_path, capsys, monkeypatch):
+    # Without SciPy the default method 't' cannot compute its bound. Every entry point must say
+    # so: no verdict computed from a different statistic, no metric quietly skipped as
+    # "incomplete", no bundle written. Percentile still works, since it never needs SciPy.
+    store, b, c = _f1_pair()
+    client = use_store(store)
+    block_scipy(monkeypatch)
+
+    resp = client.get("/compare", params={"baseline": b, "candidate": c})
+    assert resp.status_code == 503 and "needs SciPy" in resp.json()["detail"]
+    cases = client.get("/compare/cases", params={"baseline": b, "candidate": c})
+    assert cases.status_code == 503
+
+    out = tmp_path / "bundle"
+    assert cli.main(["regress", "--baseline", b, "--candidate", c, "--exit-code",
+                     "--save", str(out)]) == 1
+    captured = capsys.readouterr()
+    assert "needs SciPy" in captured.err and "VERDICT" not in captured.out
+    assert not out.exists()
+
+    inputs = asyncio.run(gate.load_inputs(store, b, c))
+    with pytest.raises(StatsDependencyError):
+        gate.compare(inputs)
+    pct = client.get("/compare", params={"baseline": b, "candidate": c, "method": "percentile"})
+    assert pct.status_code == 200 and pct.json()["verdict"] == "regression"
+
+
 def test_cli_refuses_mixed_version_run_and_bad_ids(use_store, capsys):
     s = FakeStore()
     s.add_suite("suite-1", ["q0"])
@@ -169,6 +237,84 @@ def test_compare_explicit_version_from_mixed_run(use_store):
     assert body["baseline_version"] == V1 and body["candidate_version"] == V2
     assert body["context"]["baseline"]["versions_in_run"] == [V1, V2]
     assert next(m for m in body["metrics"] if m["metric"] == "passed")["point_estimate"] == -1.0
+
+
+# --- /runs/{id}/versions (version discovery for the dashboard picker) ---
+
+
+def test_run_versions_lists_registered_versions_with_and_without_results(use_store):
+    s = FakeStore()
+    s.add_suite("suite-1", ["q0"])
+    r = rid()
+    # V3 is registered but has no case results yet; V1 only appears in results (the store's
+    # fallback rows carry status None). Order is by hash, never by role.
+    s.add_run(r, trials=1, versions={V3: "pending", V2: "succeeded"})
+    s.versions[r].append({"agent_version": V1, "status": None, "cases_total": None,
+                          "cases_done": None})
+    s.add_results(r, V2, [row("q0", 0)])
+    s.add_results(r, V1, [row("q0", 0)])
+    body = use_store(s).get(f"/runs/{r}/versions").json()
+    assert body["run_id"] == r and body["total"] == 3
+    assert body["limit"] == 50 and body["offset"] == 0
+    assert [v["agent_version"] for v in body["versions"]] == [V1, V2, V3]  # full 64-char hashes
+    assert body["versions"][0] == {"agent_version": V1, "registered": False, "status": None,
+                                   "cases_total": None, "cases_done": None}
+    assert body["versions"][2]["registered"] is True and body["versions"][2]["status"] == "pending"
+
+
+def test_run_versions_paging_is_bounded_and_stable(use_store):
+    s = FakeStore()
+    r = rid()
+    versions = [f"{i:02x}" * 32 for i in range(7)]
+    s.add_run(r, versions={v: "succeeded" for v in reversed(versions)})
+    client = use_store(s)
+    pages = [client.get(f"/runs/{r}/versions", params={"limit": 3, "offset": o}).json()
+             for o in (0, 3, 6, 9)]
+    assert [len(p["versions"]) for p in pages] == [3, 3, 1, 0]
+    assert all(p["total"] == 7 for p in pages)
+    assert [v["agent_version"] for p in pages for v in p["versions"]] == versions
+    for bad in ({"limit": 0}, {"limit": 201}, {"offset": -1}):
+        assert client.get(f"/runs/{r}/versions", params=bad).status_code == 422, bad
+
+
+def test_run_versions_empty_unknown_and_malformed_runs(use_store):
+    s = FakeStore()
+    r = rid()
+    s.add_run(r, versions={})
+    client = use_store(s)
+    body = client.get(f"/runs/{r}/versions").json()
+    assert body["versions"] == [] and body["total"] == 0
+    assert client.get(f"/runs/{rid()}/versions").status_code == 404
+    assert client.get("/runs/not-a-uuid/versions").status_code == 422
+
+
+def test_run_versions_is_read_only(use_store):
+    """GET only (CORS and routing), and the handler touches nothing but the store's reads."""
+    s = FakeStore()
+    r = rid()
+    s.add_run(r, versions={V1: "succeeded"})
+    before = (dict(s.runs), {k: list(v) for k, v in s.versions.items()})
+    client = use_store(s)
+    for method in ("post", "put", "delete", "patch"):
+        assert getattr(client, method)(f"/runs/{r}/versions").status_code == 405, method
+    assert client.get(f"/runs/{r}/versions").status_code == 200
+    assert (s.runs, s.versions) == before
+
+
+def test_discovered_versions_select_each_side_of_a_same_run_compare(use_store):
+    # The picker's flow end to end on the API: list the run's versions, pass two full hashes.
+    s = FakeStore()
+    s.add_suite("suite-1", ["q0", "q1"])
+    r = rid()
+    s.add_run(r, trials=1, versions={V1: "succeeded", V2: "succeeded"})
+    s.add_results(r, V1, [row("q0", 0), row("q1", 0)])
+    s.add_results(r, V2, [row("q0", 0), row("q1", 0)])
+    client = use_store(s)
+    listed = [v["agent_version"] for v in client.get(f"/runs/{r}/versions").json()["versions"]]
+    body = client.get("/compare", params={"baseline": r, "candidate": r,
+                                          "baseline_version": listed[1],
+                                          "candidate_version": listed[0]}).json()
+    assert (body["baseline_version"], body["candidate_version"]) == (V2, V1)
 
 
 # --- /compare/cases ---
@@ -308,3 +454,36 @@ def test_trace_endpoint_maps_clickhouse_error_to_502(monkeypatch):
     monkeypatch.setattr(app.state, "ch", _FailingCH(), raising=False)
     r = TestClient(app).get(f"/traces/{'0' * 32}")
     assert r.status_code == 502 and "unreachable" in r.json()["detail"]
+
+
+class _BlockingCH:
+    """Blocks inside query() (like urllib waiting out its timeout) until released."""
+
+    def __init__(self):
+        self.entered = threading.Event()
+        self.release = threading.Event()
+        self.thread: int | None = None
+
+    def query(self, sql, params=None):
+        self.thread = threading.get_ident()
+        self.entered.set()
+        assert self.release.wait(10), "test never released the blocked ClickHouse query"
+        raise ClickHouseError("clickhouse unreachable: timed out")
+
+
+async def test_slow_clickhouse_does_not_block_other_requests(monkeypatch):
+    # Regression: get_trace called the synchronous ClickHouse client on the event loop, so one
+    # stuck trace request (up to the 15 s timeout) stalled every API request.
+    ch = _BlockingCH()
+    monkeypatch.setattr(app.state, "ch", ch, raising=False)
+    loop_thread = threading.get_ident()
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),
+                                 base_url="http://test") as client:
+        trace = asyncio.create_task(client.get(f"/traces/{'0' * 32}"))
+        assert await asyncio.to_thread(ch.entered.wait, 5)
+        health = await asyncio.wait_for(client.get("/healthz"), timeout=2)
+        assert health.status_code == 200 and not trace.done()
+        ch.release.set()
+        resp = await asyncio.wait_for(trace, timeout=5)
+    assert resp.status_code == 502 and "timed out" in resp.json()["detail"]
+    assert ch.thread is not None and ch.thread != loop_thread  # ran in the threadpool

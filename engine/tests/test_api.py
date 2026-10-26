@@ -296,3 +296,26 @@ def test_compare_same_suite_and_mismatch(client):
         resp = _compare(client, suites[0][0], suites[1][0])
         assert resp.status_code == 400
         assert "different suites" in resp.json()["detail"]
+
+
+@pytest.mark.integration
+def test_run_versions_cover_registered_and_result_versions(client):
+    # Every version the stored data holds for a run (registered or results-only) is listed in
+    # full and in hash order, whatever the first page of /cases happens to show. Read-only: the
+    # expected set is read over the API's read-only role.
+    expected: dict[str, set[str]] = {}
+    with psycopg.connect(pg_ro_dsn()) as conn:
+        for run_id, version in conn.execute(
+            "SELECT run_id, agent_version FROM eval_run_versions "
+            "UNION SELECT run_id, agent_version FROM eval_case_results"
+        ):
+            expected.setdefault(str(run_id), set()).add(version)
+    for r in client.get("/runs", params={"limit": 200}).json()["runs"]:
+        body = client.get(f"/runs/{r['id']}/versions", params={"limit": 200}).json()
+        listed = [v["agent_version"] for v in body["versions"]]
+        assert listed == sorted(expected.get(r["id"], set())), r["id"]
+        assert body["total"] == len(listed)
+        if len(listed) >= 2:  # a bounded page is a prefix of the same list
+            first = client.get(f"/runs/{r['id']}/versions", params={"limit": 1}).json()
+            assert [v["agent_version"] for v in first["versions"]] == listed[:1]
+            assert first["total"] == len(listed)

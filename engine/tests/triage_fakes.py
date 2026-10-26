@@ -5,6 +5,7 @@ performance evidence."""
 
 from __future__ import annotations
 
+import sys
 import uuid
 
 import numpy as np
@@ -12,6 +13,14 @@ import numpy as np
 V1 = "a" * 64
 V2 = "b" * 64
 V3 = "c" * 64
+
+
+def block_scipy(monkeypatch) -> None:
+    """Make ``import scipy`` / ``from scipy.stats import t`` fail as on an install without SciPy."""
+    for name in [m for m in sys.modules if m == "scipy" or m.startswith("scipy.")]:
+        monkeypatch.delitem(sys.modules, name)
+    monkeypatch.setitem(sys.modules, "scipy", None)
+    monkeypatch.setitem(sys.modules, "scipy.stats", None)
 
 
 def rid() -> str:
@@ -49,7 +58,12 @@ class FakeStore:
         return self.runs.get(str(run_id))
 
     async def get_run_versions(self, run_id):
-        return list(self.versions.get(str(run_id), []))
+        # Same order as PgTriageStore: by hash.
+        return sorted(self.versions.get(str(run_id), []), key=lambda v: v["agent_version"])
+
+    async def get_run_versions_page(self, run_id, limit, offset):
+        rows = await self.get_run_versions(run_id)
+        return rows[offset: offset + limit], len(rows)
 
     async def get_suite_case_ids(self, suite_id):
         return list(self.suites.get(str(suite_id), []))

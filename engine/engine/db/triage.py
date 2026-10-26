@@ -25,7 +25,7 @@ WHERE r.id = %s
 # orchestrator registers every version, but a result row is the ground truth).
 # The fallback NULLs are cast to the eval_run_versions column types: under SELECT DISTINCT an
 # untyped NULL resolves to text before the UNION sees it, and text can't match int.
-_RUN_VERSIONS = """
+_RUN_VERSIONS_UNION = """
 SELECT v.agent_version, v.status, v.cases_total, v.cases_done
 FROM eval_run_versions v WHERE v.run_id = %s
 UNION ALL
@@ -34,8 +34,12 @@ FROM eval_case_results r
 WHERE r.run_id = %s
   AND NOT EXISTS (SELECT 1 FROM eval_run_versions v
                   WHERE v.run_id = r.run_id AND v.agent_version = r.agent_version)
-ORDER BY 1
 """
+_RUN_VERSIONS = _RUN_VERSIONS_UNION + "ORDER BY 1\n"
+# The same set, one bounded page at a time (the dashboard's version picker). agent_version is
+# unique within the set, so ordering by it alone keeps pages stable.
+_RUN_VERSIONS_PAGE = _RUN_VERSIONS + "LIMIT %s OFFSET %s\n"
+_RUN_VERSIONS_COUNT = f"SELECT count(*) AS n FROM ({_RUN_VERSIONS_UNION}) AS versions"
 
 _SUITE_CASE_IDS = "SELECT case_id FROM eval_cases WHERE suite_id = %s ORDER BY case_id"
 
@@ -62,6 +66,14 @@ class PgTriageStore:
 
     async def get_run_versions(self, run_id) -> list[dict]:
         return await self._fetchall(_RUN_VERSIONS, (run_id, run_id))
+
+    async def get_run_versions_page(
+        self, run_id, limit: int, offset: int
+    ) -> tuple[list[dict], int]:
+        """One page of ``get_run_versions`` (same rows, same order) plus the total count."""
+        rows = await self._fetchall(_RUN_VERSIONS_PAGE, (run_id, run_id, limit, offset))
+        total = await self._fetchall(_RUN_VERSIONS_COUNT, (run_id, run_id))
+        return rows, int(total[0]["n"])
 
     async def get_suite_case_ids(self, suite_id) -> list[str]:
         return [r["case_id"] for r in await self._fetchall(_SUITE_CASE_IDS, (suite_id,))]

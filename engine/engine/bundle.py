@@ -10,7 +10,8 @@ A bundle is a directory (never overwritten) holding:
                  alpha, n_boot, seed, failed-trial rule)
   verdict.json   ``engine.gate.Comparison.to_dict()`` as computed at export time
   metadata.json  provenance: format version, export time, engine source revision, python/numpy
-                 versions, suite adapter + config, both version manifests (redacted), argv
+                 (and, since the SciPy requirement, scipy + t-quantile source) versions, suite
+                 adapter + config, both version manifests (redacted), argv
   SHA256SUMS     sha256 of each file above
 
 Verification fails on: a missing/extra file, any checksum mismatch, an unsupported format,
@@ -39,6 +40,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from engine import gate
+from engine.regression import StatsDependencyError
 
 FORMAT = "vigil-regress-bundle"
 # 2: per-side metric availability (partial/one-sided/all-failed rules, per-metric
@@ -60,9 +62,12 @@ def _sha(data: bytes) -> str:
 
 
 def environment() -> dict:
-    import numpy
+    """Interpreter + numerical backend. New bundles also record SciPy and the t-quantile
+    source; bundles written before that carry only python/numpy and still verify (metadata is
+    provenance, not part of the recomputed verdict)."""
+    from engine.regression import stats_backend
 
-    return {"python": platform.python_version(), "numpy": numpy.__version__}
+    return {"python": platform.python_version(), **stats_backend()}
 
 
 def write_bundle(
@@ -182,7 +187,10 @@ def verify_bundle(bundle_dir: str | Path) -> tuple[list[str], dict | None]:
         if saved.get(side) != docs["inputs.json"][side]:
             problems.append(f"verdict.json {side} identity differs from inputs.json")
 
-    recomputed = json.loads(_dump(gate.compare(inputs, policy).to_dict()))
+    try:
+        recomputed = json.loads(_dump(gate.compare(inputs, policy).to_dict()))
+    except StatsDependencyError as exc:  # never verify with a different statistic
+        return [*problems, f"cannot recompute the verdict: {exc}"], None
     mismatches: list[str] = []
     _diff(saved, recomputed, "verdict", mismatches)
     problems.extend(mismatches)
