@@ -254,22 +254,68 @@ def test_api_clickhouse_connection_cannot_write():
     assert exc.value.code in (403, 500)  # ClickHouse ACCESS_DENIED
 
 
+def _result_versions() -> dict[str, str]:
+    """Per run id: one agent version that has stored results (the smallest hash, so the choice
+    is deterministic), read over the API's read-only Postgres role. A run may hold several
+    versions, and ``/compare`` without an explicit version refuses those as ambiguous — the
+    contract this test must not rely on breaking."""
+    with psycopg.connect(pg_ro_dsn()) as conn:
+        return {str(run_id): version for run_id, version in conn.execute(
+            "SELECT run_id, min(agent_version) FROM eval_case_results GROUP BY run_id")}
+
+
+def _compare(client, baseline: tuple[str, str], candidate: tuple[str, str]):
+    return client.get("/compare", params={
+        "baseline": baseline[0], "baseline_version": baseline[1],
+        "candidate": candidate[0], "candidate_version": candidate[1],
+    })
+
+
 @pytest.mark.integration
 def test_compare_same_suite_and_mismatch(client):
     runs = client.get("/runs", params={"limit": 200}).json()["runs"]
-    by_suite: dict[str, list[str]] = {}
+    versions = _result_versions()
+    by_suite: dict[str, list[tuple[str, str]]] = {}
     for r in runs:
-        by_suite.setdefault(r["suite"], []).append(r["id"])
-    # Same-suite comparison: expect 200 with a positive paired-case count.
-    same = next((ids for ids in by_suite.values() if len(ids) >= 2), None)
+        version = versions.get(r["id"])
+        if version is not None:  # a run with no results cannot be paired at all
+            by_suite.setdefault(r["suite"], []).append((r["id"], version))
+    # Same-suite comparison, versions selected explicitly: 200 with a positive paired count.
+    same = next((sides for sides in by_suite.values() if len(sides) >= 2), None)
     if same:
-        resp = client.get("/compare", params={"baseline": same[0], "candidate": same[1]})
-        assert resp.status_code == 200
+        resp = _compare(client, same[0], same[1])
+        assert resp.status_code == 200, resp.text
         body = resp.json()
+        assert body["baseline_version"] == same[0][1]
+        assert body["candidate_version"] == same[1][1]
         assert body["paired_cases"] >= 1
         assert isinstance(body["metrics"], list)
-    # Different-suite comparison: refused with a clear 400.
-    suites = [ids for ids in by_suite.values() if ids]
+    # Different-suite comparison: refused with a clear 400 for the suite, not for the versions.
+    suites = [sides for sides in by_suite.values() if sides]
     if len(suites) >= 2:
-        resp = client.get("/compare", params={"baseline": suites[0][0], "candidate": suites[1][0]})
+        resp = _compare(client, suites[0][0], suites[1][0])
         assert resp.status_code == 400
+        assert "different suites" in resp.json()["detail"]
+
+
+@pytest.mark.integration
+def test_run_versions_cover_registered_and_result_versions(client):
+    # Every version the stored data holds for a run (registered or results-only) is listed in
+    # full and in hash order, whatever the first page of /cases happens to show. Read-only: the
+    # expected set is read over the API's read-only role.
+    expected: dict[str, set[str]] = {}
+    with psycopg.connect(pg_ro_dsn()) as conn:
+        for run_id, version in conn.execute(
+            "SELECT run_id, agent_version FROM eval_run_versions "
+            "UNION SELECT run_id, agent_version FROM eval_case_results"
+        ):
+            expected.setdefault(str(run_id), set()).add(version)
+    for r in client.get("/runs", params={"limit": 200}).json()["runs"]:
+        body = client.get(f"/runs/{r['id']}/versions", params={"limit": 200}).json()
+        listed = [v["agent_version"] for v in body["versions"]]
+        assert listed == sorted(expected.get(r["id"], set())), r["id"]
+        assert body["total"] == len(listed)
+        if len(listed) >= 2:  # a bounded page is a prefix of the same list
+            first = client.get(f"/runs/{r['id']}/versions", params={"limit": 1}).json()
+            assert [v["agent_version"] for v in first["versions"]] == listed[:1]
+            assert first["total"] == len(listed)

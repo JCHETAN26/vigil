@@ -17,6 +17,12 @@ dependencies = [
     "psycopg[binary]>=3.1,<4",
     "redis>=5,<6",
     "anthropic>=1.8,<2",
+    # The regression gate (engine.regression): numpy for the bootstrap, SciPy for the Student-t
+    # quantile of the default CI method. Declared here, not left to an agent's transitive deps:
+    # without SciPy, method 't' refuses rather than approximating (a saved verdict's bound
+    # would not reproduce).
+    "numpy>=1.26,<3",
+    "scipy>=1.11,<2",
     # The worker exports real OTLP traces via vigil.init, so the engine needs the exporters
     # here (the SDK keeps them as optional extras). gRPC is the default protocol.
     "opentelemetry-exporter-otlp-proto-grpc>=1.25",

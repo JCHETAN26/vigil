@@ -19,7 +19,8 @@ A run can hold several versions, for example a baseline and a candidate run toge
 - The same run can appear on both sides if the two versions differ. The same run with the same
   version is refused. `/compare` and the CLI also refuse runs from different suites.
 
-Find run ids and versions with `python -m engine show --run <uuid>`, or with `GET /runs/{id}`.
+Find run ids and versions with `python -m engine show --run <uuid>`, or with
+`GET /runs/{id}/versions` (every registered or result-only version, full hashes, paged).
 
 ## 2. Shared policy (CLI = API = dashboard)
 
@@ -48,6 +49,10 @@ not a full paired measurement. Any of these makes it incomplete:
 - no results, or a side with no OK trials (every trial failed)
 - a gated metric that could not be compared, or that is missing on some OK trials. A missing
   gated metric is reported separately from one where failed trials scored zero
+- no gated metric compared at all, for example OK trials with no pass/fail verdict and no
+  gated score, where only cost and latency could be compared. A gated metric that neither side
+  reports (TokenF1 on τ²) is not applicable, but at least one gated metric (τ²: `passed`) must
+  be compared
 
 Otherwise the verdict is `no_regression`. **Incomplete never counts as a pass.** The CLI prints
 `VERDICT: INCOMPLETE comparison — not a pass`, and the dashboard shows a dashed "INCOMPLETE:
@@ -104,6 +109,14 @@ Verification fails on any of these:
   side identities in `inputs.json`
 - any verdict field that does not recompute, including every metric value and the coverage audit
 
+The default CI method `t` takes its Student-t quantile from SciPy, a declared engine dependency
+alongside NumPy. Without SciPy, `t` refuses instead of approximating with a normal quantile
+(which shifts every bound): `engine regress` exits 1 with an install hint and writes no bundle,
+the API answers 503, and `reproduce` prints `CANNOT VERIFY` (exit 1) rather than a pass or a
+list of bound mismatches. Methods `percentile` and `bca` do not need SciPy. New bundles record
+`numpy`, `scipy` and `t_quantile` in `metadata.json` → `environment`; older bundles record
+python and numpy only and verify unchanged.
+
 **What the checksums do *not* prove:** `SHA256SUMS` is stored inside the bundle and is not
 signed. It catches accidental or partial edits. It cannot show who produced the bundle or that
 its rows match the database. Someone who edits the rows, recomputes the verdict, and rewrites
@@ -113,7 +126,17 @@ came from.
 
 ## 5. Dashboard
 
-Open `/compare?baseline=<uuid>&baseline_version=<hash>&candidate=<uuid>&candidate_version=<hash>`.
+Open `/compare?baseline=<uuid>&baseline_version=<hash>&candidate=<uuid>&candidate_version=<hash>`,
+or get there without copying hashes:
+
+- **From a run** (`/runs/<uuid>`): the *Agent versions* list shows every version of the run.
+  Mark one as baseline and one as candidate, then follow *Compare the selected versions*.
+  Nothing is pre-selected, because hash order says nothing about which version is the baseline.
+- **From `/compare`**: picking a run lists its versions (`GET /runs/{id}/versions`) as choices
+  under that side. With the same run on both sides, the page asks for two different versions
+  and sends no comparison request until both are picked. Versions beyond the first 50, or from
+  older links, can still be typed as a hash or a ≥8-char prefix.
+
 The URL holds all of the state, including policy overrides such as `threshold_f1` and the case
 `metric`/`filter`/`offset` (`dashboard/lib/compareQuery.ts`). The page shows:
 

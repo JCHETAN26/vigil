@@ -14,46 +14,35 @@ import {
   VerdictBanner,
   shortVersion,
 } from "@/components/compare/Summary";
-import { EmptyState, ErrorBox, Loading, useAsync } from "@/components/States";
+import { EmptyState, ErrorBox, Loading, useAsync, useKeyed } from "@/components/States";
 import { ApiError, api } from "@/lib/api";
 import {
   casesQuery,
   compareHref,
   pairQuery,
   parseSelection,
+  sameRunNeedsVersions,
   selectionProblems,
   summaryQuery,
   versionsFromError,
   type Selection,
 } from "@/lib/compareQuery";
 
-// useAsync, but the result is tagged with the query it answers. A response (or error) for an
-// older selection is never shown, and `key: null` means "don't fetch".
-function useKeyed<T>(key: string | null, fn: (q: URLSearchParams) => Promise<T>) {
-  const r = useAsync(
-    useCallback(
-      () =>
-        key == null
-          ? Promise.resolve(null)
-          : fn(new URLSearchParams(key)).then(
-              (data) => ({ key, data, error: null }),
-              (e: unknown) => ({ key, data: null, error: e instanceof Error ? e : new Error(String(e)) }),
-            ),
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      [key],
-    ),
-    [key],
-  );
-  const cur = !r.loading && r.data && r.data.key === key ? r.data : null;
-  return { data: cur?.data ?? null, error: cur?.error ?? null, loading: key != null && !cur, reload: r.reload };
-}
+// The triage calls take the query the key encodes.
+const asQuery =
+  <T,>(fn: (q: URLSearchParams) => Promise<T>) =>
+  (key: string) =>
+    fn(new URLSearchParams(key));
 
 function CompareInner() {
   const router = useRouter();
   const sp = useSearchParams();
   const sel = useMemo(() => parseSelection(new URLSearchParams(sp.toString())), [sp]);
   const problems = selectionProblems(sel);
-  const ready = Boolean(sel.baseline && sel.candidate) && problems.length === 0;
+  // The same run on both sides needs two different explicit versions. Without them the API can
+  // only refuse, so ask for them (the form lists the run's versions) instead of requesting.
+  const needsVersions = sameRunNeedsVersions(sel);
+  const ready = Boolean(sel.baseline && sel.candidate) && problems.length === 0 && !needsVersions;
   const go = (next: Selection) => router.push(compareHref(next));
 
   const runs = useAsync(useCallback(() => api.listRuns(200, 0), []), []);
@@ -61,13 +50,13 @@ function CompareInner() {
   // The summary decides the verdict. Cases are only fetched once it succeeded, with the same
   // query plus the case view. The version diff shares the run/version pair; it also loads when
   // /compare refused the pair for a reason /versions/diff accepts (different suites, same version).
-  const summary = useKeyed(ready ? summaryQuery(sel).toString() : null, api.compare);
+  const summary = useKeyed(ready ? summaryQuery(sel).toString() : null, asQuery(api.compare));
   const sErr = summary.error;
   const versionHint = sErr ? versionsFromError(sErr.message) : null;
   const diffAllowed =
     summary.data != null || (sErr instanceof ApiError && sErr.status === 400 && versionHint == null);
-  const cases = useKeyed(summary.data ? casesQuery(sel).toString() : null, api.compareCases);
-  const diff = useKeyed(diffAllowed ? pairQuery(sel).toString() : null, api.versionDiff);
+  const cases = useKeyed(summary.data ? casesQuery(sel).toString() : null, asQuery(api.compareCases));
+  const diff = useKeyed(diffAllowed ? pairQuery(sel).toString() : null, asQuery(api.versionDiff));
 
   // Version choices per run, only ever from the API.
   const knownVersions: Record<string, string[]> = {};
@@ -103,6 +92,9 @@ function CompareInner() {
       {!sel.baseline || !sel.candidate ? (
         <EmptyState label="Pick a baseline and a candidate run, then Compare." />
       ) : null}
+      {sel.baseline && sel.candidate && problems.length === 0 && needsVersions && (
+        <EmptyState label="Baseline and candidate are the same run: choose which of its agent versions is the baseline and which is the candidate above, then Compare." />
+      )}
 
       {summary.loading && <Loading label="Loading comparison…" />}
       {sErr && (

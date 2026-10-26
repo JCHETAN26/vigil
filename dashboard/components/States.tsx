@@ -44,6 +44,27 @@ export function useAsync<T>(fn: () => Promise<T>, deps: unknown[]) {
   return { data, error, loading, reload };
 }
 
+// useAsync, but the result is tagged with the key it answers. A response (or error) for an older
+// key is never shown — not even while the new key loads — and `key: null` means "don't fetch".
+export function useKeyed<T>(key: string | null, fn: (key: string) => Promise<T>) {
+  const r = useAsync(
+    useCallback(
+      () =>
+        key == null
+          ? Promise.resolve(null)
+          : fn(key).then(
+              (data) => ({ key, data, error: null }),
+              (e: unknown) => ({ key, data: null, error: e instanceof Error ? e : new Error(String(e)) }),
+            ),
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      [key],
+    ),
+    [key],
+  );
+  const cur = !r.loading && r.data && r.data.key === key ? r.data : null;
+  return { data: cur?.data ?? null, error: cur?.error ?? null, loading: key != null && !cur, reload: r.reload };
+}
+
 export function Loading({ label = "Loading…" }: { label?: string }) {
   return (
     <div role="status" aria-live="polite" className="p-6 text-sm opacity-70">

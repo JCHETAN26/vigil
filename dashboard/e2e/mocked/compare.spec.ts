@@ -15,6 +15,7 @@ import {
   json,
   runSide,
   runSummary,
+  runVersions,
   test,
   traceDetail,
   trial,
@@ -32,9 +33,17 @@ const BASE_TRACE = "1".repeat(32);
 const CAND_TRACE = "2".repeat(32);
 const PAIR = `/compare?baseline=${RUN_A}&candidate=${RUN_B}`;
 
-// Mocks /runs and the three triage endpoints (defaults: a complete no-regression pair), recording
-// every triage request as "<path>?<query>" so tests can check what the page asked for.
-function triage(log: string[], h: { compare?: Handler; cases?: Handler; diff?: Handler }): Routes {
+// Default version lists: RUN_A holds V_BASE, RUN_B holds V_CAND (one each).
+const singleVersions: Handler = (url, route) =>
+  json(route, runVersions(url, [url.pathname.includes(RUN_A) ? V_BASE : V_CAND]));
+
+// Mocks /runs, each run's version list, and the three triage endpoints (defaults: a complete
+// no-regression pair), recording every triage request as "<path>?<query>" so tests can check
+// what the page asked for. Version-list requests are not triage requests and are not recorded.
+function triage(
+  log: string[],
+  h: { compare?: Handler; cases?: Handler; diff?: Handler; versions?: Handler },
+): Routes {
   const rec =
     (fn: Handler): Handler =>
     (url, route) => {
@@ -43,11 +52,16 @@ function triage(log: string[], h: { compare?: Handler; cases?: Handler; diff?: H
     };
   return [
     [/^\/runs$/, (_u, route) => json(route, runs)],
+    [/^\/runs\/[^/]+\/versions$/, h.versions ?? singleVersions],
     [/^\/compare$/, rec(h.compare ?? ((url, route) => json(route, compareResult(url))))],
     [/^\/compare\/cases$/, rec(h.cases ?? ((url, route) => json(route, casesResult(url, []))))],
     [/^\/versions\/diff$/, rec(h.diff ?? ((url, route) => json(route, versionDiff(url))))],
   ];
 }
+
+// 120 distinct versions (more than two pages of 50); version i starts with i in 4 hex digits.
+const MANY = Array.from({ length: 120 }, (_, i) => i.toString(16).padStart(4, "0").repeat(16));
+const label = (i: number) => MANY[i].slice(0, 12);
 
 const paths = (log: string[]) => log.map((l) => l.split("?")[0]);
 const params = (entry: string) => new URLSearchParams(entry.split("?")[1]);
@@ -285,52 +299,268 @@ test.describe("correctness fixture (not AI quality): compare", () => {
     }
   });
 
-  test("mixed-version run: the API's version list drives an explicit selection used by every call", async ({
+  test("mixed-version run vs another run: the API's refusal and the run's versions drive an explicit selection used by every call", async ({
     page,
     mockApi,
   }) => {
     const log: string[] = [];
     const multi = `run ${RUN_A} contains 2 agent versions (${V_BASE.slice(0, 12)}, ${V_CAND.slice(0, 12)}); select one explicitly — results are never averaged across versions`;
-    const needsVersions = (url: URL) =>
-      !url.searchParams.get("baseline_version") || !url.searchParams.get("candidate_version");
+    const unversioned = (url: URL) => !url.searchParams.get("candidate_version");
     const both = { versions_in_run: [V_BASE, V_CAND], version_selection: "explicit" };
-    const sides = { context: { baseline: runSide(RUN_A, V_BASE, both), candidate: runSide(RUN_A, V_CAND, both) } };
+    const sides = (url: URL) => ({
+      context: {
+        baseline: runSide(RUN_B, V_BASE),
+        candidate: runSide(RUN_A, url.searchParams.get("candidate_version")!, both),
+      },
+    });
     await mockApi(
       triage(log, {
+        versions: (url, route) =>
+          json(route, runVersions(url, url.pathname.includes(RUN_A) ? [V_BASE, V_CAND] : [V_BASE])),
         compare: (url, route) =>
-          needsVersions(url) ? json(route, { detail: multi }, 400) : json(route, compareResult(url, sides)),
-        cases: (url, route) => json(route, casesResult(url, [caseDelta("q001")], sides)),
-        diff: (url, route) => (needsVersions(url) ? json(route, { detail: multi }, 400) : json(route, versionDiff(url))),
+          unversioned(url) ? json(route, { detail: multi }, 400) : json(route, compareResult(url, sides(url))),
+        cases: (url, route) => json(route, casesResult(url, [caseDelta("q001")], sides(url))),
+        diff: (url, route) => (unversioned(url) ? json(route, { detail: multi }, 400) : json(route, versionDiff(url))),
       }),
     );
 
-    await gotoAndSettle(page, `/compare?baseline=${RUN_A}&candidate=${RUN_A}`);
+    // A deep link that predates version selection: different runs, no versions.
+    await gotoAndSettle(page, `/compare?baseline=${RUN_B}&candidate=${RUN_A}`);
     await expect(errorBox(page)).toContainText("contains 2 agent versions");
     await expect(verdictBanner(page)).toHaveCount(0);
     // Nothing else is requested until the versions are chosen.
     expect(new Set(paths(log))).toEqual(new Set(["/compare"]));
 
+    // The 400's prefixes and the run's full version list collapse into one choice per version.
+    const cand = page.getByRole("group", { name: "Candidate versions in run" });
+    await expect(cand.getByRole("button")).toHaveCount(2);
+    await cand.getByRole("button", { name: V_CAND.slice(0, 12) }).click();
+    await page.getByRole("button", { name: "Compare" }).click();
+
+    await expect(page).toHaveURL(new RegExp(`candidate_version=${V_CAND}`));
+    await expect(verdictBanner(page)).toContainText("No regression on gated metrics");
+    const candCtx = page.getByRole("group", { name: "candidate context" });
+    await expect(candCtx).toContainText("explicitly selected");
+    await expect(candCtx).toContainText("Mixed-version run (2 versions)");
+
+    // Unversioned requests only ever reached /compare; once chosen, all three carry the full hash.
+    const versioned = log.filter((l) => params(l).get("candidate_version"));
+    expect(new Set(paths(log.filter((l) => !params(l).get("candidate_version"))))).toEqual(new Set(["/compare"]));
+    expect(new Set(paths(versioned))).toEqual(new Set(["/compare", "/compare/cases", "/versions/diff"]));
+    for (const entry of versioned) expect(params(entry).get("candidate_version")).toBe(V_CAND);
+  });
+
+  test("same run from a fresh page: picking it lists its versions, and the user picks each side", async ({
+    page,
+    mockApi,
+  }) => {
+    const log: string[] = [];
+    const versionCalls: string[] = [];
+    // Three versions; two share their first 12 characters.
+    const VX = "abcdef012345" + "0".repeat(52);
+    const VY = "abcdef012345" + "1".repeat(52);
+    const three = { versions_in_run: [V_BASE, VX, VY].sort(), version_selection: "explicit" };
+    const sides = (url: URL) => ({
+      context: {
+        baseline: runSide(RUN_A, url.searchParams.get("baseline_version")!, three),
+        candidate: runSide(RUN_A, url.searchParams.get("candidate_version")!, three),
+      },
+    });
+    await mockApi(
+      triage(log, {
+        versions: (url, route) => {
+          versionCalls.push(url.pathname + url.search);
+          return json(route, runVersions(url, url.pathname.includes(RUN_A) ? [VY, V_BASE, VX] : [V_CAND]));
+        },
+        compare: (url, route) => json(route, compareResult(url, sides(url))),
+        cases: (url, route) => json(route, casesResult(url, [], sides(url))),
+      }),
+    );
+
+    await gotoAndSettle(page, "/compare");
+    await page.getByLabel("Baseline run").selectOption(RUN_A);
+    await page.getByLabel("Candidate run").selectOption(RUN_A);
     const compareBtn = page.getByRole("button", { name: "Compare" });
-    await expect(compareBtn).toBeDisabled(); // same run needs two different versions
-    await page.getByRole("group", { name: "Baseline versions in run" }).getByRole("button", { name: V_BASE.slice(0, 12) }).click();
-    await page.getByRole("group", { name: "Candidate versions in run" }).getByRole("button", { name: V_CAND.slice(0, 12) }).click();
+    await expect(page.getByText("Baseline and candidate are the same run: select two different agent versions.")).toBeVisible();
+    await expect(compareBtn).toBeDisabled();
+
+    for (const side of ["Baseline", "Candidate"]) {
+      const group = page.getByRole("group", { name: `${side} versions in run` });
+      await expect(group).toContainText("Versions in this run (3)");
+      // Full hashes, listed by hash and labelled long enough to tell VX and VY apart.
+      await expect(group.getByRole("button")).toHaveText([V_BASE.slice(0, 12), "abcdef0123450", "abcdef0123451"]);
+      // Nothing is pre-selected: the order is not a baseline/candidate suggestion.
+      for (const b of await group.getByRole("button").all()) await expect(b).toHaveAttribute("aria-pressed", "false");
+    }
+    // Discovery happened without any comparison request, and every list request is bounded.
+    expect(log).toEqual([]);
+    expect(versionCalls.length).toBeGreaterThan(0);
+    for (const c of versionCalls) expect(c).toMatch(new RegExp(`^/runs/${RUN_A}/versions\\?limit=50&offset=0$`));
+
+    // The user decides which version is the baseline (here the later hash).
+    await page.getByRole("group", { name: "Baseline versions in run" }).getByRole("button", { name: "abcdef0123451" }).click();
+    await page.getByRole("group", { name: "Candidate versions in run" }).getByRole("button", { name: V_BASE.slice(0, 12) }).click();
+    await expect(page.getByRole("group", { name: "Baseline versions in run" }).getByRole("button", { name: "abcdef0123451" })).toHaveAttribute("aria-pressed", "true");
     await compareBtn.click();
 
-    await expect(page).toHaveURL(new RegExp(`baseline_version=${V_BASE.slice(0, 12)}&candidate_version=${V_CAND.slice(0, 12)}`));
+    await expect(page).toHaveURL(new RegExp(`baseline_version=${VY}&candidate_version=${V_BASE}`));
     await expect(verdictBanner(page)).toContainText("No regression on gated metrics");
-    const base = page.getByRole("group", { name: "baseline context" });
-    await expect(base).toContainText("explicitly selected");
-    await expect(base).toContainText("Mixed-version run (2 versions)");
-
-    // Unversioned requests only ever reached /compare; once chosen, all three carry both versions.
-    const unversioned = log.filter((l) => !params(l).get("baseline_version"));
-    const versioned = log.filter((l) => params(l).get("baseline_version"));
-    expect(new Set(paths(unversioned))).toEqual(new Set(["/compare"]));
-    expect(new Set(paths(versioned))).toEqual(new Set(["/compare", "/compare/cases", "/versions/diff"]));
-    for (const entry of versioned) {
-      expect(params(entry).get("baseline_version")).toBe(V_BASE.slice(0, 12));
-      expect(params(entry).get("candidate_version")).toBe(V_CAND.slice(0, 12));
+    expect(new Set(paths(log))).toEqual(new Set(["/compare", "/compare/cases", "/versions/diff"]));
+    for (const entry of log) {
+      const q = params(entry);
+      expect([q.get("baseline"), q.get("candidate"), q.get("baseline_version"), q.get("candidate_version")]).toEqual([
+        RUN_A,
+        RUN_A,
+        VY,
+        V_BASE,
+      ]);
     }
+  });
+
+  test("a same-run link without versions asks for them instead of requesting a comparison", async ({ page, mockApi }) => {
+    const log: string[] = [];
+    await mockApi(
+      triage(log, { versions: (url, route) => json(route, runVersions(url, [V_BASE, V_CAND])) }),
+    );
+    await gotoAndSettle(page, `/compare?baseline=${RUN_A}&candidate=${RUN_A}`);
+    await expect(page.getByText(/same run: choose which of its agent versions is the baseline/)).toBeVisible();
+    await expect(errorBox(page)).toHaveCount(0);
+    await expect(verdictBanner(page)).toHaveCount(0);
+    await expect(page.getByRole("group", { name: "Baseline versions in run" }).getByRole("button")).toHaveCount(2);
+    expect(log).toEqual([]);
+
+    // A single-version run cannot be compared with itself; the form says so. (The newer mock
+    // registration takes precedence.)
+    await mockApi(triage(log, {}));
+    await gotoAndSettle(page, `/compare?baseline=${RUN_A}&candidate=${RUN_A}&seed=2`);
+    await expect(page.getByText(/holds a single agent version: pick a different run for one side/)).toBeVisible();
+    expect(log).toEqual([]);
+  });
+
+  test("version lists answer for the run picked now, never a previous pick; a failed list can be retried", async ({
+    page,
+    mockApi,
+  }) => {
+    let release!: () => void;
+    const released = new Promise<void>((r) => (release = r));
+    let failNext = true;
+    await mockApi(
+      triage([], {
+        versions: async (url, route) => {
+          if (url.pathname.includes(RUN_A)) {
+            await released; // RUN_A's list is slow...
+            return json(route, runVersions(url, [V_BASE, "d".repeat(64)]));
+          }
+          if (failNext) {
+            failNext = false;
+            return json(route, { detail: "postgres unavailable" }, 503);
+          }
+          return json(route, runVersions(url, [V_CAND]));
+        },
+      }),
+    );
+    await gotoAndSettle(page, "/compare");
+    const baseGroup = page.getByRole("group", { name: "Baseline versions in run" });
+
+    // ...and is superseded by RUN_B, whose first list request fails.
+    await page.getByLabel("Baseline run").selectOption(RUN_A);
+    await expect(page.getByText("Loading versions…")).toBeVisible();
+    await page.getByLabel("Baseline run").selectOption(RUN_B);
+    const err = errorBox(page);
+    await expect(err).toContainText("Could not list the agent versions of this run: postgres unavailable");
+    await err.getByRole("button", { name: "Retry" }).click();
+    await expect(baseGroup.getByRole("button")).toHaveText([V_CAND.slice(0, 12)]);
+
+    // RUN_A's late answer arrives; it must not replace RUN_B's versions.
+    const late = page.waitForEvent("requestfinished", (r) => r.url().includes(`/runs/${RUN_A}/versions`));
+    release();
+    await (await late).response();
+    await page.waitForTimeout(500);
+    await expect(baseGroup.getByRole("button")).toHaveText([V_CAND.slice(0, 12)]);
+    await expect(page.getByRole("button", { name: V_BASE.slice(0, 12) })).toHaveCount(0);
+    await expect(errorBox(page)).toHaveCount(0);
+  });
+
+  test("versions past the first page are reachable by paging, and a pick survives paging", async ({ page, mockApi }) => {
+    const log: string[] = [];
+    const seen: string[] = [];
+    await mockApi(
+      triage(log, {
+        versions: (url, route) => {
+          seen.push(`${url.pathname.includes(RUN_A) ? "A" : "B"}:${url.searchParams.get("limit")}@${url.searchParams.get("offset")}`);
+          return json(route, runVersions(url, url.pathname.includes(RUN_A) ? MANY : [V_CAND]));
+        },
+      }),
+    );
+    await gotoAndSettle(page, "/compare");
+    await page.getByLabel("Baseline run").selectOption(RUN_A);
+    await page.getByLabel("Candidate run").selectOption(RUN_A);
+    const group = (side: string) => page.getByRole("group", { name: `${side} versions in run` });
+    const pager = (side: string) => page.getByRole("navigation", { name: `${side} version pages` });
+
+    await expect(group("Baseline").getByRole("button")).toHaveCount(50);
+    await expect(pager("Baseline")).toContainText("1–50 of 120");
+    await group("Baseline").getByRole("button", { name: label(3) }).click();
+    await pager("Baseline").getByRole("button", { name: /Next/ }).click();
+    await expect(pager("Baseline")).toContainText("51–100 of 120");
+    await expect(group("Baseline").getByRole("button", { name: label(3) })).toHaveCount(0);
+    await expect(page.getByText(`Selected ${label(3)} is not on this page of the list.`)).toBeVisible();
+    await expect(page.getByLabel("Baseline agent version")).toHaveValue(MANY[3]); // still picked
+
+    // The candidate comes from the last page, never typed.
+    await pager("Candidate").getByRole("button", { name: /Next/ }).click();
+    await pager("Candidate").getByRole("button", { name: /Next/ }).click();
+    await expect(pager("Candidate")).toContainText("101–120 of 120");
+    await expect(pager("Candidate").getByRole("button", { name: /Next/ })).toBeDisabled();
+    await group("Candidate").getByRole("button", { name: label(110) }).click();
+    await page.getByRole("button", { name: "Compare" }).click();
+
+    await expect(page).toHaveURL(new RegExp(`baseline_version=${MANY[3]}&candidate_version=${MANY[110]}`));
+    await expect(verdictBanner(page)).toContainText("No regression on gated metrics");
+    for (const entry of log) {
+      expect([params(entry).get("baseline_version"), params(entry).get("candidate_version")]).toEqual([MANY[3], MANY[110]]);
+    }
+    // Every list request was one bounded page.
+    expect(new Set(seen)).toEqual(new Set(["A:50@0", "A:50@50", "A:50@100"]));
+  });
+
+  test("a version page still loading for a previous run never replaces the current run's list", async ({
+    page,
+    mockApi,
+  }) => {
+    let release!: () => void;
+    const released = new Promise<void>((r) => (release = r));
+    const seen: string[] = [];
+    await mockApi(
+      triage([], {
+        versions: async (url, route) => {
+          const a = url.pathname.includes(RUN_A);
+          const off = url.searchParams.get("offset");
+          seen.push(`${a ? "A" : "B"}@${off}`);
+          if (a && off === "50") await released; // RUN_A's second page is slow
+          return json(route, runVersions(url, a ? MANY : [V_CAND]));
+        },
+      }),
+    );
+    await gotoAndSettle(page, "/compare");
+    const group = page.getByRole("group", { name: "Baseline versions in run" });
+    await page.getByLabel("Baseline run").selectOption(RUN_A);
+    await expect(group.getByRole("button")).toHaveCount(50);
+    await page.getByRole("navigation", { name: "Baseline version pages" }).getByRole("button", { name: /Next/ }).click();
+    await expect(page.getByText("Loading versions…")).toBeVisible();
+
+    // Switch runs while page 2 of RUN_A is in flight: RUN_B's list starts at its first page.
+    await page.getByLabel("Baseline run").selectOption(RUN_B);
+    await expect(group.getByRole("button")).toHaveText([V_CAND.slice(0, 12)]);
+    expect(seen.at(-1)).toBe("B@0");
+
+    const late = page.waitForEvent("requestfinished", (r) => r.url().includes(`/runs/${RUN_A}/versions`) && r.url().includes("offset=50"));
+    release();
+    await (await late).response();
+    await page.waitForTimeout(500);
+    await expect(group.getByRole("button")).toHaveText([V_CAND.slice(0, 12)]);
+    await expect(page.getByRole("navigation", { name: "Baseline version pages" })).toHaveCount(0); // B fits one page
+    await expect(page.getByText("Loading versions…")).toHaveCount(0);
   });
 
   test("a version missing from the run shows the 404 and no verdict, cases or diff", async ({ page, mockApi }) => {

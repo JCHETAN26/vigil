@@ -21,6 +21,24 @@ export interface RunDetail extends RunSummary {
   n_versions: number;
 }
 
+// GET /runs/{id}/versions: the versions a run holds, ordered by hash (not by role).
+export interface RunVersion {
+  agent_version: string; // full hash
+  // false: the version only appears in results (never registered); status/cases are then null.
+  registered: boolean;
+  status: string | null;
+  cases_total: number | null;
+  cases_done: number | null;
+}
+
+export interface RunVersionsPage {
+  run_id: string;
+  versions: RunVersion[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 export interface CaseRow {
   // A multi-version run repeats each (case_id, trial) once per version; this tells them apart.
   agent_version: string;

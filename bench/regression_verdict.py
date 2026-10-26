@@ -37,7 +37,12 @@ def reproduce(bundle_dir: str) -> int:
         except ValueError:
             pass
     if problems:
-        print(f"MISMATCH: {bundle_dir} does not reproduce ({len(problems)} problem(s)):")
+        if recomputed is None and any(p.startswith("cannot recompute") for p in problems):
+            # An environment problem (e.g. SciPy missing), not evidence the saved data is wrong.
+            print(f"CANNOT VERIFY: {bundle_dir} could not be recomputed here "
+                  f"({len(problems)} problem(s)); fix the environment and rerun:")
+        else:
+            print(f"MISMATCH: {bundle_dir} does not reproduce ({len(problems)} problem(s)):")
         for p in problems[:50]:
             print(f"  - {p}")
         if len(problems) > 50:

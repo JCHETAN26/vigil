@@ -7,6 +7,7 @@ import type {
   CompareResult,
   RunDetail,
   RunSummary,
+  RunVersionsPage,
   TraceDetail,
   VersionDiff,
 } from "./types";
@@ -47,6 +48,9 @@ export const api = {
       `/runs?limit=${limit}&offset=${offset}`,
     ),
   getRun: (id: string) => get<RunDetail>(`/runs/${id}`),
+  // Bounded (the API caps limit at 200); `total` tells whether more versions exist.
+  getRunVersions: (id: string, limit = 50, offset = 0) =>
+    get<RunVersionsPage>(`/runs/${id}/versions?limit=${limit}&offset=${offset}`),
   getCases: (id: string, limit = 100, offset = 0) =>
     get<{ run_id: string; cases: CaseRow[]; limit: number; offset: number }>(
       `/runs/${id}/cases?limit=${limit}&offset=${offset}`,

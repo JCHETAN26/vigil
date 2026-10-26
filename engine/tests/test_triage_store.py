@@ -98,6 +98,35 @@ async def test_run_versions_empty_run(async_pg_conn):
     await async_pg_conn.commit()
     store = PgTriageStore(connection_fetchall(async_pg_conn))
     assert await store.get_run_versions(str(run)) == []
+    assert await store.get_run_versions_page(str(run), 50, 0) == ([], 0)
+
+
+async def test_run_versions_page_matches_full_list(async_pg_conn):
+    """The paged query (GET /runs/{id}/versions) returns exactly the gate's version set: a
+    registered version with no results, a results-only version (once, despite several trials),
+    in hash order, bounded by LIMIT/OFFSET, with the total of the whole set."""
+    repo = AsyncRepo(async_pg_conn)
+    suite = await repo.create_suite(name="triage-page", adapter="local", config={})
+    await repo.add_cases([CaseRow(suite_id=suite.id, case_id="c0", input={}, expected={})])
+    run = await repo.create_run(suite_id=suite.id, agent_id="agent", mode="development",
+                                trials_per_case=2)
+    v3, v4 = "3" * 64, "4" * 64
+    for v in (v4, V2, v3):  # registered; v3 never gets a result
+        await repo.create_run_version(run_id=run, agent_version=v, cases_total=2)
+    for v in (V1, V2, v4):  # V1 has results only
+        for trial in (0, 1):
+            await repo.insert_case_result(CaseResultInsert(
+                run_id=run, agent_version=v, case_id="c0", trial=trial, status="ok",
+                passed=True, scores={}, cost_usd=0.0, latency_ms=1))
+    await async_pg_conn.commit()
+    store = PgTriageStore(connection_fetchall(async_pg_conn))
+
+    full = await store.get_run_versions(str(run))
+    assert [r["agent_version"] for r in full] == [V1, V2, v3, v4]
+    pages = [await store.get_run_versions_page(str(run), 3, o) for o in (0, 3, 6)]
+    assert [rows for rows, _ in pages] == [full[:3], full[3:], []]
+    assert {total for _, total in pages} == {4}
+    assert full[0]["status"] is None and full[2]["status"] == "pending"
 
 
 async def test_pg_store_unknown_run_is_not_found(async_pg_conn):

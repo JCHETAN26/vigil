@@ -28,8 +28,11 @@ OK trials is partial: compared on the trials that have it, and incomplete if gat
 Verdict: ``regression`` when any gated metric regressed (adverse evidence stands even on
 incomplete data); else ``incomplete`` when the comparison is not a full paired measurement
 (missing cases/trials, a run that did not succeed, a side with no OK trials, a gated metric
-that could not be compared or is missing on some OK trials); else ``no_regression``.
-Incomplete is never reported as a pass.
+that could not be compared or is missing on some OK trials, or no gated metric compared at
+all); else ``no_regression``. A gated metric neither side reports is not applicable (τ² has no
+TokenF1), but at least one gated metric must be compared: OK trials with no pass/fail verdict
+and no gated score, compared only on cost/latency, are incomplete. Incomplete is never
+reported as a pass.
 
 Stores are duck-typed (see ``engine.db.triage.PgTriageStore``; tests use in-memory fakes).
 """
@@ -576,6 +579,13 @@ def compare(inputs: ComparisonInputs, policy: Policy = DEFAULT_POLICY) -> Compar
     for s in skipped:
         if s["gated"]:
             reasons.append(f"gated metric {s['metric']} not compared: {s['reason']}")
+    # A gated metric neither side reports is not applicable (TokenF1 on τ²), but a comparison
+    # needs at least one: cost/latency alone, or no metric at all, never measures quality.
+    if not any(r["gated"] for r in metrics):
+        reasons.append(
+            f"no gated metric was compared (gated: {', '.join(policy.gated) or 'none'}); "
+            "nothing measured quality on both sides"
+        )
 
     gated_regression = any(r["regressed"] for r in metrics if r["gated"])
     complete = not reasons

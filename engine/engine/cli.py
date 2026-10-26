@@ -219,6 +219,7 @@ def cmd_regress(args) -> int:
     import vigil
 
     from engine import bundle, gate
+    from engine.regression import StatsDependencyError
 
     # Canonical spelling (ValueError → clean CLI error, before any query): Postgres accepts
     # upper-case/braced/hyphenless forms of one id, which must not pass as two different runs.
@@ -234,7 +235,11 @@ def cmd_regress(args) -> int:
         threshold_f1=args.threshold_f1,
     )
     inputs, meta = asyncio.run(_gather_regress(args))
-    cmp = gate.compare(inputs, policy)
+    try:
+        cmp = gate.compare(inputs, policy)
+    except StatsDependencyError as exc:  # no verdict (and no bundle) from a changed statistic
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
     _print_comparison(cmp)
     if args.save:
         meta["engine_source"] = {"git_sha": vigil.git_sha(), "dirty_tree": "not recorded"}
