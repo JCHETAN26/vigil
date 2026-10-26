@@ -3,6 +3,7 @@
     python demo/seed.py plan     # offline: validate the fixture, print scenarios + gate verdicts
     python demo/seed.py seed     # write it (admin credentials); idempotent; refuses conflicts
     python demo/seed.py check    # read-only (RO credentials): rows identical + verdicts recompute
+    python demo/seed.py links --json  # offline: dashboard paths + expectations (make demo-smoke)
 
 This is **seeded replay data**, not an ingestion or evaluation test: no agent runs, no model is
 called, no span goes through the receiver/queue/consumer. ``seed`` writes the prepared rows of
@@ -530,13 +531,60 @@ def compare_path(scn: sf.Scenario) -> str:
     return f"/compare?{q}"
 
 
-def first_affected_trace(fx: sf.Fixture) -> str:
+def first_affected_case(fx: sf.Fixture) -> tuple[str, str]:
     """The regression scenario's first case that passed on the baseline and fails on the
-    candidate: its candidate trace."""
+    candidate: (case id, its candidate trace id)."""
     scn = next(s for s in fx.scenarios if s.key == "regression")
     base, cand = sf.OUTCOMES[scn.baseline]["passed"], sf.OUTCOMES[scn.candidate]["passed"]
     idx = next(i for i in range(len(sf.CASES)) if base[i] and not cand[i])
-    return sf.trace_id_for(scn.run_id, sf.version_hash(scn.candidate), sf.CASES[idx][0])
+    case_id = sf.CASES[idx][0]
+    return case_id, sf.trace_id_for(scn.run_id, sf.version_hash(scn.candidate), case_id)
+
+
+def first_affected_trace(fx: sf.Fixture) -> str:
+    return first_affected_case(fx)[1]
+
+
+def link_plan(fx: sf.Fixture) -> dict:
+    """Machine-readable demo targets, all derived offline from the fixture and the production
+    gate (no database): what `make demo-smoke` expects the live dashboard to show."""
+    from engine.manifests import diff_manifests
+
+    manifest = {m["agent_version"]: m for m in fx.manifests}
+    scenarios = []
+    for scn in fx.scenarios:
+        cmp = gate.compare(offline_inputs(fx, scn))
+        base, cand = sf.version_hash(scn.baseline), sf.version_hash(scn.candidate)
+        plotted = [m for m in cmp.metrics if m["point_estimate"] is not None]
+        scenarios.append({
+            "key": scn.key, "title": scn.title, "run_id": scn.run_id,
+            "expected_verdict": scn.expected_verdict, "offline_verdict": cmp.verdict,
+            "baseline_version": base, "candidate_version": cand,
+            "compare_path": compare_path(scn), "run_path": f"/runs/{scn.run_id}",
+            "regressed_gated_metrics": [m["metric"] for m in cmp.metrics
+                                        if m["gated"] and m["regressed"]],
+            "incomplete_reasons": list(cmp.incomplete_reasons),
+            "first_chart_metric": ({"metric": plotted[0]["metric"],
+                                    "point_estimate": plotted[0]["point_estimate"]}
+                                   if plotted else None),
+            "changed_manifest_fields": sorted(
+                f for f, d in diff_manifests(manifest[base], manifest[cand]).items()
+                if d["changed"]),
+        })
+    case_id, trace_id = first_affected_case(fx)
+    spans = [s for s in fx.spans if s["trace_id"] == trace_id]
+    search = next(s for s in spans if s["span_name"] == "search")
+    return {
+        "synthetic": True, "fixture": sf.FIXTURE_SOURCE, "fixture_version": sf.FIXTURE_VERSION,
+        "suite_name": sf.SUITE_NAME, "agent_id": sf.AGENT_ID, "model": sf.MODEL,
+        "run_ids": [r["id"] for r in fx.runs], "runs_path": "/runs", "scenarios": scenarios,
+        "affected": {
+            "scenario": "regression", "case_id": case_id, "trace_id": trace_id,
+            "trace_path": f"/traces/{trace_id}",
+            "retrieval_span": search["span_name"],
+            "retrieved_doc_ids": json.loads(search["span_attributes"]["vigil.retrieval.doc_ids"]),
+        },
+    }
 
 
 def redact(text: str) -> str:
@@ -565,10 +613,17 @@ def _plan() -> int:
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser("demo/seed.py", description=__doc__.split("\n\n")[0])
-    ap.add_argument("command", choices=("plan", "seed", "check"))
+    ap.add_argument("command", choices=("plan", "seed", "check", "links"))
+    ap.add_argument("--json", action="store_true",
+                    help="links: print the demo targets as JSON (the only format)")
     args = ap.parse_args(argv)
     if args.command == "plan":
         return _plan()
+    if args.command == "links":
+        if not args.json:
+            ap.error("links prints JSON only: use `links --json`")
+        print(json.dumps(link_plan(_checked()), indent=2, sort_keys=True))
+        return 0
     from engine.config import pg_dsn, pg_ro_dsn, uses_ro_pg
 
     try:

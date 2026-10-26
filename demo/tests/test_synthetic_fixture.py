@@ -5,6 +5,8 @@ from __future__ import annotations
 
 import copy
 import json
+import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -98,6 +100,31 @@ def test_traces_are_complete_and_drillable(fx):
     # The launcher's canned trace link is a candidate trace of an affected case.
     tid = seed.first_affected_trace(fx)
     assert tid in by_trace and by_trace[tid][0]["eval_case_id"] == "syn-q02"
+
+
+def test_links_json_is_offline_and_derived_from_the_fixture(fx):
+    # What `make demo-smoke` reads: with no DB settings or keys in the environment, it still works.
+    env = {"PATH": os.environ.get("PATH", "/usr/bin:/bin")}
+    out = subprocess.run([sys.executable, str(Path(seed.__file__)), "links", "--json"],
+                         env=env, capture_output=True, text=True, check=True)
+    plan = json.loads(out.stdout)
+    assert plan["synthetic"] is True and plan["run_ids"] == [r["id"] for r in fx.runs]
+    for scn, got in zip(sf.SCENARIOS, plan["scenarios"], strict=True):
+        assert got["compare_path"] == seed.compare_path(scn)
+        assert (got["baseline_version"], got["candidate_version"]) == (
+            sf.version_hash(scn.baseline), sf.version_hash(scn.candidate))
+        assert got["offline_verdict"] == got["expected_verdict"] == scn.expected_verdict
+    # The chart check depends on these signs: the regressions hang below zero, the pass above.
+    signs = {s["key"]: s["first_chart_metric"]["point_estimate"] > 0 for s in plan["scenarios"]}
+    assert signs == {"regression": False, "no_regression": True, "incomplete": False}
+    assert plan["affected"]["case_id"] == "syn-q02"
+    assert plan["affected"]["trace_id"] == seed.first_affected_trace(fx)
+    assert len(plan["affected"]["retrieved_doc_ids"]) == 1  # top_k 1
+
+
+def test_links_requires_the_json_flag():
+    with pytest.raises(SystemExit):
+        seed.main(["links"])
 
 
 def _broken(fx, mutate) -> list[str]:

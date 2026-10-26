@@ -57,3 +57,6 @@ tmp/
 
 # Vendored, pinned external benchmarks (cloned at a fixed commit; see data/tau2/retail.pins.json)
 deps/
+
+# Output of `make demo-smoke DEMO_SMOKE_ARTIFACTS=demo/smoke-artifacts` (screenshots + report).
+/demo/smoke-artifacts/

@@ -15,8 +15,25 @@ Verification of this demo (local test suites, real-stack seeding, and a final re
 walkthrough of every scenario through the same-origin proxy, including the rendered metrics
 charts, all passed on 2026-10-25; a blank-chart bug found in review was fixed by Recharts
 2.12.7 → 2.15.4 and is covered by a mocked-browser test):
-[docs/plans/status.md](../docs/plans/status.md), "Current verification". Latest hosted CI:
-[PR #2 checks](https://github.com/JCHETAN26/vigil/pull/2/checks).
+[docs/plans/status.md](../docs/plans/status.md), "Current verification". The demo is merged into
+`main` (PR #2, `da694e7`); latest hosted CI:
+[`main` runs](https://github.com/JCHETAN26/vigil/actions/workflows/ci.yml?query=branch%3Amain).
+`make demo-smoke` (below) repeats the browser walkthrough from the repo.
+
+## Screenshots (SYNTHETIC data)
+
+Captured from a real `make demo` dashboard and API (not mocked), showing only the prepared
+SYNTHETIC examples: invented scores and traces, no model calls. They are not results.
+
+![SYNTHETIC demo data: the regression comparison's metrics chart and table (invented scores, no model calls)](../docs/images/demo-synthetic-metrics.png)
+
+*SYNTHETIC example: `retrieval_top_k` 5 → 1 on the invented 12-case fixture. The gate reports a
+regression on the gated `passed` and `TokenF1`.*
+
+![SYNTHETIC demo data: the candidate trace of affected case syn-q02 with its top-1 retrieval (invented, no model calls)](../docs/images/demo-synthetic-trace.png)
+
+*SYNTHETIC example: the candidate trace of affected case `syn-q02`; the `search` span returned one
+passage instead of five.*
 
 ## 1. Offline: reproduce the real pilot verdict
 
@@ -84,6 +101,35 @@ updates, deletes or merges rows: if any fixture id, name, run, result or span al
 different content (or only partly), it refuses the whole seed and writes nothing. It also never
 removes the fixture; delete those rows by hand if you want them gone (ids under
 `d3e00000-0000-4000-8000-`, names `vigil-demo-synthetic-*`).
+
+### Check a running demo in a browser: `make demo-smoke`
+
+With `make demo` running (default proxy mode), in a second terminal:
+
+```sh
+make demo-smoke                                       # http://127.0.0.1:3318, prints a JSON report
+make demo-smoke DEMO_UI_PORT=3325                     # the demo on another port
+make demo-smoke DEMO_SMOKE_URL=http://127.0.0.1:4318  # e.g. an SSH-forwarded port
+make demo-smoke DEMO_SMOKE_ARTIFACTS=demo/smoke-artifacts   # + report.json and screenshots
+PLAYWRIGHT_CHROME_PATH=/path/to/chrome make demo-smoke     # a browser other than installed Chrome
+```
+
+`demo/smoke.cjs` opens the dashboard in installed Google Chrome (it never downloads a browser) and
+checks, through the dashboard's `/api/vigil` proxy against the real read-only API: the demo
+notice; the three SYNTHETIC runs; for each scenario, the API verdict and banner, the incomplete
+reasons, the changed manifest fields, and the first metric's bar on the correct side of a drawn
+zero line; the candidate `syn-q02` trace and its top-1 retrieval; and the run-detail version picker
+producing the right compare link. The expected ids, hashes, paths and values come from
+`python demo/seed.py links --json`, computed offline from the fixture and `engine.gate`, so
+nothing is hardcoded twice. It reads only: no database credentials, no model keys, no writes. It
+fails (exit 1, `"ok": false` with the step and reason) on any assertion, page error, failed request,
+API error status or request to another origin, and does not need the real pilot in the database.
+
+The base URL must be a loopback `http://` origin (`127.0.0.1`, `localhost` or `[::1]`, any
+port); credentials, paths, queries, fragments and other hosts are refused. Artifacts go to a new
+`demo-smoke-<UTC time>` directory under the one you give, which is never reused or overwritten
+(`demo/smoke-artifacts/` is gitignored). Screenshots show the synthetic examples; on the runs
+list every non-synthetic row is masked, so other runs in your database are not captured.
 
 **From another machine over SSH** (replace `<ssh-host>` with yours):
 

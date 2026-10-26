@@ -54,7 +54,7 @@ PROBES := \
     [ -z "$(REQUIRE_LIVE)" ] || { echo "REQUIRE_LIVE is set: failing instead of skipping." >&2; exit 1; }; \
   };
 
-.PHONY: test-all test-unit test-python test-bench test-demo test-go test-dashboard test-live test-infra test-paid test-browser dev demo demo-seed demo-check demo-evidence
+.PHONY: test-all test-unit test-python test-bench test-demo test-go test-dashboard test-live test-infra test-paid test-browser dev demo demo-seed demo-check demo-evidence demo-smoke
 
 # Every gate shares one venv and one stack; never run them concurrently under `make -j`.
 .NOTPARALLEL:
@@ -92,6 +92,7 @@ test-bench:
 # tamper refusal), the launcher's guards. The seeder's Postgres tests live in engine/tests.
 test-demo:
 	@echo "==> demo (offline)";           $(PYTEST) demo/tests
+	@echo "==> demo smoke CLI (offline)"; if command -v node >/dev/null; then node --test demo/tests/smoke_cli.test.cjs; else echo "SKIP demo smoke CLI tests: NOT RUN (node not found)"; fi
 
 # --- Demo (demo/README.md). No API key, no model calls, nothing installed or deleted. ---------
 # demo-evidence: verify the committed REAL pilot evidence offline (no DB, no key). DEMO_PY lets
@@ -99,10 +100,24 @@ test-demo:
 # demo-seed / demo-check: write (admin creds) / verify read-only (RO roles) the SYNTHETIC fixture.
 # demo: seed + check, then the real API and dashboard on free loopback ports (DEMO_API_PORT,
 #   DEMO_UI_PORT); prints canned links; Ctrl-C stops only what it started.
+# demo-smoke: drive an ALREADY RUNNING `make demo` dashboard in installed Chrome through its
+#   same-origin proxy and check the SYNTHETIC examples (demo/smoke.cjs). Read-only: no DB
+#   credentials, no model keys, no browser download. DEMO_SMOKE_URL picks another loopback origin
+#   (e.g. an SSH-forwarded port); DEMO_SMOKE_ARTIFACTS=DIR adds report.json + screenshots in a
+#   new timestamped directory under DIR (demo/smoke-artifacts/ is gitignored);
+#   PLAYWRIGHT_CHROME_PATH selects a browser binary.
 DEMO_PY ?= $(ENGINE_PY)
 DEMO_API_PORT ?= 8091
 DEMO_UI_PORT ?= 3318
 NEED_VENV = [ -x $(ENGINE_PY) ] || { echo "engine/.venv is missing: run 'make -C engine install'" >&2; exit 1; }
+
+DEMO_SMOKE_URL ?= http://127.0.0.1:$(DEMO_UI_PORT)
+DEMO_SMOKE_ARTIFACTS ?=
+
+demo-smoke:
+	@$(NEED_VENV); [ -d dashboard/node_modules ] || { echo "demo-smoke: dashboard/node_modules absent; run 'npm ci' in dashboard/" >&2; exit 1; }; \
+	$(ISOLATE) env -u ANTHROPIC_API_KEY node demo/smoke.cjs --base-url '$(DEMO_SMOKE_URL)' \
+	  $(if $(DEMO_SMOKE_ARTIFACTS),--artifacts '$(DEMO_SMOKE_ARTIFACTS)')
 
 demo-evidence:
 	@$(ISOLATE) env -u ANTHROPIC_API_KEY $(DEMO_PY) demo/evidence.py verify

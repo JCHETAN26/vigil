@@ -1,6 +1,6 @@
 # Vigil — project status (resume guide)
 
-_Last updated: 2026-10-25. Purpose: let a fresh session resume without the prior chat._
+_Last updated: 2026-10-26. Purpose: let a fresh session resume without the prior chat._
 
 Vigil is an agent reliability + evaluation platform: it traces agents (OpenTelemetry →
 ClickHouse), runs them over datasets, scores them, and detects regressions between agent
@@ -8,23 +8,52 @@ versions (CLI, API, dashboard). Diagnosing them (investigation agent) is still p
 Portfolio project — code quality, tests, and measured results matter more than feature count
 (see `CLAUDE.md`).
 
-## Snapshot (2026-10-25)
+## Snapshot (2026-10-26)
 
-- **Two open pull requests, neither merged, no GitHub approval recorded:**
-  - [PR #1](https://github.com/JCHETAN26/vigil/pull/1), branch
-    `improve/reliable-regression-triage`: the reliable regression triage milestone below plus
-    the demo-readiness core fixes (gate refuses a pass with no compared gated metric, run-version
+- **PR #1 and PR #2 are merged into `main`** (owner JCHETAN26):
+  - [PR #1](https://github.com/JCHETAN26/vigil/pull/1) (`improve/reliable-regression-triage`),
+    merge commit `672d7ab`: the reliable regression triage milestone below plus the
+    demo-readiness core fixes (gate refuses a pass with no compared gated metric, run-version
     discovery API + run-detail compare action, explicit NumPy/SciPy dependencies with no silent
     normal fallback, ClickHouse calls off the event loop).
-  - [PR #2](https://github.com/JCHETAN26/vigil/pull/2), branch `validate/hotpotqa-real-agent`
-    (stacked on PR #1): the real HotpotQA validation tooling, its exploratory pilot, the
-    single-owner span accounting fix (`0e68bd9`) and the portfolio demo (`demo/`, below).
-  - Hosted CI: PR #2's earlier head `0e68bd9` passed the three jobs CI had then
-    ([run 40208224559](https://github.com/JCHETAN26/vigil/actions/runs/40208224559)); PR #1's
-    head `466765f` passed all three jobs
-    ([run 40251722382](https://github.com/JCHETAN26/vigil/actions/runs/40251722382)). These are
-    results for those exact heads only. For PR #2's latest head (demo, review fixes, the added
-    `evidence` job) see its [checks](https://github.com/JCHETAN26/vigil/pull/2/checks).
+  - [PR #2](https://github.com/JCHETAN26/vigil/pull/2) (`validate/hotpotqa-real-agent`), merge
+    commit `da694e7` (current `main`): the real HotpotQA validation tooling, its exploratory
+    pilot, the single-owner span accounting fix (`0e68bd9`) and the portfolio demo (`demo/`).
+  - Hosted CI before the merge: all four jobs (go, python, evidence, dashboard incl. the mocked
+    browser suite) passed on the tested head `1e8837a`
+    ([run 40278190135](https://github.com/JCHETAN26/vigil/actions/runs/40278190135)). After the
+    merge, run [40278985050](https://github.com/JCHETAN26/vigil/actions/runs/40278985050) on
+    `da694e7` **passed all four jobs**, including the 33 route-mocked browser tests (1.1 min).
+    Its `Install Playwright chromium` step took about 11 minutes, mostly apt system dependencies
+    on the hosted runner (the browser download itself took seconds); no workflow change was
+    needed. Later runs: [latest `main` CI](https://github.com/JCHETAN26/vigil/actions/workflows/ci.yml?query=branch%3Amain).
+  - Older per-head results (PR #2 head `0e68bd9`,
+    [run 40208224559](https://github.com/JCHETAN26/vigil/actions/runs/40208224559); PR #1 head
+    `466765f`, [run 40251722382](https://github.com/JCHETAN26/vigil/actions/runs/40251722382))
+    are history for those heads only.
+
+### Demo smoke check from the repo (2026-10-26)
+
+- `make demo-smoke` (`demo/smoke.cjs`) replaces the manager's one-off browser script: it drives an
+  already running `make demo` dashboard in installed Chrome through the same-origin proxy (real
+  API, no mocks, no writes, no DB credentials or model keys) and checks the demo notice, the three
+  SYNTHETIC runs, each scenario's verdict (API and banner), the first metric's bar on the correct
+  side of a drawn zero line, the manifest diff fields, the candidate `syn-q02` trace with its
+  top-1 retrieval, and the run-detail version picker's compare link. Every expectation (run ids,
+  version hashes, paths, verdicts, reasons, changed fields, chart signs, affected trace) comes
+  from `python demo/seed.py links --json`, computed offline from the fixture and the production
+  gate. It does not need the real pilot in the database. Optional screenshots go to a new
+  timestamped directory, with non-synthetic rows of the runs list masked.
+- It passed against the local demo (dashboard 3318, API 8092) on 2026-10-26. `make test-demo` now
+  runs 38 Python tests (including 2 for `links --json`) and 16 Node tests of the smoke CLI's
+  URL/artifact boundaries (a malformed URL is refused without echoing it, since it may carry
+  credentials).
+- **Chart Y-axis ticks, found in the synthetic screenshots and fixed:** ticks printed raw floats
+  such as `-0.8333333333333334` that overflowed the axis. They now show at most three significant
+  digits (exponent form for very small/large values); the data, domain, bars and the table's
+  four-decimal values are unchanged. The all-negative chart test now includes −5/6 and checks
+  that the tick labels are compact and inside the chart. It failed without the fix and passes
+  with it. Typecheck and all **33** route-mocked Chrome tests passed.
 
 ### Current verification (2026-10-25, manager, local)
 
@@ -143,9 +172,8 @@ vulnerabilities (Next 15.5.28, Playwright 1.58.2, direct `postcss` 8.5.31, `sour
 1.2.2, `next.postcss` override 8.5.31).
 
 The test counts and checks above are as of 2026-10-23 (they have grown since; CI on the PRs is
-the current record). **Open before closing the milestone:** owner review and merge of
-[PR #1](https://github.com/JCHETAN26/vigil/pull/1); see its
-[checks](https://github.com/JCHETAN26/vigil/pull/1/checks) for current CI status.
+the current record). [PR #1](https://github.com/JCHETAN26/vigil/pull/1) was merged into `main`
+(`672d7ab`); see the Snapshot for CI.
 
 ## HotpotQA real-agent validation and demo (PR #2, 2026-10-25)
 
@@ -434,13 +462,12 @@ real OTel SDK exporter; refuse fault injection while a real eval run is in progr
   - **CI:** a GitHub Actions workflow running the unit/offline suites on every push, with a
     README status badge.
 
-## What's next (2026-10-25)
+## What's next (2026-10-26)
 
-1. **Owner review of PR #1 and PR #2**, then merge (PR #2 is stacked on PR #1). The manager runs
-   the full local checks and hosted CI on the newest commits first.
+1. ~~Owner review and merge of PR #1 and PR #2~~ — done (merges `672d7ab`, `da694e7`).
 2. **Present the demo** (`demo/README.md`: offline evidence, seeded synthetic scenarios, a 3–5
-   minute walkthrough script). Optional: record screenshots of the launcher-started UI, where the
-   demo notice and SYNTHETIC labels are visible.
+   minute walkthrough script; talking points in `docs/PRESENTATION.md`). Screenshots: take them
+   with `make demo-smoke DEMO_SMOKE_ARTIFACTS=demo/smoke-artifacts` (synthetic examples only).
 3. **Optional, each a separate decision:**
    - the paid HotpotQA `full` comparison (base100 × 3, `docs/HOTPOTQA_VALIDATION.md`) — needs
      owner approval for the spend; not needed for a truthful demo;

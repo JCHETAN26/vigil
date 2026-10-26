@@ -19,7 +19,8 @@ Implemented:
 - agents/      Agents under test: hello_agent (tool-calling), HotpotQA RAG, τ²-bench retail
 - bench/       Load tests, measurement scripts, offline verdict reproduction
 - demo/        No-key portfolio demo: frozen REAL HotpotQA pilot evidence + offline verifier,
-               SYNTHETIC fixture seeded into the real stores, launcher (`make demo`; demo/README.md)
+               SYNTHETIC fixture seeded into the real stores, launcher (`make demo`; demo/README.md),
+               real-Chrome check of a running demo (`make demo-smoke`)
 - deploy/      Docker Compose
 - docs/        Design docs, status, results (see docs/REGRESSION_TRIAGE.md)
 
