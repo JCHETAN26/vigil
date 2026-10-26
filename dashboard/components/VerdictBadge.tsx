@@ -1,8 +1,10 @@
-import type { MetricVerdict } from "@/lib/types";
+import type { MetricStatus, MetricVerdict } from "@/lib/types";
 
-export type Verdict = "regression" | "watch" | "ok";
+export type Verdict = MetricStatus;
 
+// The API's own per-metric `status` wins; the flags are a fallback for a response without it.
 export function verdictOf(m: MetricVerdict): Verdict {
+  if (m.status === "regression" || m.status === "watch" || m.status === "ok") return m.status;
   if (m.regressed) return "regression";
   if (m.ci_excludes_zero) return "watch"; // statistically real but below the practical threshold
   return "ok";

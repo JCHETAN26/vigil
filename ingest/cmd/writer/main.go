@@ -81,7 +81,8 @@ func run() error {
 	log.Info("writer started",
 		"brokers", kcfg.Brokers, "group", wcfg.Group, "raw_topic", wcfg.RawTopic,
 		"clickhouse", chcfg.Addr, "batch_max_rows", wcfg.BatchMaxRows,
-		"batch_max_bytes", wcfg.BatchMaxBytes, "flush_interval", wcfg.FlushInterval.String())
+		"batch_max_bytes", wcfg.BatchMaxBytes, "flush_interval", wcfg.FlushInterval.String(),
+		"max_inflight_bytes", wcfg.MaxInflightBytes, "retry_window", wcfg.RetryWindow.String())
 
 	// Run blocks until ctx is canceled, then flushes and commits in-flight batches.
 	runErr := cons.Run(ctx)

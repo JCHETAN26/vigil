@@ -3,10 +3,13 @@
 
 import type {
   CaseRow,
+  CompareCasesResult,
   CompareResult,
   RunDetail,
   RunSummary,
+  RunVersionsPage,
   TraceDetail,
+  VersionDiff,
 } from "./types";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8080";
@@ -45,13 +48,17 @@ export const api = {
       `/runs?limit=${limit}&offset=${offset}`,
     ),
   getRun: (id: string) => get<RunDetail>(`/runs/${id}`),
+  // Bounded (the API caps limit at 200); `total` tells whether more versions exist.
+  getRunVersions: (id: string, limit = 50, offset = 0) =>
+    get<RunVersionsPage>(`/runs/${id}/versions?limit=${limit}&offset=${offset}`),
   getCases: (id: string, limit = 100, offset = 0) =>
     get<{ run_id: string; cases: CaseRow[]; limit: number; offset: number }>(
       `/runs/${id}/cases?limit=${limit}&offset=${offset}`,
     ),
   getTrace: (traceId: string) => get<TraceDetail>(`/traces/${traceId}`),
-  compare: (baseline: string, candidate: string) =>
-    get<CompareResult>(
-      `/compare?baseline=${encodeURIComponent(baseline)}&candidate=${encodeURIComponent(candidate)}`,
-    ),
+  // The triage calls take a pre-built query (lib/compareQuery.ts) so summary, cases and diff
+  // always carry the same run/version selection.
+  compare: (query: URLSearchParams) => get<CompareResult>(`/compare?${query}`),
+  compareCases: (query: URLSearchParams) => get<CompareCasesResult>(`/compare/cases?${query}`),
+  versionDiff: (query: URLSearchParams) => get<VersionDiff>(`/versions/diff?${query}`),
 };

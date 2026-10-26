@@ -27,8 +27,10 @@ install: venv
 	$(PY) -m pip install -q -e "../agents/hotpotqa_agent"   # brings bm25s for the worker
 	$(PY) -m pip install -q --no-deps -e "../agents/tau2_retail_agent"  # deps satisfied; tau2 itself is isolated
 
+# -rs prints every skip reason, so self-skipped DB tests are visible. With REQUIRE_DB (or
+# REQUIRE_LIVE) set, an unusable Postgres fails those tests instead (tests/conftest.py).
 test:
-	$(ISOLATE) PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 $(PY) -m pytest -q -p asyncio -m "not integration"
+	$(ISOLATE) PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 $(PY) -m pytest -q -rs -p asyncio -m "not integration"
 
 test-integration:
 	$(ISOLATE) PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 $(PY) -m pytest -q -rs -p asyncio -m integration

@@ -58,22 +58,38 @@ type Writer struct {
 	Group         string
 	RawTopic      string
 	DLQTopic      string
-	BatchMaxRows  int
-	BatchMaxBytes int
+	BatchMaxRows  int // per-partition batch row limit
+	BatchMaxBytes int // per-partition batch byte limit (raw record value bytes)
 	FlushInterval time.Duration
 	HealthAddr    string
+
+	// MaxInflightBytes is a global budget on raw record value bytes held in open batches
+	// across all partitions. When admitting a record would exceed it, the largest batch is
+	// flushed first. 0 disables the budget (only the per-partition limits apply).
+	MaxInflightBytes int
+
+	// Insert/commit retry policy: capped exponential backoff from RetryInitialBackoff up to
+	// RetryMaxBackoff, giving up after RetryWindow. The window must stay below half the
+	// consumer group rebalance timeout (60s). Zero values fall back to the consumer's defaults.
+	RetryInitialBackoff time.Duration
+	RetryMaxBackoff     time.Duration
+	RetryWindow         time.Duration
 }
 
 // WriterFromEnv reads the writer settings.
 func WriterFromEnv() Writer {
 	return Writer{
-		Group:         envStr("VIGIL_KAFKA_GROUP", "vigil-writer"),
-		RawTopic:      envStr("VIGIL_RAW_TOPIC", "otlp.spans.raw"),
-		DLQTopic:      envStr("VIGIL_DLQ_TOPIC", "spans.dlq"),
-		BatchMaxRows:  envInt("VIGIL_BATCH_MAX_ROWS", 10000),
-		BatchMaxBytes: envInt("VIGIL_BATCH_MAX_BYTES", 32*1024*1024),
-		FlushInterval: envDuration("VIGIL_FLUSH_INTERVAL", 2*time.Second),
-		HealthAddr:    envStr("VIGIL_WRITER_HEALTH_ADDR", "127.0.0.1:8089"),
+		Group:               envStr("VIGIL_KAFKA_GROUP", "vigil-writer"),
+		RawTopic:            envStr("VIGIL_RAW_TOPIC", "otlp.spans.raw"),
+		DLQTopic:            envStr("VIGIL_DLQ_TOPIC", "spans.dlq"),
+		BatchMaxRows:        envInt("VIGIL_BATCH_MAX_ROWS", 10000),
+		BatchMaxBytes:       envInt("VIGIL_BATCH_MAX_BYTES", 32*1024*1024),
+		FlushInterval:       envDuration("VIGIL_FLUSH_INTERVAL", 2*time.Second),
+		HealthAddr:          envStr("VIGIL_WRITER_HEALTH_ADDR", "127.0.0.1:8089"),
+		MaxInflightBytes:    envInt("VIGIL_WRITER_MAX_INFLIGHT_BYTES", 128*1024*1024),
+		RetryInitialBackoff: envDuration("VIGIL_WRITER_RETRY_INITIAL_BACKOFF", 100*time.Millisecond),
+		RetryMaxBackoff:     envDuration("VIGIL_WRITER_RETRY_MAX_BACKOFF", 5*time.Second),
+		RetryWindow:         envDuration("VIGIL_WRITER_RETRY_WINDOW", 25*time.Second),
 	}
 }
 

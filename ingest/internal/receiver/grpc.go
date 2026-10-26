@@ -24,12 +24,19 @@ func NewGRPCServer(handler *Handler, log *slog.Logger) *GRPCServer {
 }
 
 // Export receives a batch of spans, splits/validates/routes them, and reports rejected
-// spans via OTLP partial success.
+// spans via OTLP partial success. A failed enqueue returns a retryable status
+// (Unavailable, or the request context's Canceled/DeadlineExceeded); see grpcCode.
 func (s *GRPCServer) Export(ctx context.Context, req *collectortracepb.ExportTraceServiceRequest) (*collectortracepb.ExportTraceServiceResponse, error) {
 	res, err := s.handler.Process(ctx, req)
 	if err != nil {
-		s.log.Error("process export", "err", err)
-		return nil, status.Error(codes.Internal, "failed to enqueue spans")
+		code := grpcCode(ctx, err)
+		if code == codes.Internal {
+			s.log.Error("process export", "err", err)
+		} else {
+			s.log.Warn("enqueue failed, client should retry", "code", code.String(),
+				"accepted_spans", res.AcceptedSpans, "err", err)
+		}
+		return nil, status.Error(code, "failed to enqueue spans")
 	}
 	resp := &collectortracepb.ExportTraceServiceResponse{}
 	if res.RejectedSpans > 0 {

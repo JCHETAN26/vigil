@@ -52,8 +52,8 @@ func (h *HTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err := proto.Unmarshal(body, &req); err != nil {
 		// Unparseable OTLP → DLQ (keep the original bytes) and 400.
 		if derr := h.handler.HandleParseFailure(r.Context(), body, err.Error()); derr != nil {
-			h.log.Error("dlq parse failure", "err", derr)
-			http.Error(w, "failed to enqueue", http.StatusInternalServerError)
+			h.log.Warn("dlq parse failure, client should retry", "err", derr)
+			http.Error(w, "failed to enqueue", httpStatus(derr))
 			return
 		}
 		http.Error(w, "invalid OTLP protobuf", http.StatusBadRequest)
@@ -62,8 +62,15 @@ func (h *HTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	res, err := h.handler.Process(r.Context(), &req)
 	if err != nil {
-		h.log.Error("process export", "err", err)
-		http.Error(w, "failed to enqueue spans", http.StatusInternalServerError)
+		// Enqueue failures (including an ended request context) are 503 so OTLP clients
+		// retry; see Handler.Process for the duplicate window a retry opens.
+		code := httpStatus(err)
+		if code == http.StatusServiceUnavailable {
+			h.log.Warn("enqueue failed, client should retry", "accepted_spans", res.AcceptedSpans, "err", err)
+		} else {
+			h.log.Error("process export", "err", err)
+		}
+		http.Error(w, "failed to enqueue spans", code)
 		return
 	}
 

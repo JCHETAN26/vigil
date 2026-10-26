@@ -215,6 +215,13 @@ services:
     <<: *ingest-image
     container_name: vigil-writer
     command: ["/usr/local/bin/writer"]
+    # Graceful shutdown is longer than Docker's 10 s default: shutdown flush (<= 15 s), then DLQ
+    # drain + health stop (<= 10 s), then Close's revoke callback, which retries any batch the
+    # shutdown flush could not land for one retry window (VIGIL_WRITER_RETRY_WINDOW, default
+    # 25 s, max < 30 s). Worst case ~50-55 s plus group-leave time; 75 s leaves headroom. A
+    # SIGKILL past this leaves the unflushed batches uncommitted; they replay from the last
+    # commit, deduplicated only if the replay reforms the same offset range.
+    stop_grace_period: 75s
     environment:
       <<: *clickhouse-env
       VIGIL_KAFKA_BROKERS: redpanda:9092

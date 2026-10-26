@@ -46,17 +46,33 @@ func NewHandler(sink Sink, log *slog.Logger) *Handler {
 
 // HandleParseFailure routes a request body that could not be unmarshaled to the DLQ. It
 // keeps the original bytes for replay/debugging; the key is empty (no trace id known).
+// A failed DLQ publish is returned as an *EnqueueError.
 func (h *Handler) HandleParseFailure(ctx context.Context, rawBody []byte, reason string) error {
 	h.log.Warn("otlp parse failure", "reason", reason, "bytes", len(rawBody))
-	return h.sink.DLQ(ctx, "", rawBody, StageParse, reason)
+	if err := h.sink.DLQ(ctx, "", rawBody, StageParse, reason); err != nil {
+		return &EnqueueError{Err: err}
+	}
+	return nil
 }
 
 // Process splits req by trace id, validates each group, and routes it: valid groups to
 // the raw topic (as marshaled per-trace OTLP), invalid groups to the DLQ. It returns the
-// accepted/rejected span counts for the OTLP partial-success response.
+// accepted/rejected span counts for the OTLP partial-success response. Validation
+// rejections are not errors (they are reported via partial success); a failed publish, or
+// a request context that ends mid-request, stops processing and returns an *EnqueueError.
+//
+// Duplicate window: groups are published one at a time, so when a later publish fails the
+// earlier groups of the same request are already on the topic, and the client's retry of
+// the whole request publishes them again (as does a retry after a publish whose ack was
+// lost). The re-sent groups land at new offsets, so the writer's offset-range dedup tokens
+// do not match them: spans rows collapse later via ReplacingMergeTree, but the rollup views
+// count them again. The window is as long as the client keeps retrying the request.
 func (h *Handler) Process(ctx context.Context, req *collectortracepb.ExportTraceServiceRequest) (Result, error) {
 	var res Result
 	for _, g := range otlpx.SplitByTraceID(req) {
+		if err := ctx.Err(); err != nil {
+			return res, &EnqueueError{Err: err}
+		}
 		n := countSpans(g)
 
 		payload, err := proto.Marshal(g.Data)
@@ -68,14 +84,14 @@ func (h *Handler) Process(ctx context.Context, req *collectortracepb.ExportTrace
 		if verr := otlpx.Validate(g.Data); verr != nil {
 			res.RejectedSpans += n
 			if err := h.sink.DLQ(ctx, g.TraceID, payload, StageValidate, verr.Error()); err != nil {
-				return res, err
+				return res, &EnqueueError{Err: err}
 			}
 			h.log.Warn("span group rejected", "trace_id", g.TraceID, "spans", n, "reason", verr.Error())
 			continue
 		}
 
 		if err := h.sink.Raw(ctx, g.TraceID, payload); err != nil {
-			return res, err
+			return res, &EnqueueError{Err: err}
 		}
 		res.AcceptedSpans += n
 	}

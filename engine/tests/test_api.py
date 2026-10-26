@@ -1,15 +1,18 @@
 """Tests for the read-only dashboard API. The endpoint tests need the live stack (Postgres +
 ClickHouse) and are marked `integration`; they skip cleanly when it's down. The ClickHouse
-read-guard test is a pure unit test."""
+read-guard and live-stack probe tests are unit tests."""
 
 from __future__ import annotations
 
 import os
 import socket
 
+import psycopg
 import pytest
+from psycopg import conninfo
 
 from engine.api.clickhouse import ClickHouseClient, ClickHouseError
+from engine.config import pg_ro_dsn
 
 # --- pure unit: the ClickHouse client refuses anything but a single read statement ---
 
@@ -21,25 +24,81 @@ def test_clickhouse_client_rejects_non_read_statements():
             ch.query(sql)  # guarded before any network call
 
 
-# --- integration: endpoints against the live stack ---
+# --- live-stack probe: the API's own ClickHouse/Postgres config, not fixed localhost ports ---
 
 
-def _stack_up() -> bool:
+def _pg_endpoint(dsn: str) -> str:
+    """``host:port`` of a libpq DSN/URL for skip messages — never the credentials."""
     try:
-        with socket.create_connection(("127.0.0.1", 8123), timeout=2):
-            pass
-        # Postgres reachable via the pool at import of the app fixture; probe its port too.
-        with socket.create_connection(("127.0.0.1", 5432), timeout=2):
-            pass
-        return True
-    except OSError:
-        return False
+        parts = conninfo.conninfo_to_dict(dsn)
+    except psycopg.ProgrammingError:  # unparsable; the connect attempt reports it
+        return "<unparsable DSN>"
+    return f"{parts.get('host') or 'localhost'}:{parts.get('port') or 5432}"
+
+
+def _clickhouse_problem() -> str | None:
+    """Why the API's ClickHouse (same host/port/user resolution as ``ClickHouseClient``) is not
+    usable, or None. An authenticated read, so some other service on the port doesn't count."""
+    ch = ClickHouseClient(timeout=3.0)
+    try:
+        ch.query("SELECT 1 AS ok")
+    except ClickHouseError as exc:  # the server's error text only, never the password
+        return f"ClickHouse at {ch.host}:{ch.port} not usable: {exc}"
+    return None
+
+
+def _postgres_problem() -> str | None:
+    """Why the API's Postgres (``pg_ro_dsn``, what the app's pool opens) is not usable, or None."""
+    try:
+        dsn = pg_ro_dsn()
+    except RuntimeError as exc:
+        return f"Postgres not configured: {exc}"
+    try:
+        with psycopg.connect(dsn, connect_timeout=3) as conn:
+            conn.read_only = True
+            conn.execute("SELECT 1")
+    except psycopg.Error as exc:  # only the type: libpq messages can echo connection params
+        return f"Postgres at {_pg_endpoint(dsn)} not usable ({type(exc).__name__})"
+    return None
+
+
+def _stack_problem() -> str | None:
+    """None when both of the API's backends answer, else the first reason to skip."""
+    return _clickhouse_problem() or _postgres_problem()
+
+
+def _closed_port() -> int:
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
+
+
+def test_probe_uses_the_api_clickhouse_config(monkeypatch):
+    # Pointed at a closed port, the probe reports that endpoint even if the default 8123 is up.
+    port = _closed_port()
+    monkeypatch.setenv("CLICKHOUSE_HOST", "127.0.0.1")
+    monkeypatch.setenv("CLICKHOUSE_HTTP_PORT", str(port))
+    monkeypatch.setenv("CLICKHOUSE_RO_USER", "probe_ro")
+    monkeypatch.setenv("CLICKHOUSE_RO_PASSWORD", "s3cret-ch")
+    problem = _clickhouse_problem()
+    assert problem and f"127.0.0.1:{port}" in problem and "s3cret-ch" not in problem
+
+
+def test_probe_uses_the_api_postgres_dsn(monkeypatch):
+    # VIGIL_API_PG_DSN wins (as in the app); the skip reason names its host:port, not the secret.
+    port = _closed_port()
+    monkeypatch.setenv("VIGIL_API_PG_DSN", f"postgresql://ro:s3cret-pg@127.0.0.1:{port}/vigil")
+    problem = _postgres_problem()
+    assert problem and f"127.0.0.1:{port}" in problem and "s3cret-pg" not in problem
+
+
+# --- integration: endpoints against the live stack ---
 
 
 @pytest.fixture
 def client():
-    if not _stack_up():
-        pytest.skip("stack (ClickHouse/Postgres) not reachable")
+    if problem := _stack_problem():
+        pytest.skip(problem)
     from fastapi.testclient import TestClient
 
     from engine.api.app import app
@@ -158,12 +217,10 @@ def test_trace_surfaces_retrieval_docs_and_text_content(client):
 def test_api_postgres_connection_cannot_write():
     # A write attempt over the API's own Postgres connection (the read-only role from pg_ro_dsn)
     # is rejected by the grant, not just by convention.
-    import psycopg
+    from engine.config import uses_ro_pg
 
-    from engine.config import pg_ro_dsn, uses_ro_pg
-
-    if not _stack_up():
-        pytest.skip("stack not reachable")
+    if problem := _stack_problem():
+        pytest.skip(problem)
     if not uses_ro_pg():
         pytest.skip("no read-only Postgres role configured (deploy/create_readonly_users.sh)")
     with psycopg.connect(pg_ro_dsn()) as conn:
@@ -180,17 +237,15 @@ def test_api_clickhouse_connection_cannot_write():
     import urllib.error
     import urllib.request
 
-    if not _stack_up():
-        pytest.skip("stack not reachable")
-    ro_user = os.getenv("CLICKHOUSE_RO_USER")
-    if not ro_user:
+    if problem := _stack_problem():
+        pytest.skip(problem)
+    if not os.getenv("CLICKHOUSE_RO_USER"):
         pytest.skip("no read-only ClickHouse user configured")
-    ro_pass = os.getenv("CLICKHOUSE_RO_PASSWORD", "")
-    db = os.getenv("CLICKHOUSE_DB", "vigil")
-    token = base64.b64encode(f"{ro_user}:{ro_pass}".encode()).decode()
+    ch = ClickHouseClient()  # the API's host/port/database and its RO credentials
+    token = base64.b64encode(f"{ch.user}:{ch.password}".encode()).decode()
     req = urllib.request.Request(
-        "http://127.0.0.1:8123/",
-        data=f"CREATE TABLE {db}._ro_probe (x Int8) ENGINE=Memory".encode(),
+        f"http://{ch.host}:{ch.port}/",
+        data=f"CREATE TABLE {ch.database}._ro_probe (x Int8) ENGINE=Memory".encode(),
         method="POST",
         headers={"Authorization": f"Basic {token}"},
     )
@@ -199,22 +254,68 @@ def test_api_clickhouse_connection_cannot_write():
     assert exc.value.code in (403, 500)  # ClickHouse ACCESS_DENIED
 
 
+def _result_versions() -> dict[str, str]:
+    """Per run id: one agent version that has stored results (the smallest hash, so the choice
+    is deterministic), read over the API's read-only Postgres role. A run may hold several
+    versions, and ``/compare`` without an explicit version refuses those as ambiguous — the
+    contract this test must not rely on breaking."""
+    with psycopg.connect(pg_ro_dsn()) as conn:
+        return {str(run_id): version for run_id, version in conn.execute(
+            "SELECT run_id, min(agent_version) FROM eval_case_results GROUP BY run_id")}
+
+
+def _compare(client, baseline: tuple[str, str], candidate: tuple[str, str]):
+    return client.get("/compare", params={
+        "baseline": baseline[0], "baseline_version": baseline[1],
+        "candidate": candidate[0], "candidate_version": candidate[1],
+    })
+
+
 @pytest.mark.integration
 def test_compare_same_suite_and_mismatch(client):
     runs = client.get("/runs", params={"limit": 200}).json()["runs"]
-    by_suite: dict[str, list[str]] = {}
+    versions = _result_versions()
+    by_suite: dict[str, list[tuple[str, str]]] = {}
     for r in runs:
-        by_suite.setdefault(r["suite"], []).append(r["id"])
-    # Same-suite comparison: expect 200 with a positive paired-case count.
-    same = next((ids for ids in by_suite.values() if len(ids) >= 2), None)
+        version = versions.get(r["id"])
+        if version is not None:  # a run with no results cannot be paired at all
+            by_suite.setdefault(r["suite"], []).append((r["id"], version))
+    # Same-suite comparison, versions selected explicitly: 200 with a positive paired count.
+    same = next((sides for sides in by_suite.values() if len(sides) >= 2), None)
     if same:
-        resp = client.get("/compare", params={"baseline": same[0], "candidate": same[1]})
-        assert resp.status_code == 200
+        resp = _compare(client, same[0], same[1])
+        assert resp.status_code == 200, resp.text
         body = resp.json()
+        assert body["baseline_version"] == same[0][1]
+        assert body["candidate_version"] == same[1][1]
         assert body["paired_cases"] >= 1
         assert isinstance(body["metrics"], list)
-    # Different-suite comparison: refused with a clear 400.
-    suites = [ids for ids in by_suite.values() if ids]
+    # Different-suite comparison: refused with a clear 400 for the suite, not for the versions.
+    suites = [sides for sides in by_suite.values() if sides]
     if len(suites) >= 2:
-        resp = client.get("/compare", params={"baseline": suites[0][0], "candidate": suites[1][0]})
+        resp = _compare(client, suites[0][0], suites[1][0])
         assert resp.status_code == 400
+        assert "different suites" in resp.json()["detail"]
+
+
+@pytest.mark.integration
+def test_run_versions_cover_registered_and_result_versions(client):
+    # Every version the stored data holds for a run (registered or results-only) is listed in
+    # full and in hash order, whatever the first page of /cases happens to show. Read-only: the
+    # expected set is read over the API's read-only role.
+    expected: dict[str, set[str]] = {}
+    with psycopg.connect(pg_ro_dsn()) as conn:
+        for run_id, version in conn.execute(
+            "SELECT run_id, agent_version FROM eval_run_versions "
+            "UNION SELECT run_id, agent_version FROM eval_case_results"
+        ):
+            expected.setdefault(str(run_id), set()).add(version)
+    for r in client.get("/runs", params={"limit": 200}).json()["runs"]:
+        body = client.get(f"/runs/{r['id']}/versions", params={"limit": 200}).json()
+        listed = [v["agent_version"] for v in body["versions"]]
+        assert listed == sorted(expected.get(r["id"], set())), r["id"]
+        assert body["total"] == len(listed)
+        if len(listed) >= 2:  # a bounded page is a prefix of the same list
+            first = client.get(f"/runs/{r['id']}/versions", params={"limit": 1}).json()
+            assert [v["agent_version"] for v in first["versions"]] == listed[:1]
+            assert first["total"] == len(listed)

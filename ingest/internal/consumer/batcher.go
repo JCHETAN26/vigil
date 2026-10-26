@@ -29,6 +29,24 @@ type batch struct {
 	lastRecord  *kgo.Record
 	byteSize    int
 	createdAt   time.Time
+
+	// Set by the first flush attempt and reused by every retry, so a retried insert sends
+	// the identical rows under the identical dedup token. A sealed batch accepts no more
+	// records. inserted records that the insert succeeded and only the commit is pending.
+	sealed     bool
+	flushRows  []chsink.Row
+	flushToken string
+	inserted   bool
+}
+
+// seal freezes the batch's rows and token for flushing; later calls are no-ops.
+func (b *batch) seal(topic string, partition int32) {
+	if b.sealed {
+		return
+	}
+	b.sealed = true
+	b.flushRows = b.sortedRows()
+	b.flushToken = DedupToken(topic, partition, b.firstOffset, b.lastOffset)
 }
 
 // note records that a record at this offset belongs to the range, extending it. It is

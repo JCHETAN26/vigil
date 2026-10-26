@@ -445,11 +445,17 @@ once. `integration/partial_insert_test.go` pins this with fault injection (a CHE
 that makes one view's insert fail), for a failing rollup push and a failing `trace_index`
 push, and shows that a re-formed retry double-counts. Hence the writer fix (Week-6 stage 4):
 on an insert error, **retry the same batch with the same token in-process** instead of
-exiting, so a re-formed range can only arise from a real crash — and repair any residue with
-the §3.7 rebuild.
+exiting, so a re-formed range can only arise from a real crash or a failed handoff (below) —
+and repair any residue with the §3.7 rebuild.
 Partition revocation is handled explicitly to keep ranges contiguous: the consumer
-flushes and commits an in-flight batch before releasing a revoked partition, so ownership
-changes do not by themselves create a mismatched range.
+flushes and commits an in-flight batch before releasing a revoked partition, so a revoke
+whose flush succeeds does not create a mismatched range. **Known limitation — failed
+handoff.** If that flush exhausts its retry window (or the partition is *lost*, when no
+commit is possible), the batch is dropped uncommitted; the writer never commits after the
+window or after ownership is gone. The new owner replays from the last committed offset and
+may form a different range, hence a new token: the same double-count as above, repaired by
+§3.7. Such a partition then stops counting against the old owner's readiness, which tracks
+only the partitions it still owns.
 
 ### 3.6 Postgres — `version_manifests`
 
